@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../widgets/debounce_search_widget.dart';
 import '../../widgets/media_card.dart';
 import '../../widgets/media_detail_sheet.dart';
+import '../../widgets/app_page_header.dart';
 import '../../../data/models/catalogue_item.dart';
 import '../../../core/services/app_services.dart';
-import '../../../core/routing/app_router.dart';
 
 /// Main home screen showing trending content carousel
 class HomeScreen extends StatefulWidget {
@@ -15,6 +14,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const _carouselHeight = 400.0;
+
   bool _isLoading = true;
   String? _errorMessage;
   final List<CatalogueItem> _trendingItems = [];
@@ -77,7 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(),
+            const AppPageHeader(),
             if (_isLoading)
               const Expanded(
                 child: Center(child: CircularProgressIndicator()),
@@ -108,51 +109,31 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               )
             else
-              Expanded(child: _buildTrendingSection()),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTrendingSection(),
+                      _buildNewEpisodesSection(),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
 
-  void _handleSearch(String query) {
-    if (query.trim().isEmpty) return;
-    Navigator.pushNamed(
-      context,
-      AppRouter.searchRoute,
-      arguments: query.trim(),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Show Time',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          const SizedBox(height: 12),
-          DebounceSearchWidget(onSearch: _handleSearch),
-        ],
-      ),
-    );
-  }
-
   Widget _buildTrendingSection() {
     if (_trendingItems.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            'No trending content available. Check your TMDB API key.',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
+      return Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text(
+          'No trending content available. Check your TMDB API key.',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyMedium,
         ),
       );
     }
@@ -182,7 +163,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        Expanded(
+        SizedBox(
+          height: _carouselHeight,
           child: PageView.builder(
             controller: _pageController,
             itemCount: _trendingItems.length,
@@ -236,8 +218,71 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 8),
       ],
+    );
+  }
+
+  Widget _buildNewEpisodesSection() {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'New Episodes',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Latest releases from TV shows in your catalogue',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+              ),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.playlist_play,
+                  size: 40,
+                  color: colorScheme.primary.withValues(alpha: 0.7),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Nothing here yet',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Save TV shows to your catalogue and new episodes will appear here.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurface.withValues(alpha: 0.6),
+                        height: 1.4,
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

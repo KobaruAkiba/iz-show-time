@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/app_page_header.dart';
 import '../../../core/services/app_services.dart';
 
 /// Settings screen with app preferences
@@ -23,11 +24,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
-      body: ListView(
-        children: [
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const AppPageHeader(),
+            Expanded(
+              child: ListView(
+                children: [
           _buildSectionTitle('App Preferences'),
           _buildSwitchListTile(
             title: 'Dark Mode',
@@ -123,7 +127,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           const SizedBox(height: 20),
-        ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

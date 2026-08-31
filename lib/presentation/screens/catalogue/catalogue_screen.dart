@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../widgets/media_card.dart';
+import '../../widgets/app_page_header.dart';
+import '../../widgets/catalogue_stats_row.dart';
 import '../../../data/models/catalogue_item.dart';
 import '../../../core/services/app_services.dart';
 
@@ -43,52 +45,61 @@ class _CatalogueScreenState extends State<CatalogueScreen>
 
   @override
   Widget build(BuildContext context) {
+    final films = _appServices.films;
+    final tvShows = _appServices.tvShows;
+    final catalogue = _appServices.catalogue;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Catalogue'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refresh,
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: TextField(
-              onChanged: (value) => setState(() => _searchQuery = value),
-              decoration: InputDecoration(
-                hintText: 'Search catalogue...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-              ),
-            ),
-          ),
-          TabBar(
-            controller: _tabController,
-            isScrollable: true,
-            tabs: _tabs.map((tab) => Tab(text: tab)).toList(),
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildItemList(_filterItems(_appServices.catalogue)),
-                _buildItemList(_filterItems(_appServices.films)),
-                _buildItemList(_filterItems(_appServices.tvShows)),
-                _buildItemList(
-                  _filterItems(_appServices.tvShows),
+      body: SafeArea(
+        child: Column(
+          children: [
+            AppPageHeader(
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: _refresh,
+                  tooltip: 'Refresh',
                 ),
               ],
             ),
-          ),
-        ],
+            CatalogueStatsRow(
+              tvShowCount: tvShows.length,
+              filmCount: films.length,
+              totalCount: catalogue.length,
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: TextField(
+                onChanged: (value) => setState(() => _searchQuery = value),
+                decoration: InputDecoration(
+                  hintText: 'Search catalogue...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                ),
+              ),
+            ),
+            TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              tabs: _tabs.map((tab) => Tab(text: tab)).toList(),
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildItemList(_filterItems(catalogue)),
+                  _buildItemList(_filterItems(films)),
+                  _buildItemList(_filterItems(tvShows)),
+                  _buildItemList(_filterItems(tvShows)),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {

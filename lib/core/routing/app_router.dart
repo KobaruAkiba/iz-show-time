@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../presentation/screens/search/search_screen.dart';
 import '../../presentation/screens/catalogue/catalogue_screen.dart';
-import '../../presentation/screens/tracking/tracking_screen.dart';
 import '../../presentation/screens/settings/settings_screen.dart';
 import '../../presentation/navigation/main_navigator.dart';
 
@@ -10,14 +9,12 @@ class AppRouter {
   static const String homeRoute = '/';
   static const String searchRoute = '/search';
   static const String catalogueRoute = '/catalogue';
-  static const String trackingRoute = '/tracking';
   static const String settingsRoute = '/settings';
 
   static final Map<String, WidgetBuilder> routes = <String, WidgetBuilder>{
     homeRoute: (context) => const MainNavigator(),
     searchRoute: (context) => const SearchScreen(initialQuery: ''),
     catalogueRoute: (context) => const CatalogueScreen(),
-    trackingRoute: (context) => const TrackingScreen(),
     settingsRoute: (context) => const SettingsScreen(),
   };
 
@@ -40,11 +37,6 @@ class AppRouter {
         return MaterialPageRoute<void>(
           settings: settings,
           builder: (context) => const CatalogueScreen(),
-        );
-      case trackingRoute:
-        return MaterialPageRoute<void>(
-          settings: settings,
-          builder: (context) => const TrackingScreen(),
         );
       case settingsRoute:
         return MaterialPageRoute<void>(

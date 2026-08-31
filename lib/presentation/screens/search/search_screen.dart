@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../widgets/media_card.dart';
+import '../../widgets/app_page_header.dart';
 import '../../../data/models/catalogue_item.dart';
 import '../../../core/services/app_services.dart';
 import '../../../core/constants/app_constants.dart';
@@ -98,38 +99,38 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Search'),
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _controller,
-              autofocus: widget.initialQuery.isEmpty,
-              decoration: InputDecoration(
-                hintText: 'Search films and TV shows...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _controller.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _controller.clear();
-                          _onQueryChanged('');
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+      body: SafeArea(
+        child: Column(
+          children: [
+            const AppPageHeader(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: TextField(
+                controller: _controller,
+                autofocus: widget.initialQuery.isEmpty,
+                decoration: InputDecoration(
+                  hintText: 'Search films and TV shows...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _controller.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _controller.clear();
+                            _onQueryChanged('');
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
+                onChanged: _onQueryChanged,
+                onSubmitted: _performSearch,
               ),
-              onChanged: _onQueryChanged,
-              onSubmitted: _performSearch,
             ),
-          ),
-          Expanded(child: _buildBody()),
-        ],
+            Expanded(child: _buildBody()),
+          ],
+        ),
       ),
     );
   }
