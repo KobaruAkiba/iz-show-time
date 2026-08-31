@@ -44,18 +44,16 @@ flowchart TB
 
 In-memory catalogue via `AppServices` singleton. Screens call `setState` after catalogue changes. Persistent storage is planned for a future phase.
 
-## API key
+## API token
 
-Configure at build/run time:
+For local debug, copy `environment.local.example` to `environment.local` and set `TMDB_API_KEY`. That file is gitignored. IDE debug (F5) and `flutter run` from Cursor load it via `--dart-define-from-file=environment.local`.
 
-```bash
-flutter run --dart-define=TMDB_API_KEY=your_key_here
-```
+The token is sent as `Authorization: Bearer <token>`.
 
-Debug alternative:
+CLI without a local file:
 
 ```bash
-flutter run --dart-define=DEV_TMDB_API_KEY=your_key_here
+flutter run --dart-define=TMDB_API_KEY=your_token_here
 ```
 
 ## Caching

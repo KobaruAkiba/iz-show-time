@@ -3,14 +3,23 @@
 ## Setup
 
 1. Create a free account at [themoviedb.org](https://www.themoviedb.org/)
-2. Generate an API key (v3) in Settings → API
-3. Run the app with:
+2. Generate an API Read Access Token in Settings → API
+3. Copy `environment.local.example` to `environment.local` and set `TMDB_API_KEY`
+4. Launch in debug (F5) or run:
 
 ```bash
-flutter run --dart-define=TMDB_API_KEY=your_key_here
+flutter run --dart-define-from-file=environment.local
 ```
 
-Keys are read via `AppApiKey.configure()` in `main.dart` and passed to `DioClient`.
+`environment.local` is gitignored. Debug launches in Cursor/VS Code pass `--dart-define-from-file=environment.local` automatically.
+
+Override without a local file:
+
+```bash
+flutter run --dart-define=TMDB_API_KEY=your_token_here
+```
+
+The token is read via `AppApiKey.configure()` in `main.dart` and sent by `DioClient` as `Authorization: Bearer <token>` on every TMDB request.
 
 ## Endpoints used
 

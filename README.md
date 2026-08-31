@@ -21,7 +21,7 @@ A cross-platform Flutter app to track films and TV shows, discover trending cont
 ## Prerequisites
 
 - Flutter SDK 3.0+
-- TMDB API key (free at [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api))
+- TMDB API Read Access Token (free at [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api))
 
 ## Getting started
 
@@ -29,13 +29,21 @@ A cross-platform Flutter app to track films and TV shows, discover trending cont
 git clone <repository-url>
 cd iz-show-time
 flutter pub get
-flutter run --dart-define=TMDB_API_KEY=your_key_here
+cp environment.local.example environment.local
 ```
 
-Alternative debug key name:
+Edit `environment.local` and set `TMDB_API_KEY` to your TMDB API Read Access Token. The file is gitignored.
+
+Then launch in debug from the IDE (F5), or:
 
 ```bash
-flutter run --dart-define=DEV_TMDB_API_KEY=your_key_here
+flutter run --dart-define-from-file=environment.local
+```
+
+Override without a local file:
+
+```bash
+flutter run --dart-define=TMDB_API_KEY=your_token_here
 ```
 
 ## Project structure

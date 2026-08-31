@@ -81,6 +81,9 @@ class DioClient {
     _dio.interceptors.clear();
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) {
+        if (_apiKey.isNotEmpty) {
+          options.headers['Authorization'] = 'Bearer $_apiKey';
+        }
         if (kDebugMode) {
           // ignore: avoid_print
           print('📡 [REQUEST] ${options.method} ${options.path}');
@@ -111,14 +114,9 @@ class DioClient {
     Map<String, dynamic>? queryParameters,
   }) async {
     try {
-      final params = Map<String, dynamic>.from(queryParameters ?? {});
-      if (_apiKey.isNotEmpty && !params.containsKey('api_key')) {
-        params['api_key'] = _apiKey;
-      }
-
       final response = await _dio.get(
         path,
-        queryParameters: params,
+        queryParameters: queryParameters,
         options: Options(),
       );
 

@@ -7,6 +7,9 @@
 .buildlog/
 .history
 
+# Local secrets (API tokens)
+environment.local
+
 
 
 # Flutter repo-specific

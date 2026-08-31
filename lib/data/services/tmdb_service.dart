@@ -178,7 +178,6 @@ class TmdbService {
 
   Map<String, String> _baseParams(Map<String, String>? extra) {
     return {
-      'api_key': AppApiKey.tmdb,
       'language': 'en-US',
       ...?extra,
     };
