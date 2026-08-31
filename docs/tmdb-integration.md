@@ -19,7 +19,20 @@ Override without a local file:
 flutter run --dart-define=TMDB_API_KEY=your_token_here
 ```
 
-The token is read via `AppApiKey.configure()` in `main.dart` and sent by `DioClient` as `Authorization: Bearer <token>` on every TMDB request.
+The token is read via `AppApiKey.configure()` in `main.dart` and sent by `DioClient`:
+- **Read Access Token (JWT, starts with `eyJ`)** → `Authorization: Bearer <token>`
+- **API Key v3 (32 chars)** → `api_key` query parameter
+
+`ApiConstants.baseUrl` must end with a trailing slash (`https://api.themoviedb.org/3/`) so Dio builds paths like `/3/trending/...` correctly.
+
+### Flutter Web (CORS)
+
+TMDB does not allow direct browser calls. For local web development, launch with Chrome flags that disable web security (configured in `.vscode/launch.json`):
+
+- `--disable-web-security`
+- `--user-data-dir=.dart_tool/chrome-dev`
+
+For production web builds you need your own backend proxy.
 
 ## Endpoints used
 

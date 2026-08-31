@@ -77,13 +77,43 @@ class DioClient {
     _setupInterceptors();
   }
 
+  void _applyAuth(RequestOptions options) {
+    if (_apiKey.isEmpty) return;
+
+    if (_apiKey.startsWith('eyJ')) {
+      options.headers['Authorization'] = 'Bearer $_apiKey';
+    } else {
+      options.queryParameters.putIfAbsent('api_key', () => _apiKey);
+    }
+  }
+
+  bool _hasJsonBody(dynamic data) {
+    if (data == null) return false;
+    if (data is String) {
+      return data.trim().isNotEmpty && !data.trimLeft().startsWith('<!');
+    }
+    return true;
+  }
+
+  ApiErrorType _errorTypeForStatus(int? statusCode) {
+    switch (statusCode) {
+      case 401:
+      case 403:
+        return ApiErrorType.unauthorized;
+      case 404:
+        return ApiErrorType.notFound;
+      case 429:
+        return ApiErrorType.rateLimit;
+      default:
+        return ApiErrorType.invalidResponse;
+    }
+  }
+
   void _setupInterceptors() {
     _dio.interceptors.clear();
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) {
-        if (_apiKey.isNotEmpty) {
-          options.headers['Authorization'] = 'Bearer $_apiKey';
-        }
+        _applyAuth(options);
         if (kDebugMode) {
           // ignore: avoid_print
           print('📡 [REQUEST] ${options.method} ${options.path}');
@@ -121,6 +151,12 @@ class DioClient {
       );
 
       if (response.statusCode == 200) {
+        if (!_hasJsonBody(response.data)) {
+          return ApiResult.error(
+            ApiErrorType.invalidResponse,
+            message: 'HTTP 200: empty or non-JSON response body',
+          );
+        }
         return ApiResult.success(response.data as T);
       } else if (response.statusCode == 429) {
         await Future.delayed(const Duration(seconds: 5));
@@ -128,8 +164,8 @@ class DioClient {
       }
 
       return ApiResult.error(
-        ApiErrorType.invalidResponse,
-        message: 'HTTP ${response.statusCode}: ${response.data}',
+        _errorTypeForStatus(response.statusCode),
+        message: 'HTTP ${response.statusCode}: ${response.data ?? 'no body'}',
       );
     } catch (e) {
       if (e is DioException && e.type == DioExceptionType.connectionTimeout) {

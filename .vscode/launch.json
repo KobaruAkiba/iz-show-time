@@ -8,7 +8,9 @@
       "program": "lib/main.dart",
       "flutterMode": "debug",
       "toolArgs": [
-        "--dart-define-from-file=environment.local"
+        "--dart-define-from-file=environment.local",
+        "--web-browser-flag=--disable-web-security",
+        "--web-browser-flag=--user-data-dir=${workspaceFolder}/.dart_tool/chrome-dev"
       ]
     }
   ]

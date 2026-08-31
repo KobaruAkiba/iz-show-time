@@ -5,7 +5,10 @@ enum MediaType { movie, tvShow }
 
 /// API Configuration and Endpoints for TMDB integration
 class ApiConstants {
-  static const String baseUrl = 'https://api.themoviedb.org/3';
+  static const String _remoteBaseUrl = 'https://api.themoviedb.org/3/';
+
+  /// Trailing slash required so Dio resolves `3/` + `trending/...` correctly.
+  static String get baseUrl => _remoteBaseUrl;
   static const String imageBaseUrl = 'https://image.tmdb.org/t/p';
 
   static const String originalImage = '/original';
