@@ -4,6 +4,7 @@ import '../../core/constants/api_constants.dart';
 import '../../core/cache/cache_manager.dart';
 import '../models/catalogue_item.dart';
 import '../models/episode_model.dart';
+import '../models/media_details.dart';
 
 /// Unified TMDB API service with caching and JSON parsing
 class TmdbService {
@@ -58,6 +59,20 @@ class TmdbService {
       ttlMinutes: AppConstants.tvDetailsCacheTTL,
     );
     return data == null ? null : TvShow.fromJson(data);
+  }
+
+  Future<MediaDetails?> getMediaDetails(CatalogueItem item) async {
+    final isFilm = item is Film;
+    final path = isFilm ? 'movie/${item.id}' : 'tv/${item.id}';
+    final data = await _fetchSingle(
+      path,
+      extraParams: isFilm ? {'append_to_response': 'credits'} : null,
+      ttlMinutes: isFilm
+          ? AppConstants.movieDetailsCacheTTL
+          : AppConstants.tvDetailsCacheTTL,
+    );
+    if (data == null) return null;
+    return MediaDetails.fromTmdbJson(data, isFilm: isFilm);
   }
 
   Future<({List<Film> films, List<TvShow> tvShows})> searchMulti({
@@ -146,9 +161,10 @@ class TmdbService {
 
   Future<Map<String, dynamic>?> _fetchSingle(
     String path, {
+    Map<String, String>? extraParams,
     int? ttlMinutes,
   }) async {
-    final params = _baseParams(null);
+    final params = _baseParams(extraParams);
     final cacheKey = _buildCacheKey(path, params);
 
     final cached = _cache.get<Map<String, dynamic>>(cacheKey);

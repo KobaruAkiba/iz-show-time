@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../widgets/debounce_search_widget.dart';
 import '../../widgets/media_card.dart';
+import '../../widgets/media_detail_sheet.dart';
 import '../../../data/models/catalogue_item.dart';
 import '../../../core/services/app_services.dart';
 import '../../../core/routing/app_router.dart';
 
-/// Main home screen showing trending content and quick access to catalogue
+/// Main home screen showing trending content carousel
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -63,16 +64,20 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  void _openDetails(CatalogueItem item) {
+    showMediaDetailSheet(context, item);
+  }
+
   @override
   Widget build(BuildContext context) {
-    _pageController ??= PageController(viewportFraction: 0.85);
+    _pageController ??= PageController(viewportFraction: 0.82);
 
     return Scaffold(
       body: SafeArea(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(),
-            const SizedBox(height: 16),
             if (_isLoading)
               const Expanded(
                 child: Center(child: CircularProgressIndicator()),
@@ -83,6 +88,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      Icon(
+                        Icons.cloud_off,
+                        size: 48,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.4),
+                      ),
+                      const SizedBox(height: 12),
                       Text(_errorMessage!),
                       const SizedBox(height: 12),
                       FilledButton(
@@ -93,11 +107,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               )
-            else ...[
-              _buildQuickActionsSection(),
-              const SizedBox(height: 20),
+            else
               Expanded(child: _buildTrendingSection()),
-            ],
           ],
         ),
       ),
@@ -115,78 +126,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: DebounceSearchWidget(onSearch: _handleSearch),
+          Text(
+            'Show Time',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
           ),
-          IconButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Filter features coming soon')),
-              );
-            },
-            icon: const Icon(Icons.tune),
-          ),
+          const SizedBox(height: 12),
+          DebounceSearchWidget(onSearch: _handleSearch),
         ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActionsSection() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildQuickActionTile(
-              icon: Icons.search,
-              title: 'Search TMDB',
-              onTap: () => Navigator.pushNamed(context, AppRouter.searchRoute),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: _buildQuickActionTile(
-              icon: Icons.bookmark,
-              title: 'My Catalogue',
-              onTap: () =>
-                  Navigator.pushNamed(context, AppRouter.catalogueRoute),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActionTile({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: Theme.of(context).colorScheme.primary, size: 32),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -194,10 +146,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildTrendingSection() {
     if (_trendingItems.isEmpty) {
       return Center(
-        child: Text(
-          'No trending content available. Check your TMDB API key.',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyMedium,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            'No trending content available. Check your TMDB API key.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
         ),
       );
     }
@@ -206,23 +161,27 @@ class _HomeScreenState extends State<HomeScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '🔥 Trending Now',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              IconButton(
-                onPressed: _loadTrending,
-                icon: const Icon(Icons.refresh),
-              ),
-            ],
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+          child: Text(
+            'Trending Now',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+          child: Text(
+            'Swipe to explore · tap for details',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.5),
+                ),
+          ),
+        ),
+        const SizedBox(height: 16),
         Expanded(
           child: PageView.builder(
             controller: _pageController,
@@ -230,47 +189,54 @@ class _HomeScreenState extends State<HomeScreen> {
             onPageChanged: (index) => setState(() => _currentPageIndex = index),
             itemBuilder: (context, index) {
               final item = _trendingItems[index];
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: MediaPosterCard(
-                  item: item,
-                  isBookmarked: _appServices.isInCatalogue(item.id),
-                  onAddRemove: () {
-                    _appServices.toggleCatalogueItem(item);
-                    setState(() {});
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          _appServices.isInCatalogue(item.id)
-                              ? 'Added to catalogue'
-                              : 'Removed from catalogue',
-                        ),
-                      ),
-                    );
-                  },
+              return AnimatedBuilder(
+                animation: _pageController!,
+                builder: (context, child) {
+                  double scale = 1.0;
+                  if (_pageController!.position.haveDimensions) {
+                    final page = _pageController!.page ?? index.toDouble();
+                    scale = (1 - (page - index).abs() * 0.12).clamp(0.88, 1.0);
+                  }
+                  return Transform.scale(
+                    scale: scale,
+                    child: child,
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: MediaPosterCard(
+                    item: item,
+                    isActive: index == _currentPageIndex,
+                    onTap: () => _openDetails(item),
+                  ),
                 ),
               );
             },
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(_trendingItems.length, (index) {
-            return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              width: index == _currentPageIndex ? 20 : 8,
+            final isActive = index == _currentPageIndex;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: isActive ? 24 : 8,
               height: 8,
               decoration: BoxDecoration(
-                color: index == _currentPageIndex
+                color: isActive
                     ? Theme.of(context).colorScheme.primary
-                    : Colors.grey.withValues(alpha: 0.5),
+                    : Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(4),
               ),
             );
           }),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 24),
       ],
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/app_scroll_behavior.dart';
 import 'core/network/dio_client.dart';
 import 'core/constants/api_constants.dart';
 import 'core/services/app_services.dart';
@@ -58,6 +59,7 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       title: 'Film/TV Tracker',
       debugShowCheckedModeBanner: false,
+      scrollBehavior: AppScrollBehavior(),
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
