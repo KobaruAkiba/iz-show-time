@@ -1,3 +1,5 @@
+import '../../core/constants/api_constants.dart';
+
 /// Base class for all catalogue items (Films and TV Shows)
 abstract class CatalogueItem {
   final int id;
@@ -9,23 +11,32 @@ abstract class CatalogueItem {
     required this.title,
     this.tags = const [],
   });
+
+  String? get posterPath;
+  double get voteAverage;
+  String? get overview;
+  String get posterUrl => ApiConstants.posterUrl(posterPath);
+
+  CatalogueItem copyWithTags(List<String> newTags);
 }
 
-/// Extension to add common functionality to catalogue items
 extension CatalogueItemExtension on CatalogueItem {
-  bool containsTag(String tag) {
-    return tags.contains(tag);
-  }
-  
-  List<String> withoutTag(String tag) {
-    return tags.where((t) => t != tag).toList();
-  }
+  bool containsTag(String tag) => tags.contains(tag);
+
+  List<String> withoutTag(String tag) =>
+      tags.where((t) => t != tag).toList();
+
+  bool get isFilm => this is Film;
+  bool get isTvShow => this is TvShow;
 }
 
-/// Film catalogue item extending base model
+/// Film catalogue item
 class Film extends CatalogueItem {
+  @override
   final String? overview;
+  @override
   final String? posterPath;
+  @override
   final double voteAverage;
 
   const Film({
@@ -37,29 +48,110 @@ class Film extends CatalogueItem {
     super.tags = const [],
   });
 
+  factory Film.fromJson(Map<String, dynamic> json) {
+    return Film(
+      id: json['id'] as int,
+      title: json['title'] as String? ??
+          json['original_title'] as String? ??
+          json['name'] as String? ??
+          '',
+      overview: json['overview'] as String?,
+      posterPath: json['poster_path'] as String?,
+      voteAverage: (json['vote_average'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'overview': overview,
+        'poster_path': posterPath,
+        'vote_average': voteAverage,
+        'tags': tags,
+      };
+
+  @override
+  Film copyWithTags(List<String> newTags) => Film(
+        id: id,
+        title: title,
+        overview: overview,
+        posterPath: posterPath,
+        voteAverage: voteAverage,
+        tags: newTags,
+      );
+
   @override
   String toString() => 'Film(id: $id, title: $title)';
 }
 
-/// TV Show catalogue item extending base model
+/// TV Show catalogue item
 class TvShow extends CatalogueItem {
   final int seasonNumber;
   final int episodeNumber;
+  @override
   final String? overview;
+  @override
   final String? posterPath;
+  @override
   final double voteAverage;
 
   const TvShow({
     required super.id,
     required super.title,
-    required this.seasonNumber,
-    required this.episodeNumber,
+    this.seasonNumber = 1,
+    this.episodeNumber = 1,
     this.overview,
     this.posterPath,
     this.voteAverage = 0.0,
     super.tags = const [],
   });
 
+  factory TvShow.fromJson(Map<String, dynamic> json) {
+    return TvShow(
+      id: json['id'] as int,
+      title: json['name'] as String? ??
+          json['original_name'] as String? ??
+          json['title'] as String? ??
+          '',
+      overview: json['overview'] as String?,
+      posterPath: json['poster_path'] as String?,
+      voteAverage: (json['vote_average'] as num?)?.toDouble() ?? 0.0,
+      seasonNumber: json['season_number'] as int? ?? 1,
+      episodeNumber: json['episode_number'] as int? ?? 1,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': title,
+        'overview': overview,
+        'poster_path': posterPath,
+        'vote_average': voteAverage,
+        'season_number': seasonNumber,
+        'episode_number': episodeNumber,
+        'tags': tags,
+      };
+
+  @override
+  TvShow copyWithTags(List<String> newTags) => TvShow(
+        id: id,
+        title: title,
+        seasonNumber: seasonNumber,
+        episodeNumber: episodeNumber,
+        overview: overview,
+        posterPath: posterPath,
+        voteAverage: voteAverage,
+        tags: newTags,
+      );
+
   @override
   String toString() => 'TvShow(id: $id, name: $title)';
+}
+
+/// Parse TMDB multi-search result into catalogue items
+CatalogueItem? catalogueItemFromSearchJson(Map<String, dynamic> json) {
+  final mediaType = json['media_type'] as String?;
+  if (mediaType == 'movie') return Film.fromJson(json);
+  if (mediaType == 'tv') return TvShow.fromJson(json);
+  return null;
 }

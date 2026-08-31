@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../widgets/film_card.dart';
-import '../../widgets/tv_show_card.dart';
+import '../../widgets/media_card.dart';
 import '../../../data/models/catalogue_item.dart';
+import '../../../core/services/app_services.dart';
+import '../../../core/constants/app_constants.dart';
 
-/// Search screen for finding films, TV shows, and tags
+/// Search screen for finding films and TV shows via TMDB
 class SearchScreen extends StatefulWidget {
   final String initialQuery;
 
@@ -16,322 +17,236 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   late TextEditingController _controller;
+  Timer? _debounceTimer;
   bool _isSearching = false;
-  bool _isLoading = true;
+  bool _isLoading = false;
+  String? _errorMessage;
 
-  // Search results
-  List<Map<String, dynamic>> _filmResults = [];
-  List<Map<String, dynamic>> _tvShowResults = [];
-  List<Map<String, dynamic>> _tagResults = [];
+  List<Film> _filmResults = [];
+  List<TvShow> _tvShowResults = [];
 
-  // View toggle: films or tv shows only
   bool _showOnlyFilms = false;
   bool _showOnlyTvShows = false;
+
+  final _appServices = AppServices();
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialQuery);
-
     if (widget.initialQuery.isNotEmpty) {
-      Future.delayed(const Duration(milliseconds: 500), () {
-        _performSearch(widget.initialQuery);
-      });
+      _performSearch(widget.initialQuery);
     }
   }
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
-  void _performSearch(String query) async {
+  void _onQueryChanged(String value) {
+    _debounceTimer?.cancel();
+    if (value.trim().isEmpty) {
+      setState(() {
+        _isSearching = false;
+        _isLoading = false;
+        _filmResults = [];
+        _tvShowResults = [];
+        _errorMessage = null;
+      });
+      return;
+    }
+
+    _debounceTimer = Timer(
+      const Duration(milliseconds: AppConstants.searchDebounceDelayMs),
+      () => _performSearch(value.trim()),
+    );
+  }
+
+  Future<void> _performSearch(String query) async {
     if (query.isEmpty) return;
 
     setState(() {
       _isSearching = true;
-      _filmResults.clear();
-      _tvShowResults.clear();
-      _tagResults.clear();
       _isLoading = true;
+      _errorMessage = null;
+      _filmResults = [];
+      _tvShowResults = [];
     });
 
-    // Simulate API call - in real implementation, use DioClient to fetch from TMDB
-    Future.delayed(const Duration(seconds: 1), () {
+    try {
+      final results = await _appServices.tmdbService.searchMulti(query: query);
       if (!mounted) return;
-
+      setState(() {
+        _filmResults = results.films;
+        _tvShowResults = results.tvShows;
+        _isSearching = false;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isSearching = false;
         _isLoading = false;
-
-        // Simulated results (replace with actual API response)
-        _filmResults = List.generate(
-            5,
-            (i) => {
-                  'id': i + 1,
-                  'title': '$query $i',
-                  'overview': 'A thrilling movie about $query.',
-                  'posterPath': '',
-                  'voteAverage': (0.5 + (i % 10)).toDouble(),
-                  'tags': ['action', 'drama'],
-                });
-
-        _tvShowResults = List.generate(
-            3,
-            (i) => {
-                  'id': i + 1,
-                  'name': '$query $i',
-                  'overview': 'A captivating TV series about $query.',
-                  'posterPath': '',
-                  'voteAverage': (7.0 + (i % 3)).toDouble(),
-                  'tags': ['drama', 'series'],
-                });
-
-        // Extract unique tags from results
-        _tagResults = [
-          {'name': 'action'},
-          {'name': 'drama'},
-          {'name': query},
-          {'name': 'popular'},
-          {'name': 'trending'},
-        ];
-      });
-    });
-  }
-
-  void _updateQuery(String value) {
-    if (mounted) {
-      setState(() {
-        _controller.text = value;
-
-        if (value.isEmpty) {
-          _performSearch('');
-        } else {
-          // Debounced search - wait 500ms
-          Timer(const Duration(milliseconds: 500), () {
-            _performSearch(value);
-          });
-        }
+        _errorMessage = 'Search failed. Check your API key and connection.';
       });
     }
-  }
-
-  void _toggleShowFilmsOnly(bool value) {
-    setState(() {
-      _showOnlyFilms = value;
-    });
-  }
-
-  void _toggleShowTvShowsOnly(bool value) {
-    setState(() {
-      _showOnlyTvShows = value;
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_controller.text.isNotEmpty ? 'Search Results' : 'Search'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.clear),
-            onPressed: () {
-              _controller.clear();
-              setState(() {
-                _isSearching = false;
-                _isLoading = true;
-              });
-              // Clear results after short delay
-              Future.delayed(const Duration(milliseconds: 500), () {
-                if (mounted) Navigator.pop(context);
-              });
-            },
-          ),
-        ],
+        title: const Text('Search'),
       ),
-      body: _isLoading ? _buildLoading() : _buildContent(),
-    );
-  }
-
-  Widget _buildLoading() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      body: Column(
         children: [
-          const CircularProgressIndicator(),
-          const SizedBox(height: 16),
-          Text(
-            'Searching for "${widget.initialQuery}"...',
-            style: Theme.of(context).textTheme.bodyMedium,
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: TextField(
+              controller: _controller,
+              autofocus: widget.initialQuery.isEmpty,
+              decoration: InputDecoration(
+                hintText: 'Search films and TV shows...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _controller.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _controller.clear();
+                          _onQueryChanged('');
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onChanged: _onQueryChanged,
+              onSubmitted: _performSearch,
+            ),
           ),
+          Expanded(child: _buildBody()),
         ],
       ),
     );
   }
 
-  Widget _buildContent() {
-    if (_controller.text.isEmpty && !_isSearching) {
+  Widget _buildBody() {
+    if (_controller.text.trim().isEmpty && !_isSearching) {
       return _buildEmptyState();
     }
 
     if (_isLoading) {
-      return _buildLoading();
+      return const Center(child: CircularProgressIndicator());
     }
 
-    // Filter results based on toggle switches
-    final filmResults = _showOnlyFilms
-        ? _filmResults
-        : _showOnlyTvShows
-            ? []
-            : _filmResults;
+    if (_errorMessage != null) {
+      return Center(child: Text(_errorMessage!));
+    }
 
-    final tvResults = _showOnlyTvShows
-        ? _tvShowResults
-        : _showOnlyFilms
-            ? []
-            : _tvShowResults;
+    final filmResults =
+        _showOnlyTvShows ? <Film>[] : _filmResults;
+    final tvResults =
+        _showOnlyFilms ? <TvShow>[] : _tvShowResults;
 
-    final tagResults = _tagResults.where((t) {
-      final query = widget.initialQuery.toLowerCase();
-      return t['name']?.toString().toLowerCase().contains(query) == true;
-    }).toList();
+    if (filmResults.isEmpty && tvResults.isEmpty) {
+      return Center(
+        child: Text(
+          'No results for "${_controller.text}"',
+          style: Theme.of(context).textTheme.bodyLarge,
+        ),
+      );
+    }
 
     return RefreshIndicator(
-      onRefresh: () async => _performSearch(_controller.text),
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
+      onRefresh: () => _performSearch(_controller.text.trim()),
+      child: ListView(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Toggle filters
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SwitchListTile(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
                   secondary: const Icon(Icons.movie_filter, size: 20),
                   title: const Text('Films Only'),
                   value: _showOnlyFilms,
-                  onChanged: (value) => _toggleShowFilmsOnly(value),
-                  activeThumbColor: Theme.of(context).colorScheme.primary,
+                  onChanged: (value) {
+                    setState(() {
+                      _showOnlyFilms = value;
+                      if (value) _showOnlyTvShows = false;
+                    });
+                  },
                 ),
-                SwitchListTile(
+              ),
+              Expanded(
+                child: SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
                   secondary: const Icon(Icons.tv_outlined, size: 20),
-                  title: const Text('TV Shows Only'),
+                  title: const Text('TV Only'),
                   value: _showOnlyTvShows,
-                  onChanged: (value) => _toggleShowTvShowsOnly(value),
-                  activeThumbColor: Theme.of(context).colorScheme.primary,
+                  onChanged: (value) {
+                    setState(() {
+                      _showOnlyTvShows = value;
+                      if (value) _showOnlyFilms = false;
+                    });
+                  },
                 ),
-              ],
+              ),
+            ],
+          ),
+          if (filmResults.isNotEmpty) ...[
+            Text(
+              '🎬 Films',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
-
-            if (_filmResults.isNotEmpty) ...[
-              const SizedBox(height: 24),
-              Text(
-                '🎬 Films',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-
-              // Results grid or list
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.75,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
-                ),
-                itemCount: filmResults.length,
-                itemBuilder: (context, index) {
-                  final result = filmResults[index];
-                  return FilmCard(
-                    film: Film(
-                      id: result['id'],
-                      title: result['title'] as String,
-                      overview: result['overview'] as String?,
-                      posterPath: '',
-                      voteAverage: result['voteAverage'] as double,
-                      tags: (result['tags'] as List<dynamic>).cast<String>(),
-                    ),
-                    onTap: () {},
-                    onAddRemove: () {},
-                  );
-                },
-              ),
-
-              const SizedBox(height: 16),
-            ],
-
-            if (_tvShowResults.isNotEmpty) ...[
-              Text(
-                '📺 TV Shows',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.75,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
-                ),
-                itemCount: tvResults.length,
-                itemBuilder: (context, index) {
-                  final result = tvResults[index];
-                  return TvShowCard(
-                    tvShow: TvShow(
-                      id: result['id'],
-                      title: result['name'] as String,
-                      seasonNumber: 1,
-                      episodeNumber: 1,
-                      overview: result['overview'] as String?,
-                      posterPath: '',
-                      voteAverage: result['voteAverage'] as double,
-                      tags: (result['tags'] as List<dynamic>).cast<String>(),
-                    ),
-                    onTap: () {},
-                    onAddRemove: () {},
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            if (_tagResults.isNotEmpty) ...[
-              Text(
-                '🏷️ Popular Tags',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: tagResults.map((tag) {
-                  return FilterChip(
-                    label: Text(tag['name'] as String),
-                    selectedColor:
-                        Theme.of(context).colorScheme.primaryContainer,
-                    checkmarkColor:
-                        Theme.of(context).colorScheme.onPrimaryContainer,
-                    onSelected: (_) {},
-                  );
-                }).toList(),
-              ),
-            ],
-
-            const SizedBox(height: 120), // Extra space for FAB
+            const SizedBox(height: 8),
+            ...filmResults.map((film) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: MediaCard(
+                    item: film,
+                    isBookmarked: _appServices.isInCatalogue(film.id),
+                    onAddRemove: () => _toggleItem(film),
+                  ),
+                )),
+            const SizedBox(height: 16),
           ],
+          if (tvResults.isNotEmpty) ...[
+            Text(
+              '📺 TV Shows',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            ...tvResults.map((show) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: MediaCard(
+                    item: show,
+                    isBookmarked: _appServices.isInCatalogue(show.id),
+                    onAddRemove: () => _toggleItem(show),
+                  ),
+                )),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _toggleItem(CatalogueItem item) {
+    _appServices.toggleCatalogueItem(item);
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _appServices.isInCatalogue(item.id)
+              ? 'Added to catalogue'
+              : 'Removed from catalogue',
         ),
       ),
     );
@@ -345,8 +260,10 @@ class _SearchScreenState extends State<SearchScreen> {
           Icon(
             Icons.search,
             size: 80,
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+            color: Theme.of(context)
+                .colorScheme
+                .onSurface
+                .withValues(alpha: 0.3),
           ),
           const SizedBox(height: 16),
           Text(
@@ -357,7 +274,7 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Search for films, TV shows, or tags',
+            'Search TMDB for films and TV shows',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context)
                       .colorScheme
@@ -368,10 +285,5 @@ class _SearchScreenState extends State<SearchScreen> {
         ],
       ),
     );
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
   }
 }

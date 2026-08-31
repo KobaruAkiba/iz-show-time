@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../presentation/screens/home/home_screen.dart';
 import '../../presentation/screens/search/search_screen.dart';
 import '../../presentation/screens/catalogue/catalogue_screen.dart';
 import '../../presentation/screens/tracking/tracking_screen.dart';
 import '../../presentation/screens/settings/settings_screen.dart';
+import '../../presentation/navigation/main_navigator.dart';
 
 /// Application router configuration for navigation
 class AppRouter {
@@ -13,51 +13,49 @@ class AppRouter {
   static const String trackingRoute = '/tracking';
   static const String settingsRoute = '/settings';
 
-  /// Get route name for a given location
-  static String getRouteName(String location) {
-    if (location == homeRoute || location.isEmpty) return homeRoute;
-
-    switch (location) {
-      case searchRoute:
-        return searchRoute;
-      case catalogueRoute:
-        return catalogueRoute;
-      case trackingRoute:
-        return trackingRoute;
-      case settingsRoute:
-        return settingsRoute;
-      default:
-        return homeRoute;
-    }
-  }
-
-  /// Build a Map of all routes with their destinations and names
   static final Map<String, WidgetBuilder> routes = <String, WidgetBuilder>{
-    homeRoute: (context) => const HomeScreen(),
+    homeRoute: (context) => const MainNavigator(),
     searchRoute: (context) => const SearchScreen(initialQuery: ''),
     catalogueRoute: (context) => const CatalogueScreen(),
     trackingRoute: (context) => const TrackingScreen(),
     settingsRoute: (context) => const SettingsScreen(),
   };
 
-  /// Get a route builder for a specific location
-  static WidgetBuilder getRouteBuilder(String location) {
-    final routeName = getRouteName(location);
-    return routes[routeName]!;
-  }
-
-  /// Get the destination widget for a given route name
-  static Widget? getDestination(String location, BuildContext context) {
-    final routeName = getRouteName(location);
-    final builder = routes[routeName];
-
-    if (builder == null) return null;
-
-    // In a real app, you'd use Navigator or state management to persist this widget
-    // For now, we'll show a placeholder
-    return Scaffold(
-      appBar: AppBar(title: Text(routeName)),
-      body: Center(child: Text('Route: $routeName')),
-    );
+  static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
+    switch (settings.name) {
+      case searchRoute:
+        final query = settings.arguments is String
+            ? settings.arguments as String
+            : '';
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (context) => SearchScreen(initialQuery: query),
+        );
+      case homeRoute:
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (context) => const MainNavigator(),
+        );
+      case catalogueRoute:
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (context) => const CatalogueScreen(),
+        );
+      case trackingRoute:
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (context) => const TrackingScreen(),
+        );
+      case settingsRoute:
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (context) => const SettingsScreen(),
+        );
+      default:
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (context) => const MainNavigator(),
+        );
+    }
   }
 }

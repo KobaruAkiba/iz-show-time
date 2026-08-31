@@ -2,99 +2,113 @@ import 'dart:convert';
 
 /// Singleton cache manager for storing and retrieving cached data
 class CacheManager {
-  final Map<String, dynamic> _memoryCache = {};
+  static final CacheManager _instance = CacheManager._internal();
 
-  /// Private constructor - use factory instead
+  final Map<String, String> _memoryCache = {};
+
   CacheManager._internal();
 
-  /// Factory constructor to create singleton instance
-  factory CacheManager() => CacheManager._internal();
+  factory CacheManager() => _instance;
 
-  /// Clears all cached data
   void clearAll() {
     _memoryCache.clear();
   }
 
-  /// Removes a specific key from the cache
   void removeFromAll(String key) {
     _memoryCache.remove(key);
   }
 
-  /// Gets statistics about the cache (returns keys expected by AppServices)
   Map<String, dynamic> getStatistics() => {
         'movies_box_size': 0,
         'episodes_box_size': 0,
         'memory_cache_entries': _memoryCache.length,
       };
 
-  /// Generic getter method - retrieve value by type and key
   T? get<T>(String key) {
     final rawValue = _memoryCache[key];
     if (rawValue == null) return null;
-    
+
     try {
-      final data = jsonDecode(rawValue);
-      return data as T?;
+      final decoded = jsonDecode(rawValue);
+      if (decoded is Map<String, dynamic> && decoded.containsKey('value')) {
+        final expiresAtStr = decoded['expiresAt'] as String?;
+        if (expiresAtStr != null) {
+          final expiresAt = DateTime.parse(expiresAtStr);
+          if (DateTime.now().isAfter(expiresAt)) {
+            _memoryCache.remove(key);
+            return null;
+          }
+        }
+        final value = decoded['value'];
+        if (value is T) return value;
+        if (value is List) {
+          return List<dynamic>.from(value) as T;
+        }
+        if (value is Map) {
+          return Map<String, dynamic>.from(value) as T;
+        }
+        return value as T?;
+      }
+      return decoded as T?;
     } catch (_) {
       return rawValue as T?;
     }
   }
 
-  /// Generic setter method - store value with optional TTL in minutes
   void put<T>(String key, dynamic value, {int ttlMinutes = 60}) {
-    final serialized = jsonEncode(value);
-    _memoryCache[key] = serialized;
+    final expiresAtTime = ttlMinutes <= 0
+        ? DateTime.now().subtract(const Duration(seconds: 1))
+        : DateTime.now().add(Duration(minutes: ttlMinutes));
+    _memoryCache[key] = jsonEncode({
+      'value': value,
+      'expiresAt': expiresAtTime.toIso8601String(),
+    });
   }
 
-  /// Convenience method to retrieve cached movie details
-  String? getCachedMovieDetails(int id) => get<String>('movie_details_' + id.toString());
+  String? getCachedMovieDetails(int id) =>
+      get<String>('movie_details_$id');
 
-  /// Sets cached movie details
   void setCachedMovieDetails(int id, Map<String, dynamic> details) {
-    put('movie_details_' + id.toString(), details);
+    put('movie_details_$id', details);
   }
 
-  /// Convenience method to retrieve cached TV show details
-  String? getCachedTvShowDetails(int id) => get<String>('tvshow_details_' + id.toString());
+  String? getCachedTvShowDetails(int id) =>
+      get<String>('tvshow_details_$id');
 
-  /// Sets cached TV show details
   void setCachedTvShowDetails(int id, Map<String, dynamic> details) {
-    put('tvshow_details_' + id.toString(), details);
+    put('tvshow_details_$id', details);
   }
 
-  /// Convenience method to retrieve cached TV show episodes
   String? getCachedTvShowEpisodes(int tvId, int season) =>
-      get<String>('tvshow_episodes_' + tvId.toString() + '_' + season.toString());
+      get<String>('tvshow_episodes_${tvId}_$season');
 
-  /// Sets cached TV show episodes
   void setCachedTvShowEpisodes(
-      int tvId, int season, List<Map<String, dynamic>> episodes) {
-    put('tvshow_episodes_' + tvId.toString() + '_' + season.toString(), episodes);
+    int tvId,
+    int season,
+    List<Map<String, dynamic>> episodes,
+  ) {
+    put('tvshow_episodes_${tvId}_$season', episodes);
   }
 
-  /// Clears all movie cache entries
   void clearAllMovieCache() {
-    for (var key in _memoryCache.keys.where((k) => k.startsWith('movie_'))) {
+    for (final key in _memoryCache.keys.where((k) => k.startsWith('movie_'))) {
       removeFromAll(key);
     }
   }
 
-  /// Clears all TV show cache entries
   void clearAllTvShowCache() {
-    for (var key in _memoryCache.keys.where((k) => k.startsWith('tvshow_'))) {
+    for (final key
+        in _memoryCache.keys.where((k) => k.startsWith('tvshow_'))) {
       removeFromAll(key);
     }
   }
 
-  /// Generic getter method (adds to public API for cache abstraction)
-  String? getFromMemory(String key) => _memoryCache[key]?.toString();
+  String? getFromMemory(String key) => _memoryCache[key];
 
-  /// Generic setter method (adds to public API for cache abstraction)
   void setInMemory(String key, dynamic value) {
-    _memoryCache[key] = jsonEncode(value);
+    put(key, value);
   }
 
-  /// Closes the cache manager (for dispose pattern compatibility)
   void dispose() {
     _memoryCache.clear();
   }

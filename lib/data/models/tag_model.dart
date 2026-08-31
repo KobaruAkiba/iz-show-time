@@ -18,7 +18,4 @@ class Tag {
 
   @override
   int get hashCode => name.hashCode ^ color.hashCode;
-
-  @override
-  String debugDescribe() => 'Tag($this)';
 }
