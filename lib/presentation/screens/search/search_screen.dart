@@ -1,10 +1,8 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../widgets/media_card.dart';
 import '../../widgets/app_page_header.dart';
 import '../../../data/models/catalogue_item.dart';
 import '../../../core/services/app_services.dart';
-import '../../../core/constants/app_constants.dart';
 
 /// Search screen for finding films and TV shows via TMDB
 class SearchScreen extends StatefulWidget {
@@ -18,10 +16,10 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   late TextEditingController _controller;
-  Timer? _debounceTimer;
-  bool _isSearching = false;
+  bool _hasSearched = false;
   bool _isLoading = false;
   String? _errorMessage;
+  String _lastQuery = '';
 
   List<Film> _filmResults = [];
   List<TvShow> _tvShowResults = [];
@@ -42,54 +40,79 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   void dispose() {
-    _debounceTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
   void _onQueryChanged(String value) {
-    _debounceTimer?.cancel();
-    if (value.trim().isEmpty) {
-      setState(() {
-        _isSearching = false;
+    setState(() {
+      if (value.trim().isEmpty) {
+        _hasSearched = false;
         _isLoading = false;
         _filmResults = [];
         _tvShowResults = [];
         _errorMessage = null;
-      });
-      return;
-    }
+        _lastQuery = '';
+      }
+    });
+  }
 
-    _debounceTimer = Timer(
-      const Duration(milliseconds: AppConstants.searchDebounceDelayMs),
-      () => _performSearch(value.trim()),
-    );
+  void _clearQuery() {
+    _controller.clear();
+    _onQueryChanged('');
   }
 
   Future<void> _performSearch(String query) async {
-    if (query.isEmpty) return;
+    final trimmedQuery = query.trim();
+    if (trimmedQuery.isEmpty) return;
 
     setState(() {
-      _isSearching = true;
+      _hasSearched = true;
       _isLoading = true;
       _errorMessage = null;
+      _lastQuery = trimmedQuery;
       _filmResults = [];
       _tvShowResults = [];
     });
 
     try {
-      final results = await _appServices.tmdbService.searchMulti(query: query);
-      if (!mounted) return;
+      final localResults = _appServices.searchLocal(trimmedQuery);
+      final hasCachedRemote =
+          _appServices.tmdbService.hasCachedSearch(trimmedQuery);
+      final shouldFetchRemote =
+          !hasCachedRemote && localResults.films.isEmpty && localResults.tvShows.isEmpty;
+
+      final remoteResults = shouldFetchRemote || hasCachedRemote
+          ? await _appServices.tmdbService.searchMulti(query: trimmedQuery)
+          : (films: <Film>[], tvShows: <TvShow>[]);
+
+      if (!mounted || _lastQuery != trimmedQuery) return;
+
+      final films = <Film>[];
+      final tvShows = <TvShow>[];
+      final seenIds = <int>{};
+
+      for (final film in localResults.films) {
+        if (seenIds.add(film.id)) films.add(film);
+      }
+      for (final show in localResults.tvShows) {
+        if (seenIds.add(show.id)) tvShows.add(show);
+      }
+      for (final film in remoteResults.films) {
+        if (seenIds.add(film.id)) films.add(film);
+      }
+      for (final show in remoteResults.tvShows) {
+        if (seenIds.add(show.id)) tvShows.add(show);
+      }
+
       setState(() {
-        _filmResults = results.films;
-        _tvShowResults = results.tvShows;
-        _isSearching = false;
+        _filmResults = films;
+        _tvShowResults = tvShows;
         _isLoading = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || _lastQuery != trimmedQuery) return;
       setState(() {
-        _isSearching = false;
         _isLoading = false;
         _errorMessage = 'Search failed. Check your API key and connection.';
       });
@@ -108,18 +131,25 @@ class _SearchScreenState extends State<SearchScreen> {
               child: TextField(
                 controller: _controller,
                 autofocus: widget.initialQuery.isEmpty,
+                textInputAction: TextInputAction.search,
                 decoration: InputDecoration(
                   hintText: 'Search films and TV shows...',
                   prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _controller.text.isNotEmpty
-                      ? IconButton(
+                  suffixIcon: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_controller.text.isNotEmpty)
+                        IconButton(
                           icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _controller.clear();
-                            _onQueryChanged('');
-                          },
-                        )
-                      : null,
+                          onPressed: _clearQuery,
+                        ),
+                      IconButton(
+                        icon: const Icon(Icons.arrow_forward),
+                        tooltip: 'Search',
+                        onPressed: () => _performSearch(_controller.text),
+                      ),
+                    ],
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -136,7 +166,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildBody() {
-    if (_controller.text.trim().isEmpty && !_isSearching) {
+    if (!_hasSearched) {
       return _buildEmptyState();
     }
 
@@ -148,22 +178,20 @@ class _SearchScreenState extends State<SearchScreen> {
       return Center(child: Text(_errorMessage!));
     }
 
-    final filmResults =
-        _showOnlyTvShows ? <Film>[] : _filmResults;
-    final tvResults =
-        _showOnlyFilms ? <TvShow>[] : _tvShowResults;
+    final filmResults = _showOnlyTvShows ? <Film>[] : _filmResults;
+    final tvResults = _showOnlyFilms ? <TvShow>[] : _tvShowResults;
 
     if (filmResults.isEmpty && tvResults.isEmpty) {
       return Center(
         child: Text(
-          'No results for "${_controller.text}"',
+          'No results for "$_lastQuery"',
           style: Theme.of(context).textTheme.bodyLarge,
         ),
       );
     }
 
     return RefreshIndicator(
-      onRefresh: () => _performSearch(_controller.text.trim()),
+      onRefresh: () => _performSearch(_lastQuery),
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -268,14 +296,14 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Start typing to search',
+            'Search for films and TV shows',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w500,
                 ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Search TMDB for films and TV shows',
+            'Type a title and press Enter or the search button',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context)
                       .colorScheme

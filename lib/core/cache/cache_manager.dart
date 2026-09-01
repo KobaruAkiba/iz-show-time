@@ -103,6 +103,8 @@ class CacheManager {
     }
   }
 
+  Iterable<String> get keys => _memoryCache.keys;
+
   String? getFromMemory(String key) => _memoryCache[key];
 
   void setInMemory(String key, dynamic value) {

@@ -100,6 +100,46 @@ class TmdbService {
       ttlMinutes: AppConstants.searchCacheTTL,
     );
 
+    return _parseSearchResults(results);
+  }
+
+  /// Whether a previous TMDB search for [query] is still in cache.
+  bool hasCachedSearch(String query) {
+    if (query.trim().isEmpty) return false;
+    final params = _baseParams({'query': query.trim()});
+    final cacheKey = _buildCacheKey('search/multi', params);
+    return _cache.get<List<dynamic>>(cacheKey) != null;
+  }
+
+  /// Search films and TV shows already stored in the local API cache.
+  ({List<Film> films, List<TvShow> tvShows}) searchLocalCache({
+    required String query,
+  }) {
+    final normalizedQuery = query.trim().toLowerCase();
+    if (normalizedQuery.isEmpty) {
+      return (films: <Film>[], tvShows: <TvShow>[]);
+    }
+
+    final films = <Film>[];
+    final tvShows = <TvShow>[];
+    final seenIds = <int>{};
+
+    for (final key in _cache.keys) {
+      _collectCachedMatches(
+        key: key,
+        query: normalizedQuery,
+        seenIds: seenIds,
+        films: films,
+        tvShows: tvShows,
+      );
+    }
+
+    return (films: films, tvShows: tvShows);
+  }
+
+  ({List<Film> films, List<TvShow> tvShows}) _parseSearchResults(
+    List<Map<String, dynamic>> results,
+  ) {
     final films = <Film>[];
     final tvShows = <TvShow>[];
 
@@ -113,6 +153,113 @@ class TmdbService {
     }
 
     return (films: films, tvShows: tvShows);
+  }
+
+  void _collectCachedMatches({
+    required String key,
+    required String query,
+    required Set<int> seenIds,
+    required List<Film> films,
+    required List<TvShow> tvShows,
+  }) {
+    if (_isCachedListKey(key)) {
+      final list = _cache.get<List<dynamic>>(key);
+      if (list == null) return;
+
+      for (final entry in list) {
+        if (entry is! Map<String, dynamic>) continue;
+        _tryAddLocalMatch(
+          item: _parseCachedListItem(entry, key),
+          query: query,
+          seenIds: seenIds,
+          films: films,
+          tvShows: tvShows,
+        );
+      }
+      return;
+    }
+
+    if (_isCachedMovieDetailKey(key)) {
+      final data = _cache.get<Map<String, dynamic>>(key);
+      if (data == null) return;
+      _tryAddLocalMatch(
+        item: _safeParse(() => Film.fromJson(data)),
+        query: query,
+        seenIds: seenIds,
+        films: films,
+        tvShows: tvShows,
+      );
+      return;
+    }
+
+    if (_isCachedTvDetailKey(key)) {
+      final data = _cache.get<Map<String, dynamic>>(key);
+      if (data == null) return;
+      _tryAddLocalMatch(
+        item: _safeParse(() => TvShow.fromJson(data)),
+        query: query,
+        seenIds: seenIds,
+        films: films,
+        tvShows: tvShows,
+      );
+    }
+  }
+
+  bool _isCachedListKey(String key) {
+    return key.startsWith('search/multi') ||
+        key.contains('trending/') ||
+        key.endsWith('/popular?language=en-US') ||
+        key.startsWith('movie/popular') ||
+        key.startsWith('tv/popular');
+  }
+
+  bool _isCachedMovieDetailKey(String key) {
+    return RegExp(r'^movie/\d+\?').hasMatch(key);
+  }
+
+  bool _isCachedTvDetailKey(String key) {
+    return RegExp(r'^tv/\d+\?').hasMatch(key) && !key.contains('/season/');
+  }
+
+  CatalogueItem? _parseCachedListItem(
+    Map<String, dynamic> json,
+    String cacheKey,
+  ) {
+    final fromSearch = catalogueItemFromSearchJson(json);
+    if (fromSearch != null) return fromSearch;
+
+    if (cacheKey.contains('movie')) {
+      return _safeParse(() => Film.fromJson(json));
+    }
+    if (cacheKey.contains('/tv') || cacheKey.startsWith('tv/')) {
+      return _safeParse(() => TvShow.fromJson(json));
+    }
+    return null;
+  }
+
+  CatalogueItem? _safeParse(CatalogueItem Function() parse) {
+    try {
+      return parse();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _tryAddLocalMatch({
+    required CatalogueItem? item,
+    required String query,
+    required Set<int> seenIds,
+    required List<Film> films,
+    required List<TvShow> tvShows,
+  }) {
+    if (item == null || !item.title.toLowerCase().contains(query)) return;
+    if (!seenIds.add(item.id)) return;
+
+    if (item is Film) {
+      films.add(item);
+    } else if (item is TvShow) {
+      tvShows.add(item);
+    }
   }
 
   Future<List<EpisodeModel>> getSeasonEpisodes({

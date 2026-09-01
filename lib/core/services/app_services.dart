@@ -46,6 +46,38 @@ class AppServices {
     }
   }
 
+  /// Search the user's catalogue and locally cached TMDB data.
+  ({List<Film> films, List<TvShow> tvShows}) searchLocal(String query) {
+    final normalizedQuery = query.trim().toLowerCase();
+    if (normalizedQuery.isEmpty) {
+      return (films: <Film>[], tvShows: <TvShow>[]);
+    }
+
+    final films = <Film>[];
+    final tvShows = <TvShow>[];
+    final seenIds = <int>{};
+
+    for (final item in _catalogue) {
+      if (!item.title.toLowerCase().contains(normalizedQuery)) continue;
+      if (!seenIds.add(item.id)) continue;
+      if (item is Film) {
+        films.add(item);
+      } else if (item is TvShow) {
+        tvShows.add(item);
+      }
+    }
+
+    final cached = tmdbService.searchLocalCache(query: query);
+    for (final film in cached.films) {
+      if (seenIds.add(film.id)) films.add(film);
+    }
+    for (final show in cached.tvShows) {
+      if (seenIds.add(show.id)) tvShows.add(show);
+    }
+
+    return (films: films, tvShows: tvShows);
+  }
+
   Future<void> initialize() async {
     tmdbService;
   }
