@@ -12,6 +12,18 @@ class TmdbService {
       : _cache = cacheManager ?? CacheManager();
 
   final CacheManager _cache;
+  final Map<String, Future<dynamic>> _inflight = {};
+
+  Future<List<CatalogueItem>> getTrendingAll() async {
+    final results = await _fetchResults(
+      'trending/all/day',
+      ttlMinutes: AppConstants.tvCacheTTL,
+    );
+    return results
+        .map(catalogueItemFromSearchJson)
+        .whereType<CatalogueItem>()
+        .toList();
+  }
 
   Future<List<Film>> getTrendingMovies() async {
     final results = await _fetchResults(
@@ -133,30 +145,37 @@ class TmdbService {
       return [];
     }
 
-    try {
-      final result = await DioClient.instance.get<Map<String, dynamic>>(
-        path,
-        queryParameters: params,
-      );
-
-      if (!result.isSuccess || result.data == null) {
-        return [];
+    return _dedupe(cacheKey, () async {
+      final cachedAfterWait = _cache.get<List<dynamic>>(cacheKey);
+      if (cachedAfterWait != null) {
+        return cachedAfterWait.whereType<Map<String, dynamic>>().toList();
       }
 
-      final payload = result.data!;
-      final rawResults = payload[resultsKey] as List<dynamic>? ?? [];
-      final list = rawResults.whereType<Map<String, dynamic>>().toList();
+      try {
+        final result = await DioClient.instance.get<Map<String, dynamic>>(
+          path,
+          queryParameters: params,
+        );
 
-      _cache.put(
-        cacheKey,
-        list,
-        ttlMinutes: ttlMinutes ?? AppConstants.defaultCacheTTLMinutes,
-      );
+        if (!result.isSuccess || result.data == null) {
+          return <Map<String, dynamic>>[];
+        }
 
-      return list;
-    } catch (_) {
-      return [];
-    }
+        final payload = result.data!;
+        final rawResults = payload[resultsKey] as List<dynamic>? ?? [];
+        final list = rawResults.whereType<Map<String, dynamic>>().toList();
+
+        _cache.put(
+          cacheKey,
+          list,
+          ttlMinutes: ttlMinutes ?? AppConstants.defaultCacheTTLMinutes,
+        );
+
+        return list;
+      } catch (_) {
+        return <Map<String, dynamic>>[];
+      }
+    });
   }
 
   Future<Map<String, dynamic>?> _fetchSingle(
@@ -172,23 +191,43 @@ class TmdbService {
 
     if (AppApiKey.tmdb.isEmpty) return null;
 
+    return _dedupe(cacheKey, () async {
+      final cachedAfterWait = _cache.get<Map<String, dynamic>>(cacheKey);
+      if (cachedAfterWait != null) return cachedAfterWait;
+
+      try {
+        final result = await DioClient.instance.get<Map<String, dynamic>>(
+          path,
+          queryParameters: params,
+        );
+
+        if (!result.isSuccess || result.data == null) return null;
+
+        _cache.put(
+          cacheKey,
+          result.data,
+          ttlMinutes: ttlMinutes ?? AppConstants.defaultCacheTTLMinutes,
+        );
+
+        return result.data;
+      } catch (_) {
+        return null;
+      }
+    });
+  }
+
+  Future<T> _dedupe<T>(String key, Future<T> Function() fetch) async {
+    final existing = _inflight[key];
+    if (existing != null) {
+      return await existing as Future<T>;
+    }
+
+    final future = fetch();
+    _inflight[key] = future;
     try {
-      final result = await DioClient.instance.get<Map<String, dynamic>>(
-        path,
-        queryParameters: params,
-      );
-
-      if (!result.isSuccess || result.data == null) return null;
-
-      _cache.put(
-        cacheKey,
-        result.data,
-        ttlMinutes: ttlMinutes ?? AppConstants.defaultCacheTTLMinutes,
-      );
-
-      return result.data;
-    } catch (_) {
-      return null;
+      return await future;
+    } finally {
+      _inflight.remove(key);
     }
   }
 

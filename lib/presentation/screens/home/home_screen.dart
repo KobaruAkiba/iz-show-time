@@ -37,10 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final movies = await _appServices.tmdbService.getTrendingMovies();
-      final tv = await _appServices.tmdbService.getTrendingTv();
-
-      final combined = <CatalogueItem>[...movies, ...tv];
+      final combined = await _appServices.tmdbService.getTrendingAll();
       combined.sort((a, b) => b.voteAverage.compareTo(a.voteAverage));
 
       if (!mounted) return;

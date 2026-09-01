@@ -43,12 +43,6 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   @override
-  void initState() {
-    super.initState();
-    widget.appServices.backgroundTaskRunner.start();
-  }
-
-  @override
   void dispose() {
     widget.appServices.dispose();
     super.dispose();

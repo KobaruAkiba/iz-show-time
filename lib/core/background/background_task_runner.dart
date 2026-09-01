@@ -22,9 +22,12 @@ class BackgroundTaskRunner {
   static const Duration notificationCheckInterval =
       Duration(hours: AppConstants.notificationCheckIntervalHours);
 
+  bool _started = false;
+
   Future<void> start() async {
+    if (_started) return;
+    _started = true;
     _startNotificationChecks();
-    await _performInitialTrendingCheck();
   }
 
   void _startNotificationChecks() {
@@ -39,8 +42,7 @@ class BackgroundTaskRunner {
   Future<void> _performNotificationCycle() async {
     try {
       if (_shouldRefreshTrending()) {
-        await _checkTrendingMovies();
-        await _checkTrendingTvShows();
+        await _checkTrending();
       }
     } catch (_) {}
   }
@@ -51,23 +53,8 @@ class BackgroundTaskRunner {
     return now.difference(lastUpdate) >= notificationCheckInterval;
   }
 
-  Future<void> _performInitialTrendingCheck() async {
-    try {
-      await _checkTrendingMovies();
-      await _checkTrendingTvShows();
-      _lastTrendingUpdate = DateTime.now();
-    } catch (_) {}
-  }
-
-  Future<void> _checkTrendingMovies() async {
-    final trending = await _tmdbService.getTrendingMovies();
-    if (trending.isNotEmpty) {
-      _lastTrendingUpdate = DateTime.now();
-    }
-  }
-
-  Future<void> _checkTrendingTvShows() async {
-    final trending = await _tmdbService.getTrendingTv();
+  Future<void> _checkTrending() async {
+    final trending = await _tmdbService.getTrendingAll();
     if (trending.isNotEmpty) {
       _lastTrendingUpdate = DateTime.now();
     }
@@ -77,6 +64,7 @@ class BackgroundTaskRunner {
     _notificationCheckTimer?.cancel();
     _notificationCheckTimer = null;
     _lastTrendingUpdate = null;
+    _started = false;
   }
 
   Map<String, dynamic> getStatistics() => cacheManager.getStatistics();
