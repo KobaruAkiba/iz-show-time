@@ -94,7 +94,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     setState(() {});
   }
 
-  void _markFilmWatched() {
+  Future<void> _markFilmWatched() async {
     final film = widget.item as Film;
     final runtime = _details?.runtimeMinutes ?? 0;
     if (runtime <= 0) {
@@ -104,10 +104,12 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
       return;
     }
 
-    final record = _appServices.markFilmWatched(
+    final record = await _appServices.markFilmWatched(
       film: film,
       durationMinutes: runtime,
     );
+
+    if (!mounted) return;
 
     if (record == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -132,7 +134,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
         _appServices.isWatched(mediaId: show.id, episodeId: episode.id);
 
     if (isWatched) {
-      _appServices.unmarkEpisodeWatched(episode.id);
+      await _appServices.unmarkEpisodeWatched(episode.id);
       _notifyWatchTimeChanged();
       return;
     }
@@ -146,11 +148,14 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     );
 
     if (record == null) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Episode runtime not available')),
       );
       return;
     }
+
+    if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

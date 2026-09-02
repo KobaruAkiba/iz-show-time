@@ -1,7 +1,11 @@
+import 'package:flutter/foundation.dart';
+
 import '../cache/cache_manager.dart';
 import '../cache/api_cache_service.dart';
 import '../background/background_task_runner.dart';
 import '../debug/agent_debug_log.dart';
+import '../../data/repositories/hive_user_data_store.dart';
+import '../../data/repositories/user_data_store.dart';
 import '../../data/services/tmdb_service.dart';
 import '../../data/models/catalogue_item.dart';
 import '../../data/models/episode_model.dart';
@@ -13,6 +17,13 @@ class AppServices {
   factory AppServices() => _instance;
 
   AppServices._internal();
+
+  UserDataStore? _userDataStore;
+
+  UserDataStore get userDataStore => _userDataStore ??= HiveUserDataStore();
+
+  @visibleForTesting
+  set userDataStore(UserDataStore store) => _userDataStore = store;
 
   final CacheManager cacheManager = CacheManager();
   final ApiCacheService apiCacheService = ApiCacheService();
@@ -43,9 +54,10 @@ class AppServices {
 
   bool isInCatalogue(int id) => _catalogue.any((item) => item.id == id);
 
-  void addToCatalogue(CatalogueItem item) {
+  Future<void> addToCatalogue(CatalogueItem item) async {
     if (isInCatalogue(item.id)) return;
     _catalogue.add(item);
+    await _persistCatalogueItem(item);
     // #region agent log
     AgentDebugLog.log(
       location: 'app_services.dart:addToCatalogue',
@@ -63,22 +75,23 @@ class AppServices {
     // #endregion
   }
 
-  void removeFromCatalogue(int id) {
+  Future<void> removeFromCatalogue(int id) async {
     _catalogue.removeWhere((item) => item.id == id);
+    await _persistCatalogueRemoval(id);
   }
 
-  void toggleCatalogueItem(CatalogueItem item) {
+  Future<void> toggleCatalogueItem(CatalogueItem item) async {
     if (isInCatalogue(item.id)) {
-      removeFromCatalogue(item.id);
+      await removeFromCatalogue(item.id);
     } else {
-      addToCatalogue(item);
+      await addToCatalogue(item);
     }
   }
 
   /// Adds a catalogue item and records watch time for films using TMDB runtime.
   Future<WatchRecord?> addToCatalogueWithWatchTime(CatalogueItem item) async {
     if (isInCatalogue(item.id)) return null;
-    addToCatalogue(item);
+    await addToCatalogue(item);
 
     if (item is! Film) return null;
 
@@ -99,19 +112,19 @@ class AppServices {
     // #endregion
     if (runtime <= 0) return null;
 
-    return markFilmWatched(film: item, durationMinutes: runtime);
+    return await markFilmWatched(film: item, durationMinutes: runtime);
   }
 
   Future<void> toggleCatalogueItemAsync(CatalogueItem item) async {
     if (isInCatalogue(item.id)) {
-      removeFromCatalogue(item.id);
+      await removeFromCatalogue(item.id);
       return;
     }
 
     if (item is Film) {
       await addToCatalogueWithWatchTime(item);
     } else {
-      addToCatalogue(item);
+      await addToCatalogue(item);
     }
   }
 
@@ -131,10 +144,10 @@ class AppServices {
     int? fallbackRuntimeMinutes,
   }) async {
     if (!isInCatalogue(show.id)) {
-      addToCatalogue(show);
+      await addToCatalogue(show);
     }
 
-    return markEpisodeWatched(
+    return await markEpisodeWatched(
       show: show,
       episode: episode,
       fallbackRuntimeMinutes: fallbackRuntimeMinutes,
@@ -150,10 +163,10 @@ class AppServices {
 
   /// Records a watched film. Returns the new record, or null if already watched
   /// or duration is invalid.
-  WatchRecord? markFilmWatched({
+  Future<WatchRecord?> markFilmWatched({
     required Film film,
     required int durationMinutes,
-  }) {
+  }) async {
     // #region agent log
     AgentDebugLog.log(
       location: 'app_services.dart:markFilmWatched',
@@ -176,6 +189,7 @@ class AppServices {
       watchedAt: DateTime.now(),
     );
     _watchHistory.add(record);
+    await _persistWatchRecord(record);
     // #region agent log
     AgentDebugLog.log(
       location: 'app_services.dart:markFilmWatched',
@@ -194,11 +208,11 @@ class AppServices {
 
   /// Records a watched episode. Returns the new record, or null if already watched
   /// or duration is invalid.
-  WatchRecord? markEpisodeWatched({
+  Future<WatchRecord?> markEpisodeWatched({
     required TvShow show,
     required EpisodeModel episode,
     int? fallbackRuntimeMinutes,
-  }) {
+  }) async {
     if (isWatched(mediaId: show.id, episodeId: episode.id)) return null;
 
     final duration = episode.runtimeMinutes ?? fallbackRuntimeMinutes ?? 0;
@@ -215,17 +229,30 @@ class AppServices {
       watchedAt: DateTime.now(),
     );
     _watchHistory.add(record);
+    await _persistWatchRecord(record);
     return record;
   }
 
-  void unmarkEpisodeWatched(int episodeId) {
+  Future<void> unmarkEpisodeWatched(int episodeId) async {
+    final removedRecords = _watchHistory
+        .where((record) => record.episodeId == episodeId)
+        .toList(growable: false);
     _watchHistory.removeWhere((record) => record.episodeId == episodeId);
+    for (final record in removedRecords) {
+      await _persistWatchRecordRemoval(record.watchKey);
+    }
   }
 
-  void unmarkFilmWatched(int mediaId) {
+  Future<void> unmarkFilmWatched(int mediaId) async {
+    final removedRecords = _watchHistory
+        .where((record) => record.isFilm && record.mediaId == mediaId)
+        .toList(growable: false);
     _watchHistory.removeWhere(
       (record) => record.isFilm && record.mediaId == mediaId,
     );
+    for (final record in removedRecords) {
+      await _persistWatchRecordRemoval(record.watchKey);
+    }
   }
 
   /// Search the user's catalogue and locally cached TMDB data.
@@ -260,7 +287,20 @@ class AppServices {
     return (films: films, tvShows: tvShows);
   }
 
-  Future<void> initialize() async {
+  Future<void> initialize({UserDataStore? userDataStore}) async {
+    if (userDataStore != null) {
+      _userDataStore = userDataStore;
+    }
+
+    final store = this.userDataStore;
+    await store.open();
+    _catalogue
+      ..clear()
+      ..addAll(await store.loadCatalogue());
+    _watchHistory
+      ..clear()
+      ..addAll(await store.loadWatchHistory());
+
     tmdbService;
   }
 
@@ -272,8 +312,46 @@ class AppServices {
     backgroundTaskRunner.dispose();
     cacheManager.dispose();
     apiCacheService.dispose();
-    _catalogue.clear();
-    _watchHistory.clear();
+  }
+
+  Future<void> _persistCatalogueItem(CatalogueItem item) async {
+    try {
+      await userDataStore.saveCatalogueItem(item);
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Failed to persist catalogue item ${item.id}: $error\n$stackTrace',
+      );
+    }
+  }
+
+  Future<void> _persistCatalogueRemoval(int mediaId) async {
+    try {
+      await userDataStore.removeCatalogueItem(mediaId);
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Failed to remove catalogue item $mediaId: $error\n$stackTrace',
+      );
+    }
+  }
+
+  Future<void> _persistWatchRecord(WatchRecord record) async {
+    try {
+      await userDataStore.saveWatchRecord(record);
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Failed to persist watch record ${record.watchKey}: $error\n$stackTrace',
+      );
+    }
+  }
+
+  Future<void> _persistWatchRecordRemoval(String watchKey) async {
+    try {
+      await userDataStore.removeWatchRecord(watchKey);
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Failed to remove watch record $watchKey: $error\n$stackTrace',
+      );
+    }
   }
 
   Map<String, dynamic> getFullStatistics() {
@@ -295,5 +373,6 @@ class AppServices {
     cacheManager.clearAll();
     _catalogue.clear();
     _watchHistory.clear();
+    await userDataStore.clearAll();
   }
 }

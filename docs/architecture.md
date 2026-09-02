@@ -8,7 +8,8 @@ IzShowTime is a Flutter app for tracking films and TV shows using the TMDB API. 
 flowchart TB
   UI[presentation/screens] --> AppServices[core/services/app_services.dart]
   AppServices --> TmdbService[data/services/tmdb_service.dart]
-  AppServices --> Catalogue[in-memory catalogue]
+  AppServices --> UserDataStore[data/repositories/hive_user_data_store.dart]
+  UserDataStore --> HiveBoxes[Hive boxes on device]
   TmdbService --> CacheManager[core/cache/cache_manager.dart]
   TmdbService --> DioClient[core/network/dio_client.dart]
   DioClient --> TMDB[TMDB API v3]
@@ -31,18 +32,19 @@ flowchart TB
 | `network/dio_client.dart` | HTTP client, retries on 429 |
 | `cache/` | In-memory cache with TTL |
 | `routing/app_router.dart` | Named routes and `onGenerateRoute` |
-| `services/app_services.dart` | Singleton: catalogue, TMDB, background tasks |
+| `services/app_services.dart` | Singleton: catalogue, watch history, TMDB, background tasks |
 | `background/` | Periodic trending refresh |
 | `theme/` | Light/dark Material 3 themes |
 
 ### Data (`lib/data/`)
 
-- **Models**: `CatalogueItem`, `Film`, `TvShow`, `EpisodeModel`, `Tag`
+- **Models**: `CatalogueItem`, `Film`, `TvShow`, `EpisodeModel`, `Tag`, `WatchRecord`
+- **Repositories**: `UserDataStore`, `HiveUserDataStore` — local persistence for catalogue and watch history
 - **Services**: `TmdbService` — single entry point for TMDB with JSON parsing
 
 ## State management
 
-In-memory catalogue via `AppServices` singleton. Screens call `setState` after catalogue changes. Persistent storage is planned for a future phase.
+Catalogue and watch history are held in memory via `AppServices` and persisted to Hive on every mutation. Data is loaded from device storage during `AppServices.initialize()`. Screens call `setState` after catalogue changes.
 
 ## API token
 
@@ -62,4 +64,4 @@ flutter run --dart-define=TMDB_API_KEY=your_token_here
 - **Rate limiting**: `ApiCacheService` tracks requests per minute (40 cap)
 - **Background**: Refreshes trending data every 4 hours
 
-Persistent Hive/SQLite cache is not implemented in the current revision.
+Persistent Hive/SQLite cache for TMDB responses is not implemented in the current revision. User catalogue and watch history are persisted via Hive.

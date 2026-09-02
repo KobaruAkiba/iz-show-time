@@ -58,6 +58,7 @@ class Film extends CatalogueItem {
       overview: json['overview'] as String?,
       posterPath: json['poster_path'] as String?,
       voteAverage: (json['vote_average'] as num?)?.toDouble() ?? 0.0,
+      tags: _parseTags(json['tags']),
     );
   }
 
@@ -112,6 +113,7 @@ class TvShow extends CatalogueItem {
       overview: json['overview'] as String?,
       posterPath: json['poster_path'] as String?,
       voteAverage: (json['vote_average'] as num?)?.toDouble() ?? 0.0,
+      tags: _parseTags(json['tags']),
     );
   }
 
@@ -136,6 +138,36 @@ class TvShow extends CatalogueItem {
 
   @override
   String toString() => 'TvShow(id: $id, name: $title)';
+}
+
+List<String> _parseTags(Object? raw) {
+  if (raw is! List) return const [];
+  return raw.map((entry) => entry.toString()).toList(growable: false);
+}
+
+/// Serializes a catalogue item for local storage with a type discriminator.
+Map<String, dynamic> catalogueItemToStorageJson(CatalogueItem item) {
+  final payload = switch (item) {
+    Film film => film.toJson(),
+    TvShow show => show.toJson(),
+    _ => throw ArgumentError('Unsupported catalogue item type: ${item.runtimeType}'),
+  };
+  return {
+    'type': item is Film ? 'film' : 'tv',
+    ...payload,
+  };
+}
+
+/// Restores a catalogue item from local storage JSON.
+CatalogueItem? catalogueItemFromStorageJson(Map<String, dynamic> json) {
+  switch (json['type']) {
+    case 'film':
+      return Film.fromJson(json);
+    case 'tv':
+      return TvShow.fromJson(json);
+    default:
+      return null;
+  }
 }
 
 /// Parse TMDB multi-search result into catalogue items

@@ -1,6 +1,6 @@
 # Roadmap
 
-## Current status (~40% complete)
+## Current status (~50% complete)
 
 ### Done
 
@@ -9,13 +9,13 @@
 - [x] `TmdbService` — trending, search, details, episodes
 - [x] In-memory cache with TTL
 - [x] UI wired to live TMDB data (Home, Search)
-- [x] In-memory catalogue (add/remove from Search and Home)
+- [x] Catalogue (add/remove from Search and Home)
+- [x] Persistent catalogue and watch history (Hive)
 - [x] Background trending prefetch
 - [x] Named routing for Search deep links
 
 ### In progress / next
 
-- [ ] Persistent catalogue (Hive or sqflite)
 - [ ] Episode watch tracking UI
 - [ ] Local/push notifications for new episodes
 - [ ] Image caching (`cached_network_image`)
@@ -28,11 +28,11 @@
 
 App shell, navigation, themes, TMDB integration, catalogue in memory.
 
-### Phase 2 — Persistence & notifications
+### Phase 2 — Persistence & notifications (in progress)
 
-- Hive or SQLite for catalogue and watch progress
-- Background episode checks
-- `flutter_local_notifications` integration
+- [x] Hive for catalogue and watch progress
+- [ ] Background episode checks
+- [ ] `flutter_local_notifications` integration
 
 ### Phase 3 — Polish & social
 

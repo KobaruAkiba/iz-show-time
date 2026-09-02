@@ -156,8 +156,8 @@ class _CatalogueScreenState extends State<CatalogueScreen>
               item: item,
               isBookmarked: true,
               onTap: () => _openDetails(item),
-              onAddRemove: () {
-                _appServices.removeFromCatalogue(item.id);
+              onAddRemove: () async {
+                await _appServices.removeFromCatalogue(item.id);
                 _refresh();
               },
             ),

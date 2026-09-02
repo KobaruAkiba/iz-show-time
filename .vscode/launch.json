@@ -9,6 +9,7 @@
       "flutterMode": "debug",
       "toolArgs": [
         "--dart-define-from-file=environment.local",
+        "--web-port=5555",
         "--web-browser-flag=--disable-web-security",
         "--web-browser-flag=--user-data-dir=${workspaceFolder}/.dart_tool/chrome-dev"
       ]

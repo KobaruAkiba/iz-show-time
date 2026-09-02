@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/app_scroll_behavior.dart';
 import 'core/network/dio_client.dart';
@@ -19,6 +20,8 @@ String _resolveApiKey() {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await Hive.initFlutter();
 
   final apiKey = _resolveApiKey();
   AppApiKey.configure(apiKey);

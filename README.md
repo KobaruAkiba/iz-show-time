@@ -6,8 +6,8 @@ A cross-platform Flutter app to track films and TV shows, discover trending cont
 
 - **Trending content** — Movies and TV shows from TMDB on the Home screen
 - **Debounced search** — Multi-search across films and series (500ms debounce)
-- **Personal catalogue** — Add/remove items in memory (bookmark from Home or Search)
-- **Tracking view** — See catalogue stats and filtered lists
+- **Personal catalogue** — Add/remove items persisted on device (bookmark from Home or Search)
+- **Watch history** — Films and episodes tracked with watch time, persisted locally
 - **Dark mode** — Follows system theme
 - **Caching** — In-memory TTL cache to respect TMDB rate limits
 
@@ -16,6 +16,7 @@ A cross-platform Flutter app to track films and TV shows, discover trending cont
 - Flutter 3 / Dart 3
 - [TMDB API v3](https://developer.themoviedb.org/docs)
 - Dio for HTTP
+- Hive for local catalogue and watch history persistence
 - Material Design 3 + Google Fonts
 
 ## Prerequisites
@@ -60,6 +61,7 @@ lib/
 │   └── theme/
 ├── data/
 │   ├── models/          # Film, TvShow, Episode, Tag
+│   ├── repositories/    # Hive user data store
 │   └── services/        # TmdbService
 └── presentation/
     ├── navigation/      # MainNavigator
@@ -87,9 +89,9 @@ flutter test
 
 ## Known limitations
 
-- Catalogue is in-memory only (cleared on app restart)
 - Notifications not yet implemented
-- No offline persistence layer
+- TMDB API cache is in-memory only (not persisted across restarts)
+- On Flutter Web debug, catalogue persistence requires a fixed port (`--web-port=5555`, already set in `.vscode/launch.json`)
 
 ## License
 
