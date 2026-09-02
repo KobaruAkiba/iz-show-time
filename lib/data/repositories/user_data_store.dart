@@ -26,6 +26,10 @@ abstract class UserDataStore {
 
   Future<void> saveLastEpisodeCheckAt(DateTime checkedAt);
 
+  Future<bool> loadAppInForeground();
+
+  Future<void> saveAppInForeground(bool isInForeground);
+
   Future<void> clearAll();
 
   Future<void> close();

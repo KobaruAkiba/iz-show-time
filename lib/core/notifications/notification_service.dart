@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// Sends local system notifications for newly detected TV episodes.
+/// Called only from native background scheduling, not while the app is open.
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
 

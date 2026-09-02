@@ -11,6 +11,7 @@ import 'package:iz_show_time_tracker/data/services/tmdb_service.dart';
 class FakeEpisodeCheckStore implements UserDataStore {
   List<NewEpisodeAlert> alerts = [];
   DateTime? lastCheck;
+  bool appInForeground = false;
 
   @override
   Future<void> open() async {}
@@ -48,6 +49,14 @@ class FakeEpisodeCheckStore implements UserDataStore {
   @override
   Future<void> saveLastEpisodeCheckAt(DateTime checkedAt) async {
     lastCheck = checkedAt;
+  }
+
+  @override
+  Future<bool> loadAppInForeground() async => appInForeground;
+
+  @override
+  Future<void> saveAppInForeground(bool isInForeground) async {
+    appInForeground = isInForeground;
   }
 
   @override

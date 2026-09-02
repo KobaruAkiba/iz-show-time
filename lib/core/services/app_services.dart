@@ -325,6 +325,17 @@ class AppServices {
     newEpisodeAlertsListenable.value = List<NewEpisodeAlert>.from(alerts);
   }
 
+  Future<void> reloadNewEpisodeAlertsFromStore() async {
+    try {
+      final alerts = await userDataStore.loadNewEpisodeAlerts();
+      updateNewEpisodeAlerts(alerts);
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Failed to reload new episode alerts: $error\n$stackTrace',
+      );
+    }
+  }
+
   Future<void> _removeNewEpisodeAlert(int? episodeId) async {
     if (episodeId == null) return;
     final removed = _newEpisodeAlerts.any((alert) => alert.episodeId == episodeId);

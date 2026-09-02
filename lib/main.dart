@@ -4,27 +4,20 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/app_scroll_behavior.dart';
 import 'core/network/dio_client.dart';
 import 'core/constants/api_constants.dart';
+import 'core/config/api_key_config.dart';
 import 'core/services/app_services.dart';
 import 'core/notifications/notification_service.dart';
+import 'core/notifications/app_lifecycle_coordinator.dart';
+import 'core/background/native_background_scheduler.dart';
 import 'core/routing/app_router.dart';
 import 'presentation/navigation/main_navigator.dart';
-
-String _resolveApiKey() {
-  const tmdbKey = String.fromEnvironment('TMDB_API_KEY');
-  if (tmdbKey.isNotEmpty) return tmdbKey;
-
-  const devKey = String.fromEnvironment('DEV_TMDB_API_KEY');
-  if (devKey.isNotEmpty) return devKey;
-
-  return '';
-}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Hive.initFlutter();
 
-  final apiKey = _resolveApiKey();
+  final apiKey = resolveTmdbApiKey();
   AppApiKey.configure(apiKey);
 
   await DioClient.init(apiKey: apiKey);
@@ -32,6 +25,9 @@ void main() async {
   final appServices = AppServices();
   await appServices.initialize();
   await NotificationService().initialize();
+  await NativeBackgroundScheduler.instance.initialize();
+  await NativeBackgroundScheduler.instance.registerEpisodeChecks();
+  await appServices.userDataStore.saveAppInForeground(true);
   await appServices.startBackgroundTasks();
 
   runApp(MyApp(appServices: appServices));
@@ -47,8 +43,20 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  late final AppLifecycleCoordinator _lifecycleCoordinator;
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycleCoordinator = AppLifecycleCoordinator(
+      appServices: widget.appServices,
+    );
+    _lifecycleCoordinator.attach();
+  }
+
   @override
   void dispose() {
+    _lifecycleCoordinator.detach();
     widget.appServices.dispose();
     super.dispose();
   }

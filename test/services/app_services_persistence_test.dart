@@ -12,6 +12,7 @@ class FakeUserDataStore implements UserDataStore {
   final List<String> removedWatchKeys = [];
   List<NewEpisodeAlert> alerts = [];
   DateTime? lastEpisodeCheckAt;
+  bool appInForeground = false;
   bool cleared = false;
 
   @override
@@ -58,6 +59,14 @@ class FakeUserDataStore implements UserDataStore {
   @override
   Future<void> saveLastEpisodeCheckAt(DateTime checkedAt) async {
     lastEpisodeCheckAt = checkedAt;
+  }
+
+  @override
+  Future<bool> loadAppInForeground() async => appInForeground;
+
+  @override
+  Future<void> saveAppInForeground(bool isInForeground) async {
+    appInForeground = isInForeground;
   }
 
   @override

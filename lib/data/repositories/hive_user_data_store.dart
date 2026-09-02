@@ -168,12 +168,28 @@ class HiveUserDataStore implements UserDataStore {
   }
 
   @override
+  Future<bool> loadAppInForeground() async {
+    await open();
+    final raw = metaBox.get(StorageConstants.appInForegroundKey);
+    if (raw is bool) return raw;
+    return false;
+  }
+
+  @override
+  Future<void> saveAppInForeground(bool isInForeground) async {
+    await open();
+    await metaBox.put(StorageConstants.appInForegroundKey, isInForeground);
+    await metaBox.flush();
+  }
+
+  @override
   Future<void> clearAll() async {
     await open();
     await catalogueBox.clear();
     await watchHistoryBox.clear();
     await metaBox.delete(StorageConstants.newEpisodeAlertsKey);
     await metaBox.delete(StorageConstants.lastEpisodeCheckKey);
+    await metaBox.delete(StorageConstants.appInForegroundKey);
     await metaBox.put(
       StorageConstants.schemaVersionKey,
       StorageConstants.storageSchemaVersion,
