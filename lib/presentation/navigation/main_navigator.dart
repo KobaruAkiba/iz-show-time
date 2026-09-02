@@ -25,7 +25,10 @@ class _MainNavigatorState extends State<MainNavigator> {
       case MainTab.home:
         return const HomeScreen();
       case MainTab.search:
-        return const SearchScreen(initialQuery: '');
+        return SearchScreen(
+          initialQuery: '',
+          isActive: _currentTab == MainTab.search,
+        );
       case MainTab.catalogue:
         return const CatalogueScreen();
       case MainTab.settings:

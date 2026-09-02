@@ -7,8 +7,13 @@ import '../../../core/services/app_services.dart';
 /// Search screen for finding films and TV shows via TMDB
 class SearchScreen extends StatefulWidget {
   final String initialQuery;
+  final bool isActive;
 
-  const SearchScreen({super.key, this.initialQuery = ''});
+  const SearchScreen({
+    super.key,
+    this.initialQuery = '',
+    this.isActive = true,
+  });
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -44,22 +49,35 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(SearchScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isActive && !widget.isActive) {
+      _clearResults();
+    }
+  }
+
   void _onQueryChanged(String value) {
-    setState(() {
-      if (value.trim().isEmpty) {
-        _hasSearched = false;
-        _isLoading = false;
-        _filmResults = [];
-        _tvShowResults = [];
-        _errorMessage = null;
-        _lastQuery = '';
-      }
-    });
+    setState(() {});
   }
 
   void _clearQuery() {
     _controller.clear();
-    _onQueryChanged('');
+    setState(() {});
+  }
+
+  void _clearResults() {
+    setState(() {
+      _hasSearched = false;
+      _isLoading = false;
+      _filmResults = [];
+      _tvShowResults = [];
+      _errorMessage = null;
+      _lastQuery = '';
+      _showOnlyFilms = false;
+      _showOnlyTvShows = false;
+      _controller.clear();
+    });
   }
 
   Future<void> _performSearch(String query) async {
@@ -178,10 +196,9 @@ class _SearchScreenState extends State<SearchScreen> {
       return Center(child: Text(_errorMessage!));
     }
 
-    final filmResults = _showOnlyTvShows ? <Film>[] : _filmResults;
-    final tvResults = _showOnlyFilms ? <TvShow>[] : _tvShowResults;
+    final results = _buildFilteredResults();
 
-    if (filmResults.isEmpty && tvResults.isEmpty) {
+    if (results.isEmpty) {
       return Center(
         child: Text(
           'No results for "$_lastQuery"',
@@ -227,44 +244,28 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
             ],
           ),
-          if (filmResults.isNotEmpty) ...[
-            Text(
-              '🎬 Films',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+          ...results.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: MediaCard(
+                item: item,
+                showTypeBadge: true,
+                formatZeroRatingAsNd: true,
+                isBookmarked: _appServices.isInCatalogue(item.id),
+                onAddRemove: () => _toggleItem(item),
+              ),
             ),
-            const SizedBox(height: 8),
-            ...filmResults.map((film) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: MediaCard(
-                    item: film,
-                    isBookmarked: _appServices.isInCatalogue(film.id),
-                    onAddRemove: () => _toggleItem(film),
-                  ),
-                )),
-            const SizedBox(height: 16),
-          ],
-          if (tvResults.isNotEmpty) ...[
-            Text(
-              '📺 TV Shows',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            ...tvResults.map((show) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: MediaCard(
-                    item: show,
-                    isBookmarked: _appServices.isInCatalogue(show.id),
-                    onAddRemove: () => _toggleItem(show),
-                  ),
-                )),
-          ],
+          ),
         ],
       ),
     );
+  }
+
+  List<CatalogueItem> _buildFilteredResults() {
+    final results = <CatalogueItem>[];
+    if (!_showOnlyTvShows) results.addAll(_filmResults);
+    if (!_showOnlyFilms) results.addAll(_tvShowResults);
+    return results;
   }
 
   void _toggleItem(CatalogueItem item) {
