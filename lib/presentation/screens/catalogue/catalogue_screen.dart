@@ -135,15 +135,6 @@ class _CatalogueScreenState extends State<CatalogueScreen>
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Use Search to add items')),
-          );
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Add to Catalogue'),
-      ),
     );
   }
 
