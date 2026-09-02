@@ -17,8 +17,8 @@ class NewEpisodeCheckResult {
   });
 }
 
-/// Checks catalogue TV shows against TMDB using the last registered S/E in
-/// watch history as the baseline for new episode detection.
+/// Checks catalogue TV shows and surfaces only the immediate next episode
+/// after the last registered S/E in watch history.
 class NewEpisodeChecker {
   NewEpisodeChecker({
     required TmdbService tmdbService,
@@ -44,20 +44,16 @@ class NewEpisodeChecker {
     final now = DateTime.now();
 
     for (final show in shows) {
-      final showAlerts = await _checkShow(
+      final nextAlert = await _findImmediateNextAlert(
         show: show,
         watchHistory: watchHistory,
         checkedAt: now,
       );
+      if (nextAlert == null) continue;
 
-      for (final alert in showAlerts) {
-        final previous = existingByEpisodeId[alert.episodeId];
-        if (previous == null) {
-          newlyDetected.add(alert);
-          allAlerts.add(alert);
-        } else {
-          allAlerts.add(previous);
-        }
+      allAlerts.add(nextAlert);
+      if (!existingByEpisodeId.containsKey(nextAlert.episodeId)) {
+        newlyDetected.add(nextAlert);
       }
     }
 
@@ -77,61 +73,79 @@ class NewEpisodeChecker {
     );
   }
 
-  Future<List<NewEpisodeAlert>> _checkShow({
+  Future<NewEpisodeAlert?> _findImmediateNextAlert({
     required TvShow show,
     required List<WatchRecord> watchHistory,
     required DateTime checkedAt,
   }) async {
     final lastRegistered = lastRegisteredEpisodeForShow(show.id, watchHistory);
-    if (lastRegistered == null) return const [];
+    if (lastRegistered == null) return null;
 
     final details = await _tmdbService.getMediaDetails(show);
     final seasonCount = details?.numberOfSeasons ?? 0;
-    if (seasonCount <= 0) return const [];
+    if (seasonCount <= 0) return null;
 
-    final airedEpisodes = await _fetchAiredEpisodes(
+    final nextEpisode = await _findImmediateNextEpisode(
       tvId: show.id,
+      lastRegistered: lastRegistered,
       seasonCount: seasonCount,
     );
 
-    return airedEpisodes
-        .where(
-          (episode) =>
-              episode.hasAired &&
-              isEpisodeAfterSignature(episode, lastRegistered) &&
-              !isEpisodeRegisteredInCatalogue(episode, watchHistory),
-        )
-        .map(
-          (episode) => NewEpisodeAlert(
-            showId: show.id,
-            showTitle: show.title,
-            showPosterPath: show.posterPath,
-            episodeId: episode.id,
-            seasonNumber: episode.seasonNumber,
-            episodeNumber: episode.episodeNumber,
-            episodeName: episode.displayTitle,
-            airDate: episode.airDate,
-            detectedAt: checkedAt,
-          ),
-        )
-        .toList(growable: false);
-  }
-
-  Future<List<EpisodeModel>> _fetchAiredEpisodes({
-    required int tvId,
-    required int seasonCount,
-  }) async {
-    final aired = <EpisodeModel>[];
-
-    for (var season = 1; season <= seasonCount; season++) {
-      final episodes = await _tmdbService.getSeasonEpisodes(
-        tvId: tvId,
-        seasonNumber: season,
-        forceRefresh: true,
-      );
-      aired.addAll(episodes.where((episode) => episode.hasAired));
+    if (nextEpisode == null ||
+        !nextEpisode.hasAired ||
+        isEpisodeRegisteredInCatalogue(nextEpisode, watchHistory)) {
+      return null;
     }
 
-    return aired;
+    return NewEpisodeAlert(
+      showId: show.id,
+      showTitle: show.title,
+      showPosterPath: show.posterPath,
+      episodeId: nextEpisode.id,
+      seasonNumber: nextEpisode.seasonNumber,
+      episodeNumber: nextEpisode.episodeNumber,
+      episodeName: nextEpisode.displayTitle,
+      airDate: nextEpisode.airDate,
+      detectedAt: checkedAt,
+    );
+  }
+
+  Future<EpisodeModel?> _findImmediateNextEpisode({
+    required int tvId,
+    required EpisodeSignature lastRegistered,
+    required int seasonCount,
+  }) async {
+    if (lastRegistered.seasonNumber <= seasonCount) {
+      final seasonEpisodes = await _tmdbService.getSeasonEpisodes(
+        tvId: tvId,
+        seasonNumber: lastRegistered.seasonNumber,
+        forceRefresh: true,
+      );
+      final nextInSeason = _episodeWithNumber(
+        seasonEpisodes,
+        lastRegistered.episodeNumber + 1,
+      );
+      if (nextInSeason != null) return nextInSeason;
+    }
+
+    final nextSeason = lastRegistered.seasonNumber + 1;
+    if (nextSeason > seasonCount) return null;
+
+    final nextSeasonEpisodes = await _tmdbService.getSeasonEpisodes(
+      tvId: tvId,
+      seasonNumber: nextSeason,
+      forceRefresh: true,
+    );
+    return _episodeWithNumber(nextSeasonEpisodes, 1);
+  }
+
+  EpisodeModel? _episodeWithNumber(
+    List<EpisodeModel> episodes,
+    int episodeNumber,
+  ) {
+    for (final episode in episodes) {
+      if (episode.episodeNumber == episodeNumber) return episode;
+    }
+    return null;
   }
 }

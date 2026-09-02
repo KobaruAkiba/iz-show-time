@@ -73,3 +73,18 @@ bool isEpisodeAfterSignature(
       ) >
       0;
 }
+
+/// Whether [episode] is exactly the next S/E after [lastRegistered].
+bool isImmediateNextEpisode(
+  EpisodeModel episode,
+  EpisodeSignature lastRegistered,
+) {
+  if (episode.seasonNumber == lastRegistered.seasonNumber) {
+    return episode.episodeNumber == lastRegistered.episodeNumber + 1;
+  }
+  if (episode.seasonNumber == lastRegistered.seasonNumber + 1) {
+    return episode.episodeNumber == 1 &&
+        lastRegistered.episodeNumber > 0;
+  }
+  return false;
+}

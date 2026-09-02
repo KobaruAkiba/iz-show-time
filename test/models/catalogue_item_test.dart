@@ -151,9 +151,17 @@ void main() {
         episodeNumber: 5,
         name: 'Same',
       );
+      const later = EpisodeModel(
+        id: 3,
+        seasonNumber: 2,
+        episodeNumber: 14,
+        name: 'Much Later',
+      );
 
       expect(isEpisodeAfterSignature(newer, lastRegistered), isTrue);
       expect(isEpisodeAfterSignature(same, lastRegistered), isFalse);
+      expect(isImmediateNextEpisode(newer, lastRegistered), isTrue);
+      expect(isImmediateNextEpisode(later, lastRegistered), isFalse);
     });
   });
 

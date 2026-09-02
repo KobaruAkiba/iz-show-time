@@ -105,7 +105,7 @@ void main() {
       store = FakeEpisodeCheckStore();
     });
 
-    test('creates alerts for aired episodes after last registered S/E', () async {
+    test('creates alert only for the immediate next aired episode', () async {
       const show = TvShow(id: 42, title: 'Sample Show');
       final watchHistory = [
         WatchRecord(
@@ -155,6 +155,120 @@ void main() {
       expect(result.newlyDetected, hasLength(1));
       expect(result.newlyDetected.first.episodeNumber, 3);
       expect(result.allAlerts, hasLength(1));
+    });
+
+    test('skips later aired episodes when an earlier next episode exists', () async {
+      const show = TvShow(id: 42, title: 'Sample Show');
+      final watchHistory = [
+        WatchRecord(
+          mediaId: 42,
+          mediaTitle: 'Sample Show',
+          isFilm: false,
+          episodeId: 200,
+          seasonNumber: 2,
+          episodeNumber: 3,
+          durationMinutes: 45,
+          watchedAt: DateTime(2026, 1, 1),
+        ),
+      ];
+
+      final tmdb = StubTmdbService(
+        seasonCount: 2,
+        episodesBySeason: {
+          2: [
+            EpisodeModel.fromJson({
+              'id': 200,
+              'season_number': 2,
+              'episode_number': 3,
+              'name': 'Registered',
+              'air_date': '2026-01-01',
+            }),
+            EpisodeModel.fromJson({
+              'id': 201,
+              'season_number': 2,
+              'episode_number': 4,
+              'name': 'Immediate Next',
+              'air_date': '2026-01-08',
+            }),
+            EpisodeModel.fromJson({
+              'id': 211,
+              'season_number': 2,
+              'episode_number': 14,
+              'name': 'Latest Aired',
+              'air_date': '2026-03-01',
+            }),
+          ],
+        },
+      );
+
+      final checker = NewEpisodeChecker(
+        tmdbService: tmdb,
+        userDataStore: store,
+      );
+
+      final result = await checker.checkShows(
+        shows: [show],
+        watchHistory: watchHistory,
+      );
+
+      expect(result.allAlerts, hasLength(1));
+      expect(result.allAlerts.first.seasonNumber, 2);
+      expect(result.allAlerts.first.episodeNumber, 4);
+      expect(result.allAlerts.first.episodeName, 'Immediate Next');
+    });
+
+    test('moves to the first episode of the next season when needed', () async {
+      const show = TvShow(id: 42, title: 'Sample Show');
+      final watchHistory = [
+        WatchRecord(
+          mediaId: 42,
+          mediaTitle: 'Sample Show',
+          isFilm: false,
+          episodeId: 300,
+          seasonNumber: 1,
+          episodeNumber: 10,
+          durationMinutes: 45,
+          watchedAt: DateTime(2026, 1, 1),
+        ),
+      ];
+
+      final tmdb = StubTmdbService(
+        seasonCount: 2,
+        episodesBySeason: {
+          1: [
+            EpisodeModel.fromJson({
+              'id': 300,
+              'season_number': 1,
+              'episode_number': 10,
+              'name': 'Finale',
+              'air_date': '2026-01-01',
+            }),
+          ],
+          2: [
+            EpisodeModel.fromJson({
+              'id': 301,
+              'season_number': 2,
+              'episode_number': 1,
+              'name': 'Season Premiere',
+              'air_date': '2026-02-01',
+            }),
+          ],
+        },
+      );
+
+      final checker = NewEpisodeChecker(
+        tmdbService: tmdb,
+        userDataStore: store,
+      );
+
+      final result = await checker.checkShows(
+        shows: [show],
+        watchHistory: watchHistory,
+      );
+
+      expect(result.allAlerts, hasLength(1));
+      expect(result.allAlerts.first.seasonNumber, 2);
+      expect(result.allAlerts.first.episodeNumber, 1);
     });
 
     test('skips shows without a registered episode in catalogue', () async {

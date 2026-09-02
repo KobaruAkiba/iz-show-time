@@ -245,7 +245,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Latest releases after your last registered episode',
+            'The next episode to watch after your last registered one',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurface.withValues(alpha: 0.5),
                 ),
@@ -287,7 +287,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 6),
                 Text(
-                  'Register at least one episode in your catalogue. New releases after that S/E will appear here.',
+                  'Register an episode in your catalogue and the next one in order will appear here.',
                   textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurface.withValues(alpha: 0.6),
