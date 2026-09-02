@@ -4,6 +4,16 @@ import '../../widgets/app_page_header.dart';
 import '../../../data/models/catalogue_item.dart';
 import '../../../core/services/app_services.dart';
 
+enum SearchMediaFilter { all, filmsOnly, tvOnly }
+
+enum SearchSortOption {
+  none,
+  titleAsc,
+  titleDesc,
+  ratingAsc,
+  ratingDesc,
+}
+
 /// Search screen for finding films and TV shows via TMDB
 class SearchScreen extends StatefulWidget {
   final String initialQuery;
@@ -29,10 +39,14 @@ class _SearchScreenState extends State<SearchScreen> {
   List<Film> _filmResults = [];
   List<TvShow> _tvShowResults = [];
 
-  bool _showOnlyFilms = false;
-  bool _showOnlyTvShows = false;
+  SearchMediaFilter _mediaFilter = SearchMediaFilter.all;
+  SearchSortOption _sortOption = SearchSortOption.none;
 
   final _appServices = AppServices();
+
+  bool get _hasActiveFilters =>
+      _mediaFilter != SearchMediaFilter.all ||
+      _sortOption != SearchSortOption.none;
 
   @override
   void initState() {
@@ -74,8 +88,8 @@ class _SearchScreenState extends State<SearchScreen> {
       _tvShowResults = [];
       _errorMessage = null;
       _lastQuery = '';
-      _showOnlyFilms = false;
-      _showOnlyTvShows = false;
+      _mediaFilter = SearchMediaFilter.all;
+      _sortOption = SearchSortOption.none;
       _controller.clear();
     });
   }
@@ -197,13 +211,23 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     final results = _buildFilteredResults();
+    final totalCount = _filmResults.length + _tvShowResults.length;
 
     if (results.isEmpty) {
-      return Center(
-        child: Text(
-          'No results for "$_lastQuery"',
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
+      return Column(
+        children: [
+          if (totalCount > 0) _buildFiltersBar(totalCount, filteredCount: 0),
+          Expanded(
+            child: Center(
+              child: Text(
+                totalCount > 0
+                    ? 'No results match your filters'
+                    : 'No results for "$_lastQuery"',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+            ),
+          ),
+        ],
       );
     }
 
@@ -212,38 +236,8 @@ class _SearchScreenState extends State<SearchScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  secondary: const Icon(Icons.movie_filter, size: 20),
-                  title: const Text('Films Only'),
-                  value: _showOnlyFilms,
-                  onChanged: (value) {
-                    setState(() {
-                      _showOnlyFilms = value;
-                      if (value) _showOnlyTvShows = false;
-                    });
-                  },
-                ),
-              ),
-              Expanded(
-                child: SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  secondary: const Icon(Icons.tv_outlined, size: 20),
-                  title: const Text('TV Only'),
-                  value: _showOnlyTvShows,
-                  onChanged: (value) {
-                    setState(() {
-                      _showOnlyTvShows = value;
-                      if (value) _showOnlyFilms = false;
-                    });
-                  },
-                ),
-              ),
-            ],
-          ),
+          _buildFiltersBar(totalCount, filteredCount: results.length),
+          const SizedBox(height: 8),
           ...results.map(
             (item) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -261,10 +255,196 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
+  Widget _buildFiltersBar(int totalCount, {required int filteredCount}) {
+    final countLabel = _hasActiveFilters && filteredCount != totalCount
+        ? '$filteredCount of $totalCount'
+        : '$totalCount';
+
+    return Row(
+      children: [
+        Text(
+          '$countLabel results',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.7),
+              ),
+        ),
+        const Spacer(),
+        Badge(
+          isLabelVisible: _hasActiveFilters,
+          label: const Text(''),
+          smallSize: 8,
+          child: OutlinedButton.icon(
+            onPressed: _showFiltersSheet,
+            icon: const Icon(Icons.tune, size: 18),
+            label: const Text('Filters & sort'),
+            style: OutlinedButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _showFiltersSheet() async {
+    var mediaFilter = _mediaFilter;
+    var sortOption = _sortOption;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Filters & sort',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Show',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  SegmentedButton<SearchMediaFilter>(
+                    segments: const [
+                      ButtonSegment(
+                        value: SearchMediaFilter.all,
+                        label: Text('All'),
+                        icon: Icon(Icons.grid_view, size: 18),
+                      ),
+                      ButtonSegment(
+                        value: SearchMediaFilter.filmsOnly,
+                        label: Text('Films'),
+                        icon: Icon(Icons.movie_filter, size: 18),
+                      ),
+                      ButtonSegment(
+                        value: SearchMediaFilter.tvOnly,
+                        label: Text('TV'),
+                        icon: Icon(Icons.tv_outlined, size: 18),
+                      ),
+                    ],
+                    selected: {mediaFilter},
+                    onSelectionChanged: (selection) {
+                      setSheetState(() => mediaFilter = selection.first);
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Sort by',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  ...SearchSortOption.values.map(
+                    (option) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      leading: Icon(
+                        sortOption == option
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_off,
+                        size: 20,
+                      ),
+                      title: Text(_sortOptionLabel(option)),
+                      onTap: () =>
+                          setSheetState(() => sortOption = option),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          setSheetState(() {
+                            mediaFilter = SearchMediaFilter.all;
+                            sortOption = SearchSortOption.none;
+                          });
+                        },
+                        child: const Text('Reset'),
+                      ),
+                      const Spacer(),
+                      FilledButton(
+                        onPressed: () {
+                          setState(() {
+                            _mediaFilter = mediaFilter;
+                            _sortOption = sortOption;
+                          });
+                          Navigator.pop(context);
+                        },
+                        child: const Text('Apply'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  String _sortOptionLabel(SearchSortOption option) {
+    return switch (option) {
+      SearchSortOption.none => 'Default order',
+      SearchSortOption.titleAsc => 'Title (A → Z)',
+      SearchSortOption.titleDesc => 'Title (Z → A)',
+      SearchSortOption.ratingDesc => 'Rating (high → low)',
+      SearchSortOption.ratingAsc => 'Rating (low → high)',
+    };
+  }
+
   List<CatalogueItem> _buildFilteredResults() {
     final results = <CatalogueItem>[];
-    if (!_showOnlyTvShows) results.addAll(_filmResults);
-    if (!_showOnlyFilms) results.addAll(_tvShowResults);
+    switch (_mediaFilter) {
+      case SearchMediaFilter.all:
+        results.addAll(_filmResults);
+        results.addAll(_tvShowResults);
+      case SearchMediaFilter.filmsOnly:
+        results.addAll(_filmResults);
+      case SearchMediaFilter.tvOnly:
+        results.addAll(_tvShowResults);
+    }
+
+    switch (_sortOption) {
+      case SearchSortOption.none:
+        break;
+      case SearchSortOption.titleAsc:
+        results.sort(
+          (a, b) =>
+              a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+        );
+      case SearchSortOption.titleDesc:
+        results.sort(
+          (a, b) =>
+              b.title.toLowerCase().compareTo(a.title.toLowerCase()),
+        );
+      case SearchSortOption.ratingAsc:
+        results.sort((a, b) => a.voteAverage.compareTo(b.voteAverage));
+      case SearchSortOption.ratingDesc:
+        results.sort((a, b) => b.voteAverage.compareTo(a.voteAverage));
+    }
+
     return results;
   }
 
