@@ -52,14 +52,16 @@ class _HomeScreenState extends State<HomeScreen> {
         _trendingItems
           ..clear()
           ..addAll(combined.take(12));
-        _isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _isLoading = false;
         _errorMessage = 'Failed to load trending content';
       });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

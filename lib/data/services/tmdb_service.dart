@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../../core/network/dio_client.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/api_constants.dart';
@@ -394,13 +396,23 @@ class TmdbService {
   Future<T> _dedupe<T>(String key, Future<T> Function() fetch) async {
     final existing = _inflight[key];
     if (existing != null) {
-      return await existing as Future<T>;
+      return await existing;
     }
 
-    final future = fetch();
-    _inflight[key] = future;
+    final completer = Completer<T>();
+    _inflight[key] = completer.future;
+
     try {
-      return await future;
+      final result = await fetch();
+      if (!completer.isCompleted) {
+        completer.complete(result);
+      }
+      return result;
+    } catch (e, stackTrace) {
+      if (!completer.isCompleted) {
+        completer.completeError(e, stackTrace);
+      }
+      rethrow;
     } finally {
       _inflight.remove(key);
     }
