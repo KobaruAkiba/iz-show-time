@@ -29,6 +29,9 @@ class _CatalogueScreenState extends State<CatalogueScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
+    if (widget.isActive) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
+    }
   }
 
   @override
@@ -86,15 +89,7 @@ class _CatalogueScreenState extends State<CatalogueScreen>
       body: SafeArea(
         child: Column(
           children: [
-            AppPageHeader(
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: _refresh,
-                  tooltip: 'Refresh',
-                ),
-              ],
-            ),
+            const AppPageHeader(),
             CatalogueStatsRow(
               tvShowCount: tvShows.length,
               filmCount: films.length,
