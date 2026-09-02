@@ -6,24 +6,29 @@ class AppPageHeader extends StatelessWidget {
 
   const AppPageHeader({super.key, this.actions});
 
-  static const title = 'Iz Show Time';
+  static const _titleAsset = 'assets/images/IzShowTimeTitle.png';
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      child: SizedBox(
+        height: 56,
+        child: Row(
+          children: [
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Image.asset(
+                  _titleAsset,
+                  height: 52,
+                  fit: BoxFit.contain,
+                ),
+              ),
             ),
-          ),
-          if (actions != null) ...actions!,
-        ],
+            if (actions != null) ...actions!,
+          ],
+        ),
       ),
     );
   }
