@@ -454,8 +454,9 @@ class _SearchScreenState extends State<SearchScreen> {
     showMediaDetailSheet(context, item);
   }
 
-  void _toggleItem(CatalogueItem item) {
-    _appServices.toggleCatalogueItem(item);
+  Future<void> _toggleItem(CatalogueItem item) async {
+    await _appServices.toggleCatalogueItemAsync(item);
+    if (!mounted) return;
     setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

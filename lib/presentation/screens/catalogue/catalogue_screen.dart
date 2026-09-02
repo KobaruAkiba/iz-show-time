@@ -4,10 +4,13 @@ import '../../widgets/app_page_header.dart';
 import '../../widgets/catalogue_stats_row.dart';
 import '../../../data/models/catalogue_item.dart';
 import '../../../core/services/app_services.dart';
+import '../../../core/debug/agent_debug_log.dart';
 
 /// Screen displaying the user's catalogue of films and TV shows
 class CatalogueScreen extends StatefulWidget {
-  const CatalogueScreen({super.key});
+  final bool isActive;
+
+  const CatalogueScreen({super.key, this.isActive = true});
 
   @override
   State<CatalogueScreen> createState() => _CatalogueScreenState();
@@ -25,6 +28,14 @@ class _CatalogueScreenState extends State<CatalogueScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
+  }
+
+  @override
+  void didUpdateWidget(covariant CatalogueScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !oldWidget.isActive) {
+      _refresh();
+    }
   }
 
   @override
@@ -48,6 +59,19 @@ class _CatalogueScreenState extends State<CatalogueScreen>
     final films = _appServices.films;
     final tvShows = _appServices.tvShows;
     final catalogue = _appServices.catalogue;
+    final watchTime = _appServices.totalWatchTimeMinutes;
+    // #region agent log
+    AgentDebugLog.log(
+      location: 'catalogue_screen.dart:build',
+      message: 'catalogue screen rendered',
+      hypothesisId: 'B',
+      data: {
+        'watchTimeMinutes': watchTime,
+        'catalogueSize': catalogue.length,
+        'filmCount': films.length,
+      },
+    );
+    // #endregion
 
     return Scaffold(
       body: SafeArea(
@@ -66,6 +90,7 @@ class _CatalogueScreenState extends State<CatalogueScreen>
               tvShowCount: tvShows.length,
               filmCount: films.length,
               totalCount: catalogue.length,
+              watchTimeMinutes: watchTime,
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),

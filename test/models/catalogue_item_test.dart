@@ -81,11 +81,13 @@ void main() {
         'name': 'Pilot',
         'air_date': '2024-06-01',
         'still_path': '/still.jpg',
+        'runtime': 58,
       });
 
       expect(episode.episodeNumber, 1);
       expect(episode.seasonNumber, 1);
       expect(episode.airDate, DateTime(2024, 6, 1));
+      expect(episode.runtimeMinutes, 58);
     });
   });
 }

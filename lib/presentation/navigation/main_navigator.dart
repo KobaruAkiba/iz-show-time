@@ -30,7 +30,9 @@ class _MainNavigatorState extends State<MainNavigator> {
           isActive: _currentTab == MainTab.search,
         );
       case MainTab.catalogue:
-        return const CatalogueScreen();
+        return CatalogueScreen(
+          isActive: _currentTab == MainTab.catalogue,
+        );
       case MainTab.settings:
         return const SettingsScreen();
     }

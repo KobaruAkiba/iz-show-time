@@ -5,6 +5,7 @@ class MediaDetails {
   final String? director;
   final int? runtimeMinutes;
   final int? numberOfSeasons;
+  final int? averageEpisodeRuntimeMinutes;
   final int? year;
   final String? posterPath;
   final bool isFilm;
@@ -15,6 +16,7 @@ class MediaDetails {
     this.director,
     this.runtimeMinutes,
     this.numberOfSeasons,
+    this.averageEpisodeRuntimeMinutes,
     this.year,
     this.posterPath,
     this.isFilm = true,
@@ -39,10 +41,21 @@ class MediaDetails {
 
     int? runtime;
     int? seasons;
+    int? avgEpisodeRuntime;
     if (isFilm) {
       runtime = json['runtime'] as int?;
     } else {
       seasons = json['number_of_seasons'] as int?;
+      final runTimes = (json['episode_run_time'] as List<dynamic>?)
+              ?.whereType<num>()
+              .map((value) => value.toInt())
+              .where((value) => value > 0)
+              .toList() ??
+          [];
+      if (runTimes.isNotEmpty) {
+        avgEpisodeRuntime =
+            runTimes.reduce((a, b) => a + b) ~/ runTimes.length;
+      }
     }
 
     String? director;
@@ -71,6 +84,7 @@ class MediaDetails {
       director: director,
       runtimeMinutes: runtime,
       numberOfSeasons: seasons,
+      averageEpisodeRuntimeMinutes: avgEpisodeRuntime,
       year: year,
       posterPath: json['poster_path'] as String?,
       isFilm: isFilm,

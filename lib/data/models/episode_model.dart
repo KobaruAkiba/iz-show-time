@@ -7,6 +7,7 @@ class EpisodeModel {
   final String? overview;
   final String? stillPath;
   final DateTime? airDate;
+  final int? runtimeMinutes;
 
   const EpisodeModel({
     required this.id,
@@ -16,6 +17,7 @@ class EpisodeModel {
     this.overview,
     this.stillPath,
     this.airDate,
+    this.runtimeMinutes,
   });
 
   factory EpisodeModel.fromJson(Map<String, dynamic> json) {
@@ -33,6 +35,7 @@ class EpisodeModel {
       overview: json['overview'] as String?,
       stillPath: json['still_path'] as String?,
       airDate: parsedDate,
+      runtimeMinutes: json['runtime'] as int?,
     );
   }
 
