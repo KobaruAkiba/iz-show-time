@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/services/app_services.dart';
 import '../../data/models/catalogue_item.dart';
 import '../../core/constants/api_constants.dart';
 
@@ -30,12 +31,21 @@ class MediaCard extends StatelessWidget {
 
   String get _typeLabel => _isFilm ? 'Film' : 'Serie TV';
 
+  String _tvShowBadgeLabel() {
+    final watchedCount =
+        AppServices().watchedEpisodesCountFor(item.id);
+    if (watchedCount > 0) {
+      return watchedCount == 1 ? '1 ep' : '$watchedCount ep';
+    }
+    return item.voteAverage.toStringAsFixed(1);
+  }
+
   @override
   Widget build(BuildContext context) {
     final posterUrl = ApiConstants.posterUrl(item.posterPath);
     final badgeLabel = _isFilm
         ? item.voteAverage.toStringAsFixed(1)
-        : 'S${(item as TvShow).seasonNumber}';
+        : _tvShowBadgeLabel();
 
     return Material(
       color: Colors.transparent,

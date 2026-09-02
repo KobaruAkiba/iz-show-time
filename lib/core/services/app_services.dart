@@ -115,6 +115,32 @@ class AppServices {
     }
   }
 
+  int watchedEpisodesCountFor(int mediaId) =>
+      _watchHistory
+          .where((record) => !record.isFilm && record.mediaId == mediaId)
+          .length;
+
+  List<WatchRecord> watchedEpisodesFor(int mediaId) => _watchHistory
+      .where((record) => !record.isFilm && record.mediaId == mediaId)
+      .toList(growable: false);
+
+  /// Adds the series to the catalogue (if needed) and records the episode.
+  Future<WatchRecord?> addEpisodeToCatalogue({
+    required TvShow show,
+    required EpisodeModel episode,
+    int? fallbackRuntimeMinutes,
+  }) async {
+    if (!isInCatalogue(show.id)) {
+      addToCatalogue(show);
+    }
+
+    return markEpisodeWatched(
+      show: show,
+      episode: episode,
+      fallbackRuntimeMinutes: fallbackRuntimeMinutes,
+    );
+  }
+
   bool isWatched({required int mediaId, int? episodeId}) {
     if (episodeId != null) {
       return _watchHistory.any((record) => record.episodeId == episodeId);

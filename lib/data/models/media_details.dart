@@ -1,3 +1,5 @@
+import 'season_model.dart';
+
 /// Lightweight view model for TMDB detail responses shown on Home tap.
 class MediaDetails {
   final String title;
@@ -9,6 +11,7 @@ class MediaDetails {
   final int? year;
   final String? posterPath;
   final bool isFilm;
+  final List<SeasonModel> seasons;
 
   const MediaDetails({
     required this.title,
@@ -20,6 +23,7 @@ class MediaDetails {
     this.year,
     this.posterPath,
     this.isFilm = true,
+    this.seasons = const [],
   });
 
   factory MediaDetails.fromTmdbJson(

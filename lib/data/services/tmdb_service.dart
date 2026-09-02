@@ -5,6 +5,7 @@ import '../../core/cache/cache_manager.dart';
 import '../models/catalogue_item.dart';
 import '../models/episode_model.dart';
 import '../models/media_details.dart';
+import '../models/season_model.dart';
 
 /// Unified TMDB API service with caching and JSON parsing
 class TmdbService {
@@ -272,6 +273,28 @@ class TmdbService {
       resultsKey: 'episodes',
     );
     return results.map(EpisodeModel.fromJson).toList();
+  }
+
+  Future<List<SeasonModel>> getTvSeasons({
+    required int tvId,
+    required int numberOfSeasons,
+  }) async {
+    if (numberOfSeasons <= 0) return const [];
+
+    final seasons = await Future.wait(
+      List.generate(
+        numberOfSeasons,
+        (index) => getSeasonEpisodes(
+          tvId: tvId,
+          seasonNumber: index + 1,
+        ),
+      ),
+    );
+
+    return [
+      for (var i = 0; i < seasons.length; i++)
+        SeasonModel(seasonNumber: i + 1, episodes: seasons[i]),
+    ];
   }
 
   Future<List<Map<String, dynamic>>> _fetchResults(

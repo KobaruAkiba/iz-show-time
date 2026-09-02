@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iz_show_time_tracker/data/models/catalogue_item.dart';
 import 'package:iz_show_time_tracker/data/models/episode_model.dart';
+import 'package:iz_show_time_tracker/data/models/season_model.dart';
 
 void main() {
   group('Film.fromJson', () {
@@ -33,8 +34,6 @@ void main() {
 
       expect(show.id, 1399);
       expect(show.title, 'Game of Thrones');
-      expect(show.seasonNumber, 1);
-      expect(show.episodeNumber, 1);
     });
   });
 
@@ -72,22 +71,40 @@ void main() {
     });
   });
 
-  group('EpisodeModel.fromJson', () {
-    test('parses episode with air date', () {
+  group('EpisodeModel', () {
+    test('parses episode payload', () {
       final episode = EpisodeModel.fromJson({
         'id': 10,
-        'episode_number': 1,
-        'season_number': 1,
-        'name': 'Pilot',
-        'air_date': '2024-06-01',
-        'still_path': '/still.jpg',
+        'episode_number': 14,
+        'season_number': 2,
+        'name': 'The Rains of Castamere',
         'runtime': 58,
       });
 
-      expect(episode.episodeNumber, 1);
-      expect(episode.seasonNumber, 1);
-      expect(episode.airDate, DateTime(2024, 6, 1));
+      expect(episode.episodeNumber, 14);
+      expect(episode.seasonNumber, 2);
       expect(episode.runtimeMinutes, 58);
+      expect(episode.codeLabel, 'S2 E14');
+      expect(episode.displayTitle, 'The Rains of Castamere');
+    });
+  });
+
+  group('SeasonModel', () {
+    test('groups episodes under a season label', () {
+      const season = SeasonModel(
+        seasonNumber: 1,
+        episodes: [
+          EpisodeModel(
+            id: 1,
+            seasonNumber: 1,
+            episodeNumber: 1,
+            name: 'Pilot',
+          ),
+        ],
+      );
+
+      expect(season.label, 'Season 1');
+      expect(season.episodes, hasLength(1));
     });
   });
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/media_detail_sheet.dart';
 import '../../widgets/media_card.dart';
 import '../../widgets/app_page_header.dart';
 import '../../widgets/catalogue_stats_row.dart';
@@ -53,6 +54,14 @@ class _CatalogueScreenState extends State<CatalogueScreen>
   }
 
   void _refresh() => setState(() {});
+
+  void _openDetails(CatalogueItem item) {
+    showMediaDetailSheet(
+      context,
+      item,
+      onWatchTimeChanged: _refresh,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -160,6 +169,7 @@ class _CatalogueScreenState extends State<CatalogueScreen>
             child: MediaCard(
               item: item,
               isBookmarked: true,
+              onTap: () => _openDetails(item),
               onAddRemove: () {
                 _appServices.removeFromCatalogue(item.id);
                 _refresh();

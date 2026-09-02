@@ -5,6 +5,7 @@ import '../../core/utils/duration_format.dart';
 import '../../data/models/catalogue_item.dart';
 import '../../data/models/episode_model.dart';
 import '../../data/models/media_details.dart';
+import '../../data/models/season_model.dart';
 
 /// Opens a bottom sheet with TMDB details for the tapped carousel item.
 Future<void> showMediaDetailSheet(
@@ -42,9 +43,9 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
 
   MediaDetails? _details;
   bool _isLoading = true;
-  int _selectedSeason = 1;
-  List<EpisodeModel> _episodes = [];
-  bool _isLoadingEpisodes = false;
+  List<SeasonModel> _seasons = [];
+  bool _isLoadingSeasons = false;
+  final Set<int> _expandedSeasons = {1};
 
   @override
   void initState() {
@@ -68,23 +69,23 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
       _isLoading = false;
     });
 
-    if (widget.item is TvShow && _details?.numberOfSeasons != null) {
-      await _loadEpisodes();
+    if (widget.item is TvShow && (_details?.numberOfSeasons ?? 0) > 0) {
+      await _loadSeasons();
     }
   }
 
-  Future<void> _loadEpisodes() async {
-    setState(() => _isLoadingEpisodes = true);
+  Future<void> _loadSeasons() async {
+    setState(() => _isLoadingSeasons = true);
 
-    final episodes = await _appServices.tmdbService.getSeasonEpisodes(
+    final seasons = await _appServices.tmdbService.getTvSeasons(
       tvId: widget.item.id,
-      seasonNumber: _selectedSeason,
+      numberOfSeasons: _details!.numberOfSeasons!,
     );
 
     if (!mounted) return;
     setState(() {
-      _episodes = episodes;
-      _isLoadingEpisodes = false;
+      _seasons = seasons;
+      _isLoadingSeasons = false;
     });
   }
 
@@ -125,7 +126,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     _notifyWatchTimeChanged();
   }
 
-  void _toggleEpisodeWatched(EpisodeModel episode) {
+  Future<void> _addEpisodeToCatalogue(EpisodeModel episode) async {
     final show = widget.item as TvShow;
     final isWatched =
         _appServices.isWatched(mediaId: show.id, episodeId: episode.id);
@@ -136,7 +137,9 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
       return;
     }
 
-    final record = _appServices.markEpisodeWatched(
+    final wasInCatalogue = _appServices.isInCatalogue(show.id);
+
+    final record = await _appServices.addEpisodeToCatalogue(
       show: show,
       episode: episode,
       fallbackRuntimeMinutes: _details?.averageEpisodeRuntimeMinutes,
@@ -152,11 +155,23 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'Added ${formatDurationMinutes(record.durationMinutes)} to watch time',
+          wasInCatalogue
+              ? 'Added ${episode.codeLabel} to catalogue'
+              : 'Added ${episode.codeLabel} — series saved to catalogue',
         ),
       ),
     );
     _notifyWatchTimeChanged();
+  }
+
+  void _toggleSeason(int seasonNumber) {
+    setState(() {
+      if (_expandedSeasons.contains(seasonNumber)) {
+        _expandedSeasons.remove(seasonNumber);
+      } else {
+        _expandedSeasons.add(seasonNumber);
+      }
+    });
   }
 
   @override
@@ -260,6 +275,19 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                               ),
                             ],
                           ),
+                          if (!isFilm &&
+                              _appServices
+                                  .watchedEpisodesCountFor(widget.item.id) >
+                                  0) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              '${_appServices.watchedEpisodesCountFor(widget.item.id)} episode(s) in catalogue',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(color: colorScheme.primary),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -319,7 +347,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                 ],
                 if (!isFilm) ...[
                   const SizedBox(height: 24),
-                  _buildEpisodesSection(details),
+                  _buildSeasonsSection(),
                 ],
               ],
             ],
@@ -329,62 +357,78 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     );
   }
 
-  Widget _buildEpisodesSection(MediaDetails details) {
+  Widget _buildSeasonsSection() {
     final colorScheme = Theme.of(context).colorScheme;
-    final seasonCount = details.numberOfSeasons ?? 1;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Episodes',
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
+        Text(
+          'Episodes',
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: colorScheme.primary,
+                fontWeight: FontWeight.w600,
               ),
-            ),
-            if (seasonCount > 1)
-              DropdownButton<int>(
-                value: _selectedSeason,
-                underline: const SizedBox.shrink(),
-                items: List.generate(seasonCount, (index) {
-                  final season = index + 1;
-                  return DropdownMenuItem(
-                    value: season,
-                    child: Text('Season $season'),
-                  );
-                }),
-                onChanged: (season) {
-                  if (season == null) return;
-                  setState(() => _selectedSeason = season);
-                  _loadEpisodes();
-                },
-              ),
-          ],
         ),
         const SizedBox(height: 8),
-        if (_isLoadingEpisodes)
+        if (_isLoadingSeasons)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 24),
             child: Center(child: CircularProgressIndicator()),
           )
-        else if (_episodes.isEmpty)
+        else if (_seasons.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Text(
-              'No episodes found for this season.',
+              'No episodes found.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
             ),
           )
         else
-          ..._episodes.map(_buildEpisodeTile),
+          ..._seasons.map(_buildSeasonSection),
       ],
+    );
+  }
+
+  Widget _buildSeasonSection(SeasonModel season) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isExpanded = _expandedSeasons.contains(season.seasonNumber);
+    final watchedInSeason = season.episodes
+        .where(
+          (episode) => _appServices.isWatched(
+            mediaId: widget.item.id,
+            episodeId: episode.id,
+          ),
+        )
+        .length;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      elevation: 0,
+      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+      child: Column(
+        children: [
+          ListTile(
+            onTap: () => _toggleSeason(season.seasonNumber),
+            title: Text(
+              season.label,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: watchedInSeason > 0
+                ? Text('$watchedInSeason / ${season.episodes.length} in catalogue')
+                : Text('${season.episodes.length} episodes'),
+            trailing: Icon(
+              isExpanded ? Icons.expand_less : Icons.expand_more,
+            ),
+          ),
+          if (isExpanded)
+            ...season.episodes.map(
+              (episode) => _buildEpisodeTile(episode),
+            ),
+        ],
+      ),
     );
   }
 
@@ -394,47 +438,31 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
       mediaId: widget.item.id,
       episodeId: episode.id,
     );
-    final runtime = episode.runtimeMinutes ??
-        _details?.averageEpisodeRuntimeMinutes;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      elevation: 0,
-      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        leading: CircleAvatar(
-          backgroundColor: isWatched
-              ? colorScheme.primary
-              : colorScheme.surfaceContainerHighest,
-          child: Text(
-            '${episode.episodeNumber}',
-            style: TextStyle(
-              color: isWatched
-                  ? colorScheme.onPrimary
-                  : colorScheme.onSurface,
-              fontWeight: FontWeight.w600,
+    return ListTile(
+      dense: true,
+      contentPadding: const EdgeInsets.fromLTRB(16, 0, 8, 0),
+      leading: Text(
+        episode.codeLabel,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: isWatched ? colorScheme.primary : colorScheme.onSurface,
             ),
-          ),
+      ),
+      title: Text(
+        episode.displayTitle,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: IconButton(
+        tooltip: isWatched
+            ? 'Remove from catalogue'
+            : 'Add episode to catalogue',
+        icon: Icon(
+          isWatched ? Icons.bookmark : Icons.bookmark_add_outlined,
+          color: isWatched ? colorScheme.primary : null,
         ),
-        title: Text(
-          episode.name.isNotEmpty
-              ? episode.name
-              : 'Episode ${episode.episodeNumber}',
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        subtitle: runtime != null && runtime > 0
-            ? Text(formatDurationMinutes(runtime))
-            : null,
-        trailing: IconButton(
-          tooltip: isWatched ? 'Unmark as watched' : 'Mark as watched',
-          icon: Icon(
-            isWatched ? Icons.check_circle : Icons.check_circle_outline,
-            color: isWatched ? colorScheme.primary : null,
-          ),
-          onPressed: () => _toggleEpisodeWatched(episode),
-        ),
+        onPressed: () => _addEpisodeToCatalogue(episode),
       ),
     );
   }

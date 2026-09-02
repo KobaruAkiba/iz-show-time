@@ -84,10 +84,8 @@ class Film extends CatalogueItem {
   String toString() => 'Film(id: $id, title: $title)';
 }
 
-/// TV Show catalogue item
+/// TV Show catalogue item — always represents the full series, not a single episode.
 class TvShow extends CatalogueItem {
-  final int seasonNumber;
-  final int episodeNumber;
   @override
   final String? overview;
   @override
@@ -98,8 +96,6 @@ class TvShow extends CatalogueItem {
   const TvShow({
     required super.id,
     required super.title,
-    this.seasonNumber = 1,
-    this.episodeNumber = 1,
     this.overview,
     this.posterPath,
     this.voteAverage = 0.0,
@@ -116,8 +112,6 @@ class TvShow extends CatalogueItem {
       overview: json['overview'] as String?,
       posterPath: json['poster_path'] as String?,
       voteAverage: (json['vote_average'] as num?)?.toDouble() ?? 0.0,
-      seasonNumber: json['season_number'] as int? ?? 1,
-      episodeNumber: json['episode_number'] as int? ?? 1,
     );
   }
 
@@ -127,8 +121,6 @@ class TvShow extends CatalogueItem {
         'overview': overview,
         'poster_path': posterPath,
         'vote_average': voteAverage,
-        'season_number': seasonNumber,
-        'episode_number': episodeNumber,
         'tags': tags,
       };
 
@@ -136,8 +128,6 @@ class TvShow extends CatalogueItem {
   TvShow copyWithTags(List<String> newTags) => TvShow(
         id: id,
         title: title,
-        seasonNumber: seasonNumber,
-        episodeNumber: episodeNumber,
         overview: overview,
         posterPath: posterPath,
         voteAverage: voteAverage,
