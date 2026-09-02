@@ -5,6 +5,7 @@ import 'core/theme/app_scroll_behavior.dart';
 import 'core/network/dio_client.dart';
 import 'core/constants/api_constants.dart';
 import 'core/services/app_services.dart';
+import 'core/notifications/notification_service.dart';
 import 'core/routing/app_router.dart';
 import 'presentation/navigation/main_navigator.dart';
 
@@ -30,6 +31,7 @@ void main() async {
 
   final appServices = AppServices();
   await appServices.initialize();
+  await NotificationService().initialize();
   await appServices.startBackgroundTasks();
 
   runApp(MyApp(appServices: appServices));

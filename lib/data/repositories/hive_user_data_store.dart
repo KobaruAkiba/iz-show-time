@@ -5,6 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../core/constants/storage_constants.dart';
 import '../models/catalogue_item.dart';
+import '../models/new_episode_alert.dart';
 import '../models/watch_record.dart';
 import 'user_data_store.dart';
 
@@ -107,10 +108,72 @@ class HiveUserDataStore implements UserDataStore {
   }
 
   @override
+  Future<List<NewEpisodeAlert>> loadNewEpisodeAlerts() async {
+    await open();
+    final raw = metaBox.get(StorageConstants.newEpisodeAlertsKey);
+    if (raw == null) return [];
+
+    final List<dynamic> entries;
+    if (raw is String) {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return [];
+      entries = decoded;
+    } else if (raw is List) {
+      entries = raw;
+    } else {
+      return [];
+    }
+
+    final alerts = <NewEpisodeAlert>[];
+    for (final entry in entries) {
+      final json = _decodeStoredMap(entry);
+      if (json == null) continue;
+      try {
+        alerts.add(NewEpisodeAlert.fromJson(json));
+      } catch (error, stackTrace) {
+        debugPrint(
+          'Skipping corrupted new episode alert: $error\n$stackTrace',
+        );
+      }
+    }
+    return alerts;
+  }
+
+  @override
+  Future<void> saveNewEpisodeAlerts(List<NewEpisodeAlert> alerts) async {
+    await open();
+    await metaBox.put(
+      StorageConstants.newEpisodeAlertsKey,
+      jsonEncode(alerts.map((alert) => alert.toJson()).toList()),
+    );
+    await metaBox.flush();
+  }
+
+  @override
+  Future<DateTime?> loadLastEpisodeCheckAt() async {
+    await open();
+    final raw = metaBox.get(StorageConstants.lastEpisodeCheckKey);
+    if (raw is! String) return null;
+    return DateTime.tryParse(raw);
+  }
+
+  @override
+  Future<void> saveLastEpisodeCheckAt(DateTime checkedAt) async {
+    await open();
+    await metaBox.put(
+      StorageConstants.lastEpisodeCheckKey,
+      checkedAt.toIso8601String(),
+    );
+    await metaBox.flush();
+  }
+
+  @override
   Future<void> clearAll() async {
     await open();
     await catalogueBox.clear();
     await watchHistoryBox.clear();
+    await metaBox.delete(StorageConstants.newEpisodeAlertsKey);
+    await metaBox.delete(StorageConstants.lastEpisodeCheckKey);
     await metaBox.put(
       StorageConstants.schemaVersionKey,
       StorageConstants.storageSchemaVersion,

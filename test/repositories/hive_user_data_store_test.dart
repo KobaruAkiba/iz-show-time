@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:iz_show_time_tracker/core/constants/storage_constants.dart';
 import 'package:iz_show_time_tracker/data/models/catalogue_item.dart';
+import 'package:iz_show_time_tracker/data/models/new_episode_alert.dart';
 import 'package:iz_show_time_tracker/data/models/watch_record.dart';
 import 'package:iz_show_time_tracker/data/repositories/hive_user_data_store.dart';
 
@@ -101,15 +102,54 @@ void main() {
           watchedAt: DateTime(2026, 3, 1),
         ),
       );
+      await store.saveNewEpisodeAlerts([
+        NewEpisodeAlert(
+          showId: 1,
+          showTitle: 'Test Film',
+          episodeId: 11,
+          seasonNumber: 1,
+          episodeNumber: 2,
+          episodeName: 'Episode 2',
+          detectedAt: DateTime(2026, 3, 2),
+        ),
+      ]);
 
       await store.clearAll();
 
       expect(await store.loadCatalogue(), isEmpty);
       expect(await store.loadWatchHistory(), isEmpty);
+      expect(await store.loadNewEpisodeAlerts(), isEmpty);
       expect(
         store.metaBox.get(StorageConstants.schemaVersionKey),
         StorageConstants.storageSchemaVersion,
       );
+    });
+
+    test('round-trips new episode alerts', () async {
+      final checkedAt = DateTime(2026, 5, 1, 12);
+      final detectedAt = DateTime(2026, 5, 2, 8);
+
+      await store.saveNewEpisodeAlerts([
+        NewEpisodeAlert(
+          showId: 42,
+          showTitle: 'Sample Show',
+          showPosterPath: '/poster.jpg',
+          episodeId: 901,
+          seasonNumber: 3,
+          episodeNumber: 9,
+          episodeName: 'New One',
+          airDate: DateTime(2026, 5, 1),
+          detectedAt: detectedAt,
+        ),
+      ]);
+      await store.saveLastEpisodeCheckAt(checkedAt);
+
+      final alerts = await store.loadNewEpisodeAlerts();
+      final lastCheck = await store.loadLastEpisodeCheckAt();
+
+      expect(alerts, hasLength(1));
+      expect(alerts.first.episodeName, 'New One');
+      expect(lastCheck, checkedAt);
     });
 
     test('removeCatalogueItem and removeWatchRecord delete entries', () async {

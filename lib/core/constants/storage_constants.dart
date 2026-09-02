@@ -6,4 +6,7 @@ class StorageConstants {
 
   static const String schemaVersionKey = 'schema_version';
   static const int storageSchemaVersion = 1;
+
+  static const String newEpisodeAlertsKey = 'new_episode_alerts';
+  static const String lastEpisodeCheckKey = 'last_episode_check_at';
 }

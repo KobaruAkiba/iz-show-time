@@ -9,6 +9,7 @@ import '../../data/repositories/user_data_store.dart';
 import '../../data/services/tmdb_service.dart';
 import '../../data/models/catalogue_item.dart';
 import '../../data/models/episode_model.dart';
+import '../../data/models/new_episode_alert.dart';
 import '../../data/models/watch_record.dart';
 
 /// Central services wrapper for easy access to all app services
@@ -33,9 +34,14 @@ class AppServices {
 
   final List<CatalogueItem> _catalogue = [];
   final List<WatchRecord> _watchHistory = [];
+  final List<NewEpisodeAlert> _newEpisodeAlerts = [];
+  final ValueNotifier<List<NewEpisodeAlert>> newEpisodeAlertsListenable =
+      ValueNotifier<List<NewEpisodeAlert>>([]);
 
   List<CatalogueItem> get catalogue => List.unmodifiable(_catalogue);
   List<WatchRecord> get watchHistory => List.unmodifiable(_watchHistory);
+  List<NewEpisodeAlert> get newEpisodeAlerts =>
+      List.unmodifiable(_newEpisodeAlerts);
 
   int get totalWatchTimeMinutes =>
       _watchHistory.fold(0, (sum, record) => sum + record.durationMinutes);
@@ -78,6 +84,7 @@ class AppServices {
   Future<void> removeFromCatalogue(int id) async {
     _catalogue.removeWhere((item) => item.id == id);
     await _persistCatalogueRemoval(id);
+    await _removeEpisodeDataForShow(id);
   }
 
   Future<void> toggleCatalogueItem(CatalogueItem item) async {
@@ -230,6 +237,7 @@ class AppServices {
     );
     _watchHistory.add(record);
     await _persistWatchRecord(record);
+    await _removeNewEpisodeAlert(record.episodeId);
     return record;
   }
 
@@ -300,8 +308,54 @@ class AppServices {
     _watchHistory
       ..clear()
       ..addAll(await store.loadWatchHistory());
+    _newEpisodeAlerts
+      ..clear()
+      ..addAll(await store.loadNewEpisodeAlerts());
+    newEpisodeAlertsListenable.value = List<NewEpisodeAlert>.from(
+      _newEpisodeAlerts,
+    );
 
     tmdbService;
+  }
+
+  void updateNewEpisodeAlerts(List<NewEpisodeAlert> alerts) {
+    _newEpisodeAlerts
+      ..clear()
+      ..addAll(alerts);
+    newEpisodeAlertsListenable.value = List<NewEpisodeAlert>.from(alerts);
+  }
+
+  Future<void> _removeNewEpisodeAlert(int? episodeId) async {
+    if (episodeId == null) return;
+    final removed = _newEpisodeAlerts.any((alert) => alert.episodeId == episodeId);
+    if (!removed) return;
+
+    _newEpisodeAlerts.removeWhere((alert) => alert.episodeId == episodeId);
+    newEpisodeAlertsListenable.value = List<NewEpisodeAlert>.from(
+      _newEpisodeAlerts,
+    );
+    try {
+      await userDataStore.saveNewEpisodeAlerts(_newEpisodeAlerts);
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Failed to persist new episode alert removal: $error\n$stackTrace',
+      );
+    }
+  }
+
+  Future<void> _removeEpisodeDataForShow(int showId) async {
+    _newEpisodeAlerts.removeWhere((alert) => alert.showId == showId);
+    newEpisodeAlertsListenable.value = List<NewEpisodeAlert>.from(
+      _newEpisodeAlerts,
+    );
+
+    try {
+      await userDataStore.saveNewEpisodeAlerts(_newEpisodeAlerts);
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Failed to remove episode data for show $showId: $error\n$stackTrace',
+      );
+    }
   }
 
   Future<void> startBackgroundTasks() async {
@@ -373,6 +427,8 @@ class AppServices {
     cacheManager.clearAll();
     _catalogue.clear();
     _watchHistory.clear();
+    _newEpisodeAlerts.clear();
+    newEpisodeAlertsListenable.value = const [];
     await userDataStore.clearAll();
   }
 }

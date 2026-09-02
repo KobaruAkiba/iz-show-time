@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iz_show_time_tracker/core/services/app_services.dart';
 import 'package:iz_show_time_tracker/data/models/catalogue_item.dart';
+import 'package:iz_show_time_tracker/data/models/new_episode_alert.dart';
 import 'package:iz_show_time_tracker/data/models/watch_record.dart';
 import 'package:iz_show_time_tracker/data/repositories/user_data_store.dart';
 
@@ -9,6 +10,8 @@ class FakeUserDataStore implements UserDataStore {
   final List<int> removedCatalogueIds = [];
   final List<WatchRecord> savedWatchRecords = [];
   final List<String> removedWatchKeys = [];
+  List<NewEpisodeAlert> alerts = [];
+  DateTime? lastEpisodeCheckAt;
   bool cleared = false;
 
   @override
@@ -41,8 +44,27 @@ class FakeUserDataStore implements UserDataStore {
   }
 
   @override
+  Future<List<NewEpisodeAlert>> loadNewEpisodeAlerts() async =>
+      List<NewEpisodeAlert>.from(alerts);
+
+  @override
+  Future<void> saveNewEpisodeAlerts(List<NewEpisodeAlert> alerts) async {
+    this.alerts = List<NewEpisodeAlert>.from(alerts);
+  }
+
+  @override
+  Future<DateTime?> loadLastEpisodeCheckAt() async => lastEpisodeCheckAt;
+
+  @override
+  Future<void> saveLastEpisodeCheckAt(DateTime checkedAt) async {
+    lastEpisodeCheckAt = checkedAt;
+  }
+
+  @override
   Future<void> clearAll() async {
     cleared = true;
+    alerts = [];
+    lastEpisodeCheckAt = null;
   }
 
   @override

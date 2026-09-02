@@ -266,11 +266,13 @@ class TmdbService {
   Future<List<EpisodeModel>> getSeasonEpisodes({
     required int tvId,
     required int seasonNumber,
+    bool forceRefresh = false,
   }) async {
     final results = await _fetchResults(
       'tv/$tvId/season/$seasonNumber',
       ttlMinutes: AppConstants.episodeCacheTTL,
       resultsKey: 'episodes',
+      bypassCache: forceRefresh,
     );
     return results.map(EpisodeModel.fromJson).toList();
   }
@@ -302,13 +304,16 @@ class TmdbService {
     Map<String, String>? extraParams,
     int? ttlMinutes,
     String resultsKey = 'results',
+    bool bypassCache = false,
   }) async {
     final params = _baseParams(extraParams);
     final cacheKey = _buildCacheKey(path, params);
 
-    final cached = _cache.get<List<dynamic>>(cacheKey);
-    if (cached != null) {
-      return cached.whereType<Map<String, dynamic>>().toList();
+    if (!bypassCache) {
+      final cached = _cache.get<List<dynamic>>(cacheKey);
+      if (cached != null) {
+        return cached.whereType<Map<String, dynamic>>().toList();
+      }
     }
 
     if (AppApiKey.tmdb.isEmpty) {
