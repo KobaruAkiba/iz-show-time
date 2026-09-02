@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../widgets/media_card.dart';
+import '../../widgets/media_detail_sheet.dart';
 import '../../widgets/app_page_header.dart';
 import '../../../data/models/catalogue_item.dart';
 import '../../../core/services/app_services.dart';
@@ -246,6 +247,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 showTypeBadge: true,
                 formatZeroRatingAsNd: true,
                 isBookmarked: _appServices.isInCatalogue(item.id),
+                onTap: () => _openDetails(item),
                 onAddRemove: () => _toggleItem(item),
               ),
             ),
@@ -446,6 +448,10 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     return results;
+  }
+
+  void _openDetails(CatalogueItem item) {
+    showMediaDetailSheet(context, item);
   }
 
   void _toggleItem(CatalogueItem item) {
