@@ -145,13 +145,17 @@ class AppServices {
     return _watchHistory.any((record) => record.isFilm && record.mediaId == mediaId);
   }
 
-  /// Records a watched film. Returns the new record, or null if already watched
-  /// or duration is invalid.
+  /// Adds the film to the catalogue (if needed) and records it as watched.
+  /// Returns the new record, or null if already watched or duration is invalid.
   Future<WatchRecord?> markFilmWatched({
     required Film film,
     required int durationMinutes,
   }) async {
     if (durationMinutes <= 0 || isWatched(mediaId: film.id)) return null;
+
+    if (!isInCatalogue(film.id)) {
+      await addToCatalogue(film);
+    }
 
     final record = WatchRecord(
       mediaId: film.id,
