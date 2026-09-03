@@ -45,7 +45,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
   bool _isLoading = true;
   List<SeasonModel> _seasons = [];
   bool _isLoadingSeasons = false;
-  final Set<int> _expandedSeasons = {1};
+  final Set<int> _expandedSeasons = {};
 
   @override
   void initState() {
