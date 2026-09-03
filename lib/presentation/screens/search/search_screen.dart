@@ -1,20 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../widgets/media_card.dart';
 import '../../widgets/media_detail_sheet.dart';
+import '../../widgets/media_filters.dart';
 import '../../widgets/app_page_header.dart';
 import '../../widgets/lazy_paged_list_view.dart';
 import '../../../data/models/catalogue_item.dart';
 import '../../../core/services/app_services.dart';
-
-enum SearchMediaFilter { all, filmsOnly, tvOnly }
-
-enum SearchSortOption {
-  none,
-  titleAsc,
-  titleDesc,
-  ratingAsc,
-  ratingDesc,
-}
 
 /// Search screen for finding films and TV shows via TMDB
 class SearchScreen extends StatefulWidget {
@@ -46,14 +37,15 @@ class _SearchScreenState extends State<SearchScreen> {
   int _remotePage = 0;
   int _remoteTotalPages = 0;
 
-  SearchMediaFilter _mediaFilter = SearchMediaFilter.all;
-  SearchSortOption _sortOption = SearchSortOption.none;
+  MediaFilter _mediaFilter = MediaFilter.all;
+  MediaSortOption _sortOption = MediaSortOption.none;
 
   final _appServices = AppServices();
 
-  bool get _hasActiveFilters =>
-      _mediaFilter != SearchMediaFilter.all ||
-      _sortOption != SearchSortOption.none;
+  bool get _hasActiveFilters => hasActiveMediaFilters(
+        mediaFilter: _mediaFilter,
+        sortOption: _sortOption,
+      );
 
   bool get _hasMoreRemote =>
       _remotePage > 0 && _remotePage < _remoteTotalPages;
@@ -102,8 +94,8 @@ class _SearchScreenState extends State<SearchScreen> {
       _lastQuery = '';
       _remotePage = 0;
       _remoteTotalPages = 0;
-      _mediaFilter = SearchMediaFilter.all;
-      _sortOption = SearchSortOption.none;
+      _mediaFilter = MediaFilter.all;
+      _sortOption = MediaSortOption.none;
       _controller.clear();
     });
   }
@@ -329,180 +321,33 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
         ),
         const Spacer(),
-        Badge(
-          isLabelVisible: _hasActiveFilters,
-          label: const Text(''),
-          smallSize: 8,
-          child: OutlinedButton.icon(
-            onPressed: _showFiltersSheet,
-            icon: const Icon(Icons.tune, size: 18),
-            label: const Text('Filters & sort'),
-            style: OutlinedButton.styleFrom(
-              visualDensity: VisualDensity.compact,
-            ),
-          ),
+        MediaFiltersButton(
+          isActive: _hasActiveFilters,
+          onPressed: _showFiltersSheet,
         ),
       ],
     );
   }
 
   Future<void> _showFiltersSheet() async {
-    var mediaFilter = _mediaFilter;
-    var sortOption = _sortOption;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    'Filters & sort',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Show',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  SegmentedButton<SearchMediaFilter>(
-                    segments: const [
-                      ButtonSegment(
-                        value: SearchMediaFilter.all,
-                        label: Text('All'),
-                        icon: Icon(Icons.grid_view, size: 18),
-                      ),
-                      ButtonSegment(
-                        value: SearchMediaFilter.filmsOnly,
-                        label: Text('Films'),
-                        icon: Icon(Icons.movie_filter, size: 18),
-                      ),
-                      ButtonSegment(
-                        value: SearchMediaFilter.tvOnly,
-                        label: Text('TV'),
-                        icon: Icon(Icons.tv_outlined, size: 18),
-                      ),
-                    ],
-                    selected: {mediaFilter},
-                    onSelectionChanged: (selection) {
-                      setSheetState(() => mediaFilter = selection.first);
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Sort by',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  ...SearchSortOption.values.map(
-                    (option) => ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                      leading: Icon(
-                        sortOption == option
-                            ? Icons.radio_button_checked
-                            : Icons.radio_button_off,
-                        size: 20,
-                      ),
-                      title: Text(_sortOptionLabel(option)),
-                      onTap: () =>
-                          setSheetState(() => sortOption = option),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      TextButton(
-                        onPressed: () {
-                          setSheetState(() {
-                            mediaFilter = SearchMediaFilter.all;
-                            sortOption = SearchSortOption.none;
-                          });
-                        },
-                        child: const Text('Reset'),
-                      ),
-                      const Spacer(),
-                      FilledButton(
-                        onPressed: () {
-                          setState(() {
-                            _mediaFilter = mediaFilter;
-                            _sortOption = sortOption;
-                          });
-                          Navigator.pop(context);
-                        },
-                        child: const Text('Apply'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+    final result = await showMediaFiltersSheet(
+      context,
+      mediaFilter: _mediaFilter,
+      sortOption: _sortOption,
     );
-  }
-
-  String _sortOptionLabel(SearchSortOption option) {
-    return switch (option) {
-      SearchSortOption.none => 'Default order',
-      SearchSortOption.titleAsc => 'Title (A → Z)',
-      SearchSortOption.titleDesc => 'Title (Z → A)',
-      SearchSortOption.ratingDesc => 'Rating (high → low)',
-      SearchSortOption.ratingAsc => 'Rating (low → high)',
-    };
+    if (result == null || !mounted) return;
+    setState(() {
+      _mediaFilter = result.mediaFilter;
+      _sortOption = result.sortOption;
+    });
   }
 
   List<CatalogueItem> _buildFilteredResults() {
-    final results = <CatalogueItem>[];
-    switch (_mediaFilter) {
-      case SearchMediaFilter.all:
-        results.addAll(_filmResults);
-        results.addAll(_tvShowResults);
-      case SearchMediaFilter.filmsOnly:
-        results.addAll(_filmResults);
-      case SearchMediaFilter.tvOnly:
-        results.addAll(_tvShowResults);
-    }
-
-    switch (_sortOption) {
-      case SearchSortOption.none:
-        break;
-      case SearchSortOption.titleAsc:
-        results.sort(
-          (a, b) =>
-              a.title.toLowerCase().compareTo(b.title.toLowerCase()),
-        );
-      case SearchSortOption.titleDesc:
-        results.sort(
-          (a, b) =>
-              b.title.toLowerCase().compareTo(a.title.toLowerCase()),
-        );
-      case SearchSortOption.ratingAsc:
-        results.sort((a, b) => a.voteAverage.compareTo(b.voteAverage));
-      case SearchSortOption.ratingDesc:
-        results.sort((a, b) => b.voteAverage.compareTo(a.voteAverage));
-    }
-
-    return results;
+    return applyMediaFilters(
+      [..._filmResults, ..._tvShowResults],
+      mediaFilter: _mediaFilter,
+      sortOption: _sortOption,
+    );
   }
 
   void _openDetails(CatalogueItem item) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../widgets/media_detail_sheet.dart';
 import '../../widgets/media_card.dart';
+import '../../widgets/media_filters.dart';
 import '../../widgets/app_page_header.dart';
 import '../../widgets/catalogue_stats_row.dart';
 import '../../widgets/lazy_paged_list_view.dart';
@@ -20,10 +21,17 @@ class CatalogueScreen extends StatefulWidget {
 class _CatalogueScreenState extends State<CatalogueScreen>
     with SingleTickerProviderStateMixin {
   String _searchQuery = '';
+  MediaFilter _mediaFilter = MediaFilter.all;
+  MediaSortOption _sortOption = MediaSortOption.none;
   final _appServices = AppServices();
 
   final List<String> _tabs = ['All', 'Films', 'TV Shows', 'In Progress'];
   late TabController _tabController;
+
+  bool get _hasActiveFilters => hasActiveMediaFilters(
+        mediaFilter: _mediaFilter,
+        sortOption: _sortOption,
+      );
 
   @override
   void initState() {
@@ -49,14 +57,33 @@ class _CatalogueScreenState extends State<CatalogueScreen>
   }
 
   List<CatalogueItem> _filterItems(List<CatalogueItem> items) {
-    if (_searchQuery.isEmpty) return items;
-    final query = _searchQuery.toLowerCase();
-    return items
-        .where((item) => item.title.toLowerCase().contains(query))
-        .toList();
+    Iterable<CatalogueItem> filtered = items;
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
+      filtered =
+          filtered.where((item) => item.title.toLowerCase().contains(query));
+    }
+    return applyMediaFilters(
+      filtered,
+      mediaFilter: _mediaFilter,
+      sortOption: _sortOption,
+    );
   }
 
   void _refresh() => setState(() {});
+
+  Future<void> _showFiltersSheet() async {
+    final result = await showMediaFiltersSheet(
+      context,
+      mediaFilter: _mediaFilter,
+      sortOption: _sortOption,
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      _mediaFilter = result.mediaFilter;
+      _sortOption = result.sortOption;
+    });
+  }
 
   void _openDetails(CatalogueItem item) {
     showMediaDetailSheet(
@@ -86,17 +113,31 @@ class _CatalogueScreenState extends State<CatalogueScreen>
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: TextField(
-                onChanged: (value) => setState(() => _searchQuery = value),
-                decoration: InputDecoration(
-                  hintText: 'Search catalogue...',
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: TextField(
+                      onChanged: (value) =>
+                          setState(() => _searchQuery = value),
+                      decoration: InputDecoration(
+                        hintText: 'Search catalogue...',
+                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                      ),
+                    ),
                   ),
-                  filled: true,
-                ),
+                  const SizedBox(width: 8),
+                  MediaFiltersButton(
+                    isActive: _hasActiveFilters,
+                    onPressed: _showFiltersSheet,
+                    compact: true,
+                  ),
+                ],
               ),
             ),
             TabBar(
@@ -125,7 +166,9 @@ class _CatalogueScreenState extends State<CatalogueScreen>
     if (items.isEmpty) {
       return Center(
         child: Text(
-          'Your catalogue is empty',
+          _hasActiveFilters || _searchQuery.isNotEmpty
+              ? 'No results match your filters'
+              : 'Your catalogue is empty',
           style: Theme.of(context).textTheme.bodyLarge,
         ),
       );
@@ -133,7 +176,13 @@ class _CatalogueScreenState extends State<CatalogueScreen>
 
     return LazyPagedListView(
       // Local catalogue only — no remote API. Window resets on filter/tab data change.
-      resetKey: Object.hash(tabIndex, _searchQuery, items.length),
+      resetKey: Object.hash(
+        tabIndex,
+        _searchQuery,
+        _mediaFilter,
+        _sortOption,
+        items.length,
+      ),
       totalItemCount: items.length,
       onRefresh: () async => _refresh(),
       itemBuilder: (context, index) {
