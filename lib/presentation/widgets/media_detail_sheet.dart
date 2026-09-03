@@ -139,33 +139,21 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
       return;
     }
 
-    final wasInCatalogue = _appServices.isInCatalogue(show.id);
-
     final record = await _appServices.addEpisodeToCatalogue(
       show: show,
       episode: episode,
       fallbackRuntimeMinutes: _details?.averageEpisodeRuntimeMinutes,
     );
 
+    if (!mounted) return;
+
     if (record == null) {
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Episode runtime not available')),
       );
       return;
     }
 
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          wasInCatalogue
-              ? 'Added ${episode.codeLabel} to catalogue'
-              : 'Added ${episode.codeLabel} — series saved to catalogue',
-        ),
-      ),
-    );
     _notifyWatchTimeChanged();
   }
 
