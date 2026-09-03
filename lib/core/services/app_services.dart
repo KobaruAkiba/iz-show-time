@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import '../cache/cache_manager.dart';
 import '../cache/api_cache_service.dart';
 import '../background/background_task_runner.dart';
-import '../debug/agent_debug_log.dart';
 import '../notifications/new_episode_checker.dart';
 import '../../data/repositories/hive_user_data_store.dart';
 import '../../data/repositories/user_data_store.dart';
@@ -70,21 +69,6 @@ class AppServices {
     if (isInCatalogue(item.id)) return;
     _catalogue.add(item);
     await _persistCatalogueItem(item);
-    // #region agent log
-    AgentDebugLog.log(
-      location: 'app_services.dart:addToCatalogue',
-      message: 'catalogue item added',
-      hypothesisId: 'A',
-      data: {
-        'mediaId': item.id,
-        'title': item.title,
-        'isFilm': item is Film,
-        'catalogueSize': _catalogue.length,
-        'watchHistorySize': _watchHistory.length,
-        'totalWatchTimeMinutes': totalWatchTimeMinutes,
-      },
-    );
-    // #endregion
   }
 
   Future<void> removeFromCatalogue(int id) async {
@@ -110,19 +94,6 @@ class AppServices {
 
     final details = await tmdbService.getMediaDetails(item);
     final runtime = details?.runtimeMinutes ?? 0;
-    // #region agent log
-    AgentDebugLog.log(
-      location: 'app_services.dart:addToCatalogueWithWatchTime',
-      message: 'film runtime resolved for catalogue add',
-      hypothesisId: 'D',
-      data: {
-        'mediaId': item.id,
-        'title': item.title,
-        'runtimeMinutes': runtime,
-      },
-      runId: 'post-fix',
-    );
-    // #endregion
     if (runtime <= 0) return null;
 
     return await markFilmWatched(film: item, durationMinutes: runtime);
@@ -180,18 +151,6 @@ class AppServices {
     required Film film,
     required int durationMinutes,
   }) async {
-    // #region agent log
-    AgentDebugLog.log(
-      location: 'app_services.dart:markFilmWatched',
-      message: 'markFilmWatched called',
-      hypothesisId: 'C',
-      data: {
-        'mediaId': film.id,
-        'durationMinutes': durationMinutes,
-        'alreadyWatched': isWatched(mediaId: film.id),
-      },
-    );
-    // #endregion
     if (durationMinutes <= 0 || isWatched(mediaId: film.id)) return null;
 
     final record = WatchRecord(
@@ -203,19 +162,6 @@ class AppServices {
     );
     _watchHistory.add(record);
     await _persistWatchRecord(record);
-    // #region agent log
-    AgentDebugLog.log(
-      location: 'app_services.dart:markFilmWatched',
-      message: 'watch record created',
-      hypothesisId: 'C',
-      data: {
-        'mediaId': film.id,
-        'durationMinutes': durationMinutes,
-        'totalWatchTimeMinutes': totalWatchTimeMinutes,
-        'watchHistorySize': _watchHistory.length,
-      },
-    );
-    // #endregion
     return record;
   }
 

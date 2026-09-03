@@ -3,9 +3,9 @@ import '../../widgets/media_detail_sheet.dart';
 import '../../widgets/media_card.dart';
 import '../../widgets/app_page_header.dart';
 import '../../widgets/catalogue_stats_row.dart';
+import '../../widgets/lazy_paged_list_view.dart';
 import '../../../data/models/catalogue_item.dart';
 import '../../../core/services/app_services.dart';
-import '../../../core/debug/agent_debug_log.dart';
 
 /// Screen displaying the user's catalogue of films and TV shows
 class CatalogueScreen extends StatefulWidget {
@@ -72,18 +72,6 @@ class _CatalogueScreenState extends State<CatalogueScreen>
     final tvShows = _appServices.tvShows;
     final catalogue = _appServices.catalogue;
     final watchTime = _appServices.totalWatchTimeMinutes;
-    // #region agent log
-    AgentDebugLog.log(
-      location: 'catalogue_screen.dart:build',
-      message: 'catalogue screen rendered',
-      hypothesisId: 'B',
-      data: {
-        'watchTimeMinutes': watchTime,
-        'catalogueSize': catalogue.length,
-        'filmCount': films.length,
-      },
-    );
-    // #endregion
 
     return Scaffold(
       body: SafeArea(
@@ -120,10 +108,10 @@ class _CatalogueScreenState extends State<CatalogueScreen>
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  _buildItemList(_filterItems(catalogue)),
-                  _buildItemList(_filterItems(films)),
-                  _buildItemList(_filterItems(tvShows)),
-                  _buildItemList(_filterItems(tvShows)),
+                  _buildItemList(_filterItems(catalogue), tabIndex: 0),
+                  _buildItemList(_filterItems(films), tabIndex: 1),
+                  _buildItemList(_filterItems(tvShows), tabIndex: 2),
+                  _buildItemList(_filterItems(tvShows), tabIndex: 3),
                 ],
               ),
             ),
@@ -133,7 +121,7 @@ class _CatalogueScreenState extends State<CatalogueScreen>
     );
   }
 
-  Widget _buildItemList(List<CatalogueItem> items) {
+  Widget _buildItemList(List<CatalogueItem> items, {required int tabIndex}) {
     if (items.isEmpty) {
       return Center(
         child: Text(
@@ -143,27 +131,26 @@ class _CatalogueScreenState extends State<CatalogueScreen>
       );
     }
 
-    return RefreshIndicator(
+    return LazyPagedListView(
+      // Local catalogue only — no remote API. Window resets on filter/tab data change.
+      resetKey: Object.hash(tabIndex, _searchQuery, items.length),
+      totalItemCount: items.length,
       onRefresh: () async => _refresh(),
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: items.length,
-        itemBuilder: (context, index) {
-          final item = items[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: MediaCard(
-              item: item,
-              isBookmarked: true,
-              onTap: () => _openDetails(item),
-              onAddRemove: () async {
-                await _appServices.removeFromCatalogue(item.id);
-                _refresh();
-              },
-            ),
-          );
-        },
-      ),
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: MediaCard(
+            item: item,
+            isBookmarked: true,
+            onTap: () => _openDetails(item),
+            onAddRemove: () async {
+              await _appServices.removeFromCatalogue(item.id);
+              _refresh();
+            },
+          ),
+        );
+      },
     );
   }
 }

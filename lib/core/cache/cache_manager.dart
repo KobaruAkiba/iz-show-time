@@ -45,13 +45,25 @@ class CacheManager {
           return List<dynamic>.from(value) as T;
         }
         if (value is Map) {
-          return Map<String, dynamic>.from(value) as T;
+          try {
+            return Map<String, dynamic>.from(value) as T;
+          } catch (_) {
+            return null;
+          }
         }
-        return value as T?;
+        try {
+          return value as T?;
+        } catch (_) {
+          return null;
+        }
       }
-      return decoded as T?;
+      try {
+        return decoded as T?;
+      } catch (_) {
+        return null;
+      }
     } catch (_) {
-      return rawValue as T?;
+      return null;
     }
   }
 

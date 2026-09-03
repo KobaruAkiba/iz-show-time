@@ -32,4 +32,7 @@ class AppConstants {
   // UI-related constants
   static const double cardHeight = 200.0;
   static const double cardWidthRatio = 0.75;
+
+  /// Initial / incremental page size for lazy-loaded lists.
+  static const int listPageSize = 15;
 }

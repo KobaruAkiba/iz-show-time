@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../widgets/media_card.dart';
 import '../../widgets/media_detail_sheet.dart';
 import '../../widgets/app_page_header.dart';
+import '../../widgets/lazy_paged_list_view.dart';
 import '../../../data/models/catalogue_item.dart';
 import '../../../core/services/app_services.dart';
 
@@ -34,11 +35,16 @@ class _SearchScreenState extends State<SearchScreen> {
   late TextEditingController _controller;
   bool _hasSearched = false;
   bool _isLoading = false;
+  bool _isLoadingMore = false;
   String? _errorMessage;
   String _lastQuery = '';
 
   List<Film> _filmResults = [];
   List<TvShow> _tvShowResults = [];
+  final Set<int> _seenIds = {};
+
+  int _remotePage = 0;
+  int _remoteTotalPages = 0;
 
   SearchMediaFilter _mediaFilter = SearchMediaFilter.all;
   SearchSortOption _sortOption = SearchSortOption.none;
@@ -48,6 +54,9 @@ class _SearchScreenState extends State<SearchScreen> {
   bool get _hasActiveFilters =>
       _mediaFilter != SearchMediaFilter.all ||
       _sortOption != SearchSortOption.none;
+
+  bool get _hasMoreRemote =>
+      _remotePage > 0 && _remotePage < _remoteTotalPages;
 
   @override
   void initState() {
@@ -85,14 +94,38 @@ class _SearchScreenState extends State<SearchScreen> {
     setState(() {
       _hasSearched = false;
       _isLoading = false;
+      _isLoadingMore = false;
       _filmResults = [];
       _tvShowResults = [];
+      _seenIds.clear();
       _errorMessage = null;
       _lastQuery = '';
+      _remotePage = 0;
+      _remoteTotalPages = 0;
       _mediaFilter = SearchMediaFilter.all;
       _sortOption = SearchSortOption.none;
       _controller.clear();
     });
+  }
+
+  void _resetResultBuffers() {
+    _filmResults = [];
+    _tvShowResults = [];
+    _seenIds.clear();
+    _remotePage = 0;
+    _remoteTotalPages = 0;
+  }
+
+  void _appendUnique({
+    required Iterable<Film> films,
+    required Iterable<TvShow> tvShows,
+  }) {
+    for (final film in films) {
+      if (_seenIds.add(film.id)) _filmResults.add(film);
+    }
+    for (final show in tvShows) {
+      if (_seenIds.add(show.id)) _tvShowResults.add(show);
+    }
   }
 
   Future<void> _performSearch(String query) async {
@@ -102,39 +135,31 @@ class _SearchScreenState extends State<SearchScreen> {
     setState(() {
       _hasSearched = true;
       _isLoading = true;
+      _isLoadingMore = false;
       _errorMessage = null;
       _lastQuery = trimmedQuery;
-      _filmResults = [];
-      _tvShowResults = [];
+      _resetResultBuffers();
     });
 
     try {
       final localResults = _appServices.searchLocal(trimmedQuery);
-      final remoteResults =
-          await _appServices.tmdbService.searchMulti(query: trimmedQuery);
+      _appendUnique(films: localResults.films, tvShows: localResults.tvShows);
+
+      final remoteResults = await _appServices.tmdbService.searchMulti(
+        query: trimmedQuery,
+        page: 1,
+      );
 
       if (!mounted || _lastQuery != trimmedQuery) return;
 
-      final films = <Film>[];
-      final tvShows = <TvShow>[];
-      final seenIds = <int>{};
-
-      for (final film in localResults.films) {
-        if (seenIds.add(film.id)) films.add(film);
-      }
-      for (final show in localResults.tvShows) {
-        if (seenIds.add(show.id)) tvShows.add(show);
-      }
-      for (final film in remoteResults.films) {
-        if (seenIds.add(film.id)) films.add(film);
-      }
-      for (final show in remoteResults.tvShows) {
-        if (seenIds.add(show.id)) tvShows.add(show);
-      }
+      _appendUnique(
+        films: remoteResults.films,
+        tvShows: remoteResults.tvShows,
+      );
 
       setState(() {
-        _filmResults = films;
-        _tvShowResults = tvShows;
+        _remotePage = remoteResults.page;
+        _remoteTotalPages = remoteResults.totalPages;
         _isLoading = false;
       });
     } catch (e) {
@@ -143,6 +168,38 @@ class _SearchScreenState extends State<SearchScreen> {
         _isLoading = false;
         _errorMessage = 'Search failed. Check your API key and connection.';
       });
+    }
+  }
+
+  Future<void> _loadMoreRemote() async {
+    if (_isLoadingMore || !_hasMoreRemote || _lastQuery.isEmpty) return;
+
+    final nextPage = _remotePage + 1;
+    final query = _lastQuery;
+
+    setState(() => _isLoadingMore = true);
+
+    try {
+      final remoteResults = await _appServices.tmdbService.searchMulti(
+        query: query,
+        page: nextPage,
+      );
+
+      if (!mounted || _lastQuery != query) return;
+
+      _appendUnique(
+        films: remoteResults.films,
+        tvShows: remoteResults.tvShows,
+      );
+
+      setState(() {
+        _remotePage = remoteResults.page;
+        _remoteTotalPages = remoteResults.totalPages;
+        _isLoadingMore = false;
+      });
+    } catch (_) {
+      if (!mounted || _lastQuery != query) return;
+      setState(() => _isLoadingMore = false);
     }
   }
 
@@ -226,28 +283,34 @@ class _SearchScreenState extends State<SearchScreen> {
       );
     }
 
-    return RefreshIndicator(
+    // With active filters, only paginate the filtered in-memory list (no extra API).
+    final canLoadMoreRemote = !_hasActiveFilters && _hasMoreRemote;
+
+    return LazyPagedListView(
+      resetKey: Object.hash(_lastQuery, _mediaFilter, _sortOption),
+      totalItemCount: results.length,
+      hasMoreRemote: canLoadMoreRemote,
+      isLoadingMore: _isLoadingMore,
+      onLoadMore: canLoadMoreRemote ? _loadMoreRemote : null,
       onRefresh: () => _performSearch(_lastQuery),
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _buildFiltersBar(totalCount, filteredCount: results.length),
-          const SizedBox(height: 8),
-          ...results.map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: MediaCard(
-                item: item,
-                showTypeBadge: true,
-                formatZeroRatingAsNd: true,
-                isBookmarked: _appServices.isInCatalogue(item.id),
-                onTap: () => _openDetails(item),
-                onAddRemove: () => _toggleItem(item),
-              ),
-            ),
-          ),
-        ],
+      leading: Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: _buildFiltersBar(totalCount, filteredCount: results.length),
       ),
+      itemBuilder: (context, index) {
+        final item = results[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: MediaCard(
+            item: item,
+            showTypeBadge: true,
+            formatZeroRatingAsNd: true,
+            isBookmarked: _appServices.isInCatalogue(item.id),
+            onTap: () => _openDetails(item),
+            onAddRemove: () => _toggleItem(item),
+          ),
+        );
+      },
     );
   }
 

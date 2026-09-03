@@ -90,20 +90,44 @@ class TmdbService {
     return MediaDetails.fromTmdbJson(data, isFilm: isFilm);
   }
 
-  Future<({List<Film> films, List<TvShow> tvShows})> searchMulti({
+  /// Searches TMDB multi endpoint. Pass [page] to fetch subsequent pages.
+  /// TMDB returns a fixed ~20 results per page; UI may window further locally.
+  Future<
+      ({
+        List<Film> films,
+        List<TvShow> tvShows,
+        int page,
+        int totalPages,
+      })> searchMulti({
     required String query,
+    int page = 1,
   }) async {
     if (query.trim().isEmpty) {
-      return (films: <Film>[], tvShows: <TvShow>[]);
+      return (
+        films: <Film>[],
+        tvShows: <TvShow>[],
+        page: 1,
+        totalPages: 0,
+      );
     }
 
-    final results = await _fetchResults(
+    final safePage = page < 1 ? 1 : page;
+    final pageData = await _fetchPagedResults(
       'search/multi',
-      extraParams: {'query': query},
+      extraParams: {
+        'query': query,
+        'page': '$safePage',
+      },
       ttlMinutes: AppConstants.searchCacheTTL,
     );
 
-    return _parseSearchResults(results);
+    final parsed = _parseSearchResults(pageData.results);
+    return (
+      films: parsed.films,
+      tvShows: parsed.tvShows,
+      page: pageData.page,
+      totalPages: pageData.totalPages,
+    );
   }
 
   /// Search films and TV shows already stored in the local API cache.
@@ -201,6 +225,8 @@ class TmdbService {
   }
 
   bool _isCachedListKey(String key) {
+    // Pagination metadata keys store a Map, not a result list.
+    if (key.contains('#meta')) return false;
     return key.startsWith('search/multi') ||
         key.contains('trending/') ||
         key.endsWith('/popular?language=en-US') ||
@@ -300,24 +326,61 @@ class TmdbService {
     String resultsKey = 'results',
     bool bypassCache = false,
   }) async {
+    final paged = await _fetchPagedResults(
+      path,
+      extraParams: extraParams,
+      ttlMinutes: ttlMinutes,
+      resultsKey: resultsKey,
+      bypassCache: bypassCache,
+    );
+    return paged.results;
+  }
+
+  Future<
+      ({
+        List<Map<String, dynamic>> results,
+        int page,
+        int totalPages,
+      })> _fetchPagedResults(
+    String path, {
+    Map<String, String>? extraParams,
+    int? ttlMinutes,
+    String resultsKey = 'results',
+    bool bypassCache = false,
+  }) async {
     final params = _baseParams(extraParams);
     final cacheKey = _buildCacheKey(path, params);
+    final metaCacheKey = '$cacheKey#meta';
 
     if (!bypassCache) {
       final cached = _cache.get<List<dynamic>>(cacheKey);
       if (cached != null) {
-        return cached.whereType<Map<String, dynamic>>().toList();
+        final meta = _cache.get<Map<String, dynamic>>(metaCacheKey);
+        return (
+          results: cached.whereType<Map<String, dynamic>>().toList(),
+          page: (meta?['page'] as int?) ?? 1,
+          totalPages: (meta?['total_pages'] as int?) ?? 1,
+        );
       }
     }
 
     if (AppApiKey.tmdb.isEmpty) {
-      return [];
+      return (
+        results: <Map<String, dynamic>>[],
+        page: 1,
+        totalPages: 0,
+      );
     }
 
     return _dedupe(cacheKey, () async {
       final cachedAfterWait = _cache.get<List<dynamic>>(cacheKey);
       if (cachedAfterWait != null) {
-        return cachedAfterWait.whereType<Map<String, dynamic>>().toList();
+        final meta = _cache.get<Map<String, dynamic>>(metaCacheKey);
+        return (
+          results: cachedAfterWait.whereType<Map<String, dynamic>>().toList(),
+          page: (meta?['page'] as int?) ?? 1,
+          totalPages: (meta?['total_pages'] as int?) ?? 1,
+        );
       }
 
       try {
@@ -327,22 +390,34 @@ class TmdbService {
         );
 
         if (!result.isSuccess || result.data == null) {
-          return <Map<String, dynamic>>[];
+          return (
+            results: <Map<String, dynamic>>[],
+            page: 1,
+            totalPages: 0,
+          );
         }
 
         final payload = result.data!;
         final rawResults = payload[resultsKey] as List<dynamic>? ?? [];
         final list = rawResults.whereType<Map<String, dynamic>>().toList();
+        final page = (payload['page'] as num?)?.toInt() ?? 1;
+        final totalPages = (payload['total_pages'] as num?)?.toInt() ?? page;
+        final ttl = ttlMinutes ?? AppConstants.defaultCacheTTLMinutes;
 
+        _cache.put(cacheKey, list, ttlMinutes: ttl);
         _cache.put(
-          cacheKey,
-          list,
-          ttlMinutes: ttlMinutes ?? AppConstants.defaultCacheTTLMinutes,
+          metaCacheKey,
+          {'page': page, 'total_pages': totalPages},
+          ttlMinutes: ttl,
         );
 
-        return list;
+        return (results: list, page: page, totalPages: totalPages);
       } catch (_) {
-        return <Map<String, dynamic>>[];
+        return (
+          results: <Map<String, dynamic>>[],
+          page: 1,
+          totalPages: 0,
+        );
       }
     });
   }

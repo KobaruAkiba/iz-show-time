@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import '../../widgets/media_card.dart';
 import '../../widgets/media_detail_sheet.dart';
 import '../../widgets/app_page_header.dart';
+import '../../widgets/lazy_paged_list_view.dart';
 import '../../../data/models/catalogue_item.dart';
 import '../../../data/models/new_episode_alert.dart';
 import '../../../core/services/app_services.dart';
 import '../../../core/constants/api_constants.dart';
+import '../../../core/constants/app_constants.dart';
 
 /// Main home screen showing trending content carousel
 class HomeScreen extends StatefulWidget {
@@ -23,6 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<CatalogueItem> _trendingItems = [];
   int _currentPageIndex = 0;
   PageController? _pageController;
+  int _visibleNewEpisodes = AppConstants.listPageSize;
 
   final _appServices = AppServices();
 
@@ -34,7 +37,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onNewEpisodesChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    final total = _appServices.newEpisodeAlerts.length;
+    setState(() {
+      if (total == 0) {
+        _visibleNewEpisodes = AppConstants.listPageSize;
+      } else if (_visibleNewEpisodes > total) {
+        _visibleNewEpisodes = total;
+      } else if (_visibleNewEpisodes < AppConstants.listPageSize) {
+        _visibleNewEpisodes = AppConstants.listPageSize.clamp(0, total);
+      }
+    });
   }
 
   Future<void> _loadTrending() async {
@@ -117,13 +130,28 @@ class _HomeScreenState extends State<HomeScreen> {
               )
             else
               Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildTrendingSection(),
-                      _buildNewEpisodesSection(),
-                    ],
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: (notification) {
+                    final alerts = _appServices.newEpisodeAlerts;
+                    return handleLazyParentScroll(
+                      notification: notification,
+                      totalCount: alerts.length,
+                      visibleCount: _visibleNewEpisodes,
+                      onRevealMore: (next) {
+                        if (next != _visibleNewEpisodes) {
+                          setState(() => _visibleNewEpisodes = next);
+                        }
+                      },
+                    );
+                  },
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildTrendingSection(),
+                        _buildNewEpisodesSection(),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -233,6 +261,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildNewEpisodesSection() {
     final colorScheme = Theme.of(context).colorScheme;
     final alerts = _appServices.newEpisodeAlerts;
+    final visibleCount = _visibleNewEpisodes.clamp(0, alerts.length);
+    final visibleAlerts = alerts.take(visibleCount);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
@@ -256,7 +286,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (alerts.isEmpty)
             _buildNewEpisodesEmptyState(colorScheme)
           else
-            ...alerts.map(_buildNewEpisodeTile),
+            ...visibleAlerts.map(_buildNewEpisodeTile),
         ],
       ),
     );
@@ -288,9 +318,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
           ),
           const SizedBox(height: 6),
-                Text(
-                  'Register an episode in your catalogue and the next one in order will appear here.',
-                  textAlign: TextAlign.center,
+          Text(
+            'Register an episode in your catalogue and the next one in order will appear here.',
+            textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurface.withValues(alpha: 0.6),
                   height: 1.4,
