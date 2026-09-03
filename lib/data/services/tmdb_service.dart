@@ -106,14 +106,6 @@ class TmdbService {
     return _parseSearchResults(results);
   }
 
-  /// Whether a previous TMDB search for [query] is still in cache.
-  bool hasCachedSearch(String query) {
-    if (query.trim().isEmpty) return false;
-    final params = _baseParams({'query': query.trim()});
-    final cacheKey = _buildCacheKey('search/multi', params);
-    return _cache.get<List<dynamic>>(cacheKey) != null;
-  }
-
   /// Search films and TV shows already stored in the local API cache.
   ({List<Film> films, List<TvShow> tvShows}) searchLocalCache({
     required String query,

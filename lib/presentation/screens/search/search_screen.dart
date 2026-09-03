@@ -110,14 +110,8 @@ class _SearchScreenState extends State<SearchScreen> {
 
     try {
       final localResults = _appServices.searchLocal(trimmedQuery);
-      final hasCachedRemote =
-          _appServices.tmdbService.hasCachedSearch(trimmedQuery);
-      final shouldFetchRemote =
-          !hasCachedRemote && localResults.films.isEmpty && localResults.tvShows.isEmpty;
-
-      final remoteResults = shouldFetchRemote || hasCachedRemote
-          ? await _appServices.tmdbService.searchMulti(query: trimmedQuery)
-          : (films: <Film>[], tvShows: <TvShow>[]);
+      final remoteResults =
+          await _appServices.tmdbService.searchMulti(query: trimmedQuery);
 
       if (!mounted || _lastQuery != trimmedQuery) return;
 
