@@ -31,21 +31,18 @@ class MediaCard extends StatelessWidget {
 
   String get _typeLabel => _isFilm ? 'Film' : 'Serie TV';
 
-  String _tvShowBadgeLabel() {
+  String? _posterBadgeLabel() {
+    if (_isFilm) return null;
     final watchedCount =
         AppServices().watchedEpisodesCountFor(item.id);
-    if (watchedCount > 0) {
-      return watchedCount == 1 ? '1 ep' : '$watchedCount ep';
-    }
-    return item.voteAverage.toStringAsFixed(1);
+    if (watchedCount <= 0) return null;
+    return watchedCount == 1 ? '1 ep' : '$watchedCount ep';
   }
 
   @override
   Widget build(BuildContext context) {
     final posterUrl = ApiConstants.posterUrl(item.posterPath);
-    final badgeLabel = _isFilm
-        ? item.voteAverage.toStringAsFixed(1)
-        : _tvShowBadgeLabel();
+    final badgeLabel = _posterBadgeLabel();
 
     return Material(
       color: Colors.transparent,
@@ -84,7 +81,7 @@ class MediaCard extends StatelessWidget {
                             : _placeholder(context),
                       ),
                     ),
-                    if (!showTypeBadge)
+                    if (!showTypeBadge && badgeLabel != null)
                       Positioned(
                         top: 4,
                         right: 4,
