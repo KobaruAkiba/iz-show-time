@@ -1,9 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iz_show_time_tracker/core/services/app_services.dart';
 import 'package:iz_show_time_tracker/data/models/catalogue_item.dart';
+import 'package:iz_show_time_tracker/data/models/episode_model.dart';
+import 'package:iz_show_time_tracker/data/models/media_details.dart';
 import 'package:iz_show_time_tracker/data/models/new_episode_alert.dart';
 import 'package:iz_show_time_tracker/data/models/watch_record.dart';
 import 'package:iz_show_time_tracker/data/repositories/user_data_store.dart';
+import 'package:iz_show_time_tracker/data/services/tmdb_service.dart';
 
 class FakeUserDataStore implements UserDataStore {
   final List<CatalogueItem> savedCatalogueItems = [];
@@ -80,6 +83,34 @@ class FakeUserDataStore implements UserDataStore {
   Future<void> close() async {}
 }
 
+class StubTmdbService extends TmdbService {
+  StubTmdbService({
+    required this.seasonCount,
+    required this.episodesBySeason,
+  }) : super(cacheManager: null);
+
+  final int seasonCount;
+  final Map<int, List<EpisodeModel>> episodesBySeason;
+
+  @override
+  Future<MediaDetails?> getMediaDetails(CatalogueItem item) async {
+    return MediaDetails(
+      title: item.title,
+      numberOfSeasons: seasonCount,
+      isFilm: false,
+    );
+  }
+
+  @override
+  Future<List<EpisodeModel>> getSeasonEpisodes({
+    required int tvId,
+    required int seasonNumber,
+    bool forceRefresh = false,
+  }) async {
+    return episodesBySeason[seasonNumber] ?? const [];
+  }
+}
+
 void main() {
   group('AppServices persistence hooks', () {
     late AppServices appServices;
@@ -114,5 +145,91 @@ void main() {
 
       expect(store.cleared, isTrue);
     });
+  });
+
+  group('AppServices new episode alerts after watch changes', () {
+    late AppServices appServices;
+    late FakeUserDataStore store;
+
+    setUp(() async {
+      appServices = AppServices();
+      store = FakeUserDataStore();
+      appServices.userDataStore = store;
+      await appServices.clearAllData();
+      store.cleared = false;
+
+      appServices.tmdbService = StubTmdbService(
+        seasonCount: 1,
+        episodesBySeason: {
+          1: [
+            EpisodeModel.fromJson({
+              'id': 100,
+              'season_number': 1,
+              'episode_number': 2,
+              'name': 'Registered',
+              'air_date': '2026-01-01',
+              'runtime': 45,
+            }),
+            EpisodeModel.fromJson({
+              'id': 101,
+              'season_number': 1,
+              'episode_number': 3,
+              'name': 'Next Aired',
+              'air_date': '2026-01-08',
+              'runtime': 45,
+            }),
+            EpisodeModel.fromJson({
+              'id': 102,
+              'season_number': 1,
+              'episode_number': 4,
+              'name': 'Following Aired',
+              'air_date': '2026-01-15',
+              'runtime': 45,
+            }),
+          ],
+        },
+      );
+    });
+
+    test(
+      'marking an episode watched immediately surfaces the next aired episode',
+      () async {
+        const show = TvShow(id: 42, title: 'Sample Show');
+        final episode2 = EpisodeModel.fromJson({
+          'id': 100,
+          'season_number': 1,
+          'episode_number': 2,
+          'name': 'Registered',
+          'air_date': '2026-01-01',
+          'runtime': 45,
+        });
+        final episode3 = EpisodeModel.fromJson({
+          'id': 101,
+          'season_number': 1,
+          'episode_number': 3,
+          'name': 'Next Aired',
+          'air_date': '2026-01-08',
+          'runtime': 45,
+        });
+
+        await appServices.addEpisodeToCatalogue(
+          show: show,
+          episode: episode2,
+        );
+
+        expect(appServices.newEpisodeAlerts, hasLength(1));
+        expect(appServices.newEpisodeAlerts.first.episodeId, 101);
+        expect(appServices.newEpisodeAlerts.first.episodeNumber, 3);
+
+        await appServices.markEpisodeWatched(
+          show: show,
+          episode: episode3,
+        );
+
+        expect(appServices.newEpisodeAlerts, hasLength(1));
+        expect(appServices.newEpisodeAlerts.first.episodeId, 102);
+        expect(appServices.newEpisodeAlerts.first.episodeNumber, 4);
+      },
+    );
   });
 }

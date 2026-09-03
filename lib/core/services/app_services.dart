@@ -4,6 +4,7 @@ import '../cache/cache_manager.dart';
 import '../cache/api_cache_service.dart';
 import '../background/background_task_runner.dart';
 import '../debug/agent_debug_log.dart';
+import '../notifications/new_episode_checker.dart';
 import '../../data/repositories/hive_user_data_store.dart';
 import '../../data/repositories/user_data_store.dart';
 import '../../data/services/tmdb_service.dart';
@@ -28,8 +29,13 @@ class AppServices {
 
   final CacheManager cacheManager = CacheManager();
   final ApiCacheService apiCacheService = ApiCacheService();
-  late final TmdbService tmdbService =
-      TmdbService(cacheManager: cacheManager);
+  TmdbService? _tmdbService;
+  TmdbService get tmdbService =>
+      _tmdbService ??= TmdbService(cacheManager: cacheManager);
+
+  @visibleForTesting
+  set tmdbService(TmdbService service) => _tmdbService = service;
+
   final BackgroundTaskRunner backgroundTaskRunner = BackgroundTaskRunner();
 
   final List<CatalogueItem> _catalogue = [];
@@ -237,7 +243,7 @@ class AppServices {
     );
     _watchHistory.add(record);
     await _persistWatchRecord(record);
-    await _removeNewEpisodeAlert(record.episodeId);
+    await _refreshNewEpisodeAlerts();
     return record;
   }
 
@@ -249,6 +255,7 @@ class AppServices {
     for (final record in removedRecords) {
       await _persistWatchRecordRemoval(record.watchKey);
     }
+    await _refreshNewEpisodeAlerts();
   }
 
   Future<void> unmarkFilmWatched(int mediaId) async {
@@ -336,20 +343,22 @@ class AppServices {
     }
   }
 
-  Future<void> _removeNewEpisodeAlert(int? episodeId) async {
-    if (episodeId == null) return;
-    final removed = _newEpisodeAlerts.any((alert) => alert.episodeId == episodeId);
-    if (!removed) return;
-
-    _newEpisodeAlerts.removeWhere((alert) => alert.episodeId == episodeId);
-    newEpisodeAlertsListenable.value = List<NewEpisodeAlert>.from(
-      _newEpisodeAlerts,
-    );
+  /// Rebuilds New Episodes from current catalogue progress so the home
+  /// section immediately shows the next aired episode after a watch change.
+  Future<void> _refreshNewEpisodeAlerts() async {
     try {
-      await userDataStore.saveNewEpisodeAlerts(_newEpisodeAlerts);
+      final checker = NewEpisodeChecker(
+        tmdbService: tmdbService,
+        userDataStore: userDataStore,
+      );
+      final result = await checker.checkShows(
+        shows: tvShows,
+        watchHistory: watchHistory,
+      );
+      updateNewEpisodeAlerts(result.allAlerts);
     } catch (error, stackTrace) {
       debugPrint(
-        'Failed to persist new episode alert removal: $error\n$stackTrace',
+        'Failed to refresh new episode alerts: $error\n$stackTrace',
       );
     }
   }
