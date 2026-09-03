@@ -10,6 +10,8 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        // Required by flutter_local_notifications (Java 8+ APIs via desugaring).
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -23,6 +25,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        multiDexEnabled = true
     }
 
     buildTypes {
@@ -43,3 +46,17 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+}
+
+// #region agent log
+gradle.projectsEvaluated {
+    val logFile = rootProject.file("../debug-aa2fa7.log")
+    val desugarEnabled = android.compileOptions.isCoreLibraryDesugaringEnabled
+    val line =
+        """{"sessionId":"aa2fa7","timestamp":${System.currentTimeMillis()},"location":"android/app/build.gradle.kts:projectsEvaluated","message":"post-config desugar check","hypothesisId":"A","runId":"post-fix","data":{"isCoreLibraryDesugaringEnabled":$desugarEnabled}}"""
+    logFile.appendText(line + "\n")
+}
+// #endregion
