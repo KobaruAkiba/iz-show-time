@@ -9,8 +9,6 @@ class MediaCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onAddRemove;
   final bool isBookmarked;
-  final bool showTypeBadge;
-  final bool formatZeroRatingAsNd;
 
   const MediaCard({
     super.key,
@@ -18,14 +16,12 @@ class MediaCard extends StatelessWidget {
     this.onTap,
     this.onAddRemove,
     this.isBookmarked = false,
-    this.showTypeBadge = false,
-    this.formatZeroRatingAsNd = false,
   });
 
   bool get _isFilm => item is Film;
 
   String _formatRating(double voteAverage) {
-    if (formatZeroRatingAsNd && voteAverage == 0) return 'N/D';
+    if (voteAverage == 0) return 'N/D';
     return voteAverage.toStringAsFixed(1);
   }
 
@@ -43,6 +39,7 @@ class MediaCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final posterUrl = ApiConstants.posterUrl(item.posterPath);
     final badgeLabel = _posterBadgeLabel();
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Material(
       color: Colors.transparent,
@@ -81,7 +78,7 @@ class MediaCard extends StatelessWidget {
                             : _placeholder(context),
                       ),
                     ),
-                    if (!showTypeBadge && badgeLabel != null)
+                    if (badgeLabel != null)
                       Positioned(
                         top: 4,
                         right: 4,
@@ -120,58 +117,34 @@ class MediaCard extends StatelessWidget {
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 15,
-                          color: Theme.of(context).colorScheme.onSurface,
+                          color: colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      if (showTypeBadge)
-                        Row(
-                          children: [
-                            _TypeBadge(
-                              icon: _isFilm ? Icons.movie_filter : Icons.tv,
-                              label: _typeLabel,
+                      Row(
+                        children: [
+                          _TypeBadge(
+                            icon: _isFilm ? Icons.movie_filter : Icons.tv,
+                            label: _typeLabel,
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            Icons.star_rounded,
+                            size: 14,
+                            color: colorScheme.primary,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            _formatRating(item.voteAverage),
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: colorScheme.onSurface
+                                  .withValues(alpha: 0.6),
                             ),
-                            const SizedBox(width: 8),
-                            Icon(
-                              Icons.star_rounded,
-                              size: 14,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                            const SizedBox(width: 2),
-                            Text(
-                              _formatRating(item.voteAverage),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.6),
-                              ),
-                            ),
-                          ],
-                        )
-                      else
-                        Row(
-                          children: [
-                            Icon(
-                              _isFilm ? Icons.movie_filter : Icons.tv,
-                              size: 12,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              item.voteAverage.toStringAsFixed(1),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.6),
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
+                      ),
                       if (item.overview != null &&
                           item.overview!.isNotEmpty) ...[
                         const SizedBox(height: 4),
@@ -183,9 +156,7 @@ class MediaCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 11,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
+                            color: colorScheme.onSurface
                                 .withValues(alpha: 0.7),
                           ),
                         ),
@@ -199,10 +170,7 @@ class MediaCard extends StatelessWidget {
                   isBookmarked ? Icons.bookmark : Icons.bookmark_border,
                   size: 24,
                 ),
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.6),
+                color: colorScheme.onSurface.withValues(alpha: 0.6),
                 onPressed: onAddRemove,
               ),
             ],

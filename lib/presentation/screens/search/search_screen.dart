@@ -303,8 +303,6 @@ class _SearchScreenState extends State<SearchScreen> {
           padding: const EdgeInsets.only(bottom: 8),
           child: MediaCard(
             item: item,
-            showTypeBadge: true,
-            formatZeroRatingAsNd: true,
             isBookmarked: _appServices.isInCatalogue(item.id),
             onTap: () => _openDetails(item),
             onAddRemove: () => _toggleItem(item),
