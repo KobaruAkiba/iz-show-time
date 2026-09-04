@@ -264,4 +264,73 @@ void main() {
       },
     );
   });
+
+  group('AppServices addSeasonToCatalogue', () {
+    late AppServices appServices;
+    late FakeUserDataStore store;
+
+    setUp(() async {
+      appServices = AppServices();
+      store = FakeUserDataStore();
+      appServices.userDataStore = store;
+      await appServices.clearAllData();
+      store.cleared = false;
+    });
+
+    test('skips upcoming episodes and still adds undated ones', () async {
+      const show = TvShow(id: 7, title: 'In Progress Show');
+      final aired = EpisodeModel.fromJson({
+        'id': 201,
+        'season_number': 1,
+        'episode_number': 1,
+        'name': 'Aired',
+        'air_date': '2020-01-01',
+        'runtime': 42,
+      });
+      final undated = EpisodeModel.fromJson({
+        'id': 202,
+        'season_number': 1,
+        'episode_number': 2,
+        'name': 'Missing air date',
+        'runtime': 42,
+      });
+      final upcoming = EpisodeModel.fromJson({
+        'id': 203,
+        'season_number': 1,
+        'episode_number': 3,
+        'name': 'Upcoming',
+        'air_date': '2099-06-01',
+        'runtime': 42,
+      });
+
+      expect(aired.isUpcoming, isFalse);
+      expect(undated.isUpcoming, isFalse);
+      expect(undated.hasAired, isFalse);
+      expect(upcoming.isUpcoming, isTrue);
+
+      final addedCount = await appServices.addSeasonToCatalogue(
+        show: show,
+        episodes: [aired, undated, upcoming],
+      );
+
+      expect(addedCount, 2);
+      expect(
+        appServices.isWatched(mediaId: show.id, episodeId: aired.id),
+        isTrue,
+      );
+      expect(
+        appServices.isWatched(mediaId: show.id, episodeId: undated.id),
+        isTrue,
+      );
+      expect(
+        appServices.isWatched(mediaId: show.id, episodeId: upcoming.id),
+        isFalse,
+      );
+      expect(store.savedWatchRecords, hasLength(2));
+      expect(
+        store.savedWatchRecords.map((record) => record.episodeId),
+        [aired.id, undated.id],
+      );
+    });
+  });
 }

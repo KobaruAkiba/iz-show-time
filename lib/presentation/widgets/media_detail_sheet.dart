@@ -189,7 +189,12 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
 
     final show = widget.item as TvShow;
     final l10n = context.l10n;
-    final allInCatalogue = season.episodes.every(
+    final catalogueEpisodes = season.episodes
+        .where((episode) => !episode.isUpcoming)
+        .toList(growable: false);
+    if (catalogueEpisodes.isEmpty) return;
+
+    final allInCatalogue = catalogueEpisodes.every(
       (episode) => _appServices.isWatched(
         mediaId: show.id,
         episodeId: episode.id,
@@ -197,7 +202,9 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     );
 
     if (allInCatalogue) {
-      await _appServices.removeSeasonFromCatalogue(episodes: season.episodes);
+      await _appServices.removeSeasonFromCatalogue(
+        episodes: catalogueEpisodes,
+      );
       _notifyWatchTimeChanged();
       return;
     }
@@ -554,7 +561,10 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = context.l10n;
     final isExpanded = _expandedSeasons.contains(season.seasonNumber);
-    final watchedInSeason = season.episodes
+    final catalogueEpisodes = season.episodes
+        .where((episode) => !episode.isUpcoming)
+        .toList(growable: false);
+    final watchedInSeason = catalogueEpisodes
         .where(
           (episode) => _appServices.isWatched(
             mediaId: widget.item.id,
@@ -562,8 +572,8 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
           ),
         )
         .length;
-    final allInCatalogue =
-        season.episodes.isNotEmpty && watchedInSeason == season.episodes.length;
+    final allInCatalogue = catalogueEpisodes.isNotEmpty &&
+        watchedInSeason == catalogueEpisodes.length;
     final canAddSeason = season.episodes.isNotEmpty && !season.isUpcoming;
 
     final String subtitle;
@@ -574,7 +584,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     } else if (watchedInSeason > 0) {
       subtitle = l10n.seasonProgressInCatalogue(
         watchedInSeason,
-        season.episodes.length,
+        catalogueEpisodes.length,
       );
     } else {
       subtitle = l10n.episodeCountLabel(season.episodes.length);

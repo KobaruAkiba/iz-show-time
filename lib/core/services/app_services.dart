@@ -156,7 +156,8 @@ class AppServices {
     );
   }
 
-  /// Adds every episode of a season to the catalogue.
+  /// Adds every non-upcoming episode of a season to the catalogue.
+  /// Upcoming episodes (`episode.isUpcoming`) are skipped.
   /// Returns how many episodes were newly added.
   Future<int> addSeasonToCatalogue({
     required TvShow show,
@@ -171,6 +172,7 @@ class AppServices {
 
     var addedCount = 0;
     for (final episode in episodes) {
+      if (episode.isUpcoming) continue;
       if (isWatched(mediaId: show.id, episodeId: episode.id)) continue;
 
       final duration = episode.runtimeMinutes ?? fallbackRuntimeMinutes ?? 0;
