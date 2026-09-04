@@ -130,7 +130,7 @@ class TmdbService {
     );
   }
 
-  /// Search films and TV shows already stored in the local API cache.
+  /// Search films and shows already stored in the local API cache.
   ({List<Film> films, List<TvShow> tvShows}) searchLocalCache({
     required String query,
   }) {

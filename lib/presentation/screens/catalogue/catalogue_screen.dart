@@ -9,7 +9,7 @@ import '../../widgets/lazy_paged_list_view.dart';
 import '../../../data/models/catalogue_item.dart';
 import '../../../core/services/app_services.dart';
 
-/// Screen displaying the user's catalogue of films and TV shows
+/// Screen displaying the user's catalogue of films and shows
 class CatalogueScreen extends StatefulWidget {
   final bool isActive;
 
@@ -195,8 +195,7 @@ class _CatalogueScreenState extends State<CatalogueScreen>
             isBookmarked: true,
             onTap: () => _openDetails(item),
             onAddRemove: () async {
-              final confirmed =
-                  await confirmRemoveFromCatalogue(context, item);
+              final confirmed = await confirmRemoveFromCatalogue(context, item);
               if (!confirmed || !mounted) return;
               await _appServices.removeFromCatalogue(item.id);
               _refresh();

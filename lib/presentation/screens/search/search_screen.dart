@@ -8,7 +8,7 @@ import '../../widgets/lazy_paged_list_view.dart';
 import '../../../data/models/catalogue_item.dart';
 import '../../../core/services/app_services.dart';
 
-/// Search screen for finding films and TV shows via TMDB
+/// Search screen for finding films and shows via TMDB
 class SearchScreen extends StatefulWidget {
   final String initialQuery;
   final bool isActive;
@@ -48,8 +48,7 @@ class _SearchScreenState extends State<SearchScreen> {
         sortOption: _sortOption,
       );
 
-  bool get _hasMoreRemote =>
-      _remotePage > 0 && _remotePage < _remoteTotalPages;
+  bool get _hasMoreRemote => _remotePage > 0 && _remotePage < _remoteTotalPages;
 
   @override
   void initState() {
@@ -210,7 +209,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 autofocus: widget.initialQuery.isEmpty,
                 textInputAction: TextInputAction.search,
                 decoration: InputDecoration(
-                  hintText: 'Search films and TV shows...',
+                  hintText: 'Search films and shows...',
                   prefixIcon: const Icon(Icons.search),
                   suffixIcon: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -368,9 +367,7 @@ class _SearchScreenState extends State<SearchScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          wasInCatalogue
-              ? 'Removed from catalogue'
-              : 'Added to catalogue',
+          wasInCatalogue ? 'Removed from catalogue' : 'Added to catalogue',
         ),
       ),
     );
@@ -384,14 +381,12 @@ class _SearchScreenState extends State<SearchScreen> {
           Icon(
             Icons.search,
             size: 80,
-            color: Theme.of(context)
-                .colorScheme
-                .onSurface
-                .withValues(alpha: 0.3),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
           ),
           const SizedBox(height: 16),
           Text(
-            'Search for films and TV shows',
+            'Search for films and shows',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w500,
                 ),

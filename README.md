@@ -1,10 +1,10 @@
 # Film/TV Show Tracker
 
-A cross-platform Flutter app to track films and TV shows, discover trending content via TMDB, and manage a personal catalogue.
+A cross-platform Flutter app to track films and shows, discover trending content via TMDB, and manage a personal catalogue.
 
 ## Features
 
-- **Trending content** — Movies and TV shows from TMDB on the Home screen
+- **Trending content** — Movies and shows from TMDB on the Home screen
 - **Debounced search** — Multi-search across films and series (500ms debounce)
 - **Personal catalogue** — Add/remove items persisted on device (bookmark from Home or Search)
 - **Watch history** — Films and episodes tracked with watch time, persisted locally

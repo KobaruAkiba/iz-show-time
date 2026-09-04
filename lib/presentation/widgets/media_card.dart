@@ -3,7 +3,7 @@ import '../../core/services/app_services.dart';
 import '../../data/models/catalogue_item.dart';
 import '../../core/constants/api_constants.dart';
 
-/// Shared card widget for films and TV shows
+/// Shared card widget for films and shows
 class MediaCard extends StatelessWidget {
   final CatalogueItem item;
   final VoidCallback? onTap;
@@ -29,8 +29,7 @@ class MediaCard extends StatelessWidget {
 
   String? _posterBadgeLabel() {
     if (_isFilm) return null;
-    final watchedCount =
-        AppServices().watchedEpisodesCountFor(item.id);
+    final watchedCount = AppServices().watchedEpisodesCountFor(item.id);
     if (watchedCount <= 0) return null;
     return watchedCount == 1 ? '1 ep' : '$watchedCount ep';
   }
@@ -144,8 +143,7 @@ class MediaCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 11,
-                            color: colorScheme.onSurface
-                                .withValues(alpha: 0.7),
+                            color: colorScheme.onSurface.withValues(alpha: 0.7),
                           ),
                         ),
                       ],

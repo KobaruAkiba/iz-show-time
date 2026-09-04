@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/utils/duration_format.dart';
 
-/// Summary counts for films, TV shows, total catalogue items, and watch time.
+/// Summary counts for films, shows, total catalogue items, and watch time.
 class CatalogueStatsRow extends StatelessWidget {
   final int tvShowCount;
   final int filmCount;
@@ -26,7 +26,7 @@ class CatalogueStatsRow extends StatelessWidget {
             children: [
               Expanded(
                 child: _StatCard(
-                  label: 'TV Shows',
+                  label: 'Shows',
                   value: tvShowCount,
                   icon: Icons.tv,
                 ),

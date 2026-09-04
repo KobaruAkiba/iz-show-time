@@ -2,7 +2,7 @@
 
 ## Overview
 
-IzShowTime is a Flutter app for tracking films and TV shows using the TMDB API. Data flows through a layered structure:
+IzShowTime is a Flutter app for tracking films and shows using the TMDB API. Data flows through a layered structure:
 
 ```mermaid
 flowchart TB

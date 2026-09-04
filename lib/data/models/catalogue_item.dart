@@ -1,6 +1,6 @@
 import '../../core/constants/api_constants.dart';
 
-/// Base class for all catalogue items (Films and TV Shows)
+/// Base class for all catalogue items (Films and Shows)
 abstract class CatalogueItem {
   final int id;
   final String title;
@@ -23,8 +23,7 @@ abstract class CatalogueItem {
 extension CatalogueItemExtension on CatalogueItem {
   bool containsTag(String tag) => tags.contains(tag);
 
-  List<String> withoutTag(String tag) =>
-      tags.where((t) => t != tag).toList();
+  List<String> withoutTag(String tag) => tags.where((t) => t != tag).toList();
 
   bool get isFilm => this is Film;
   bool get isTvShow => this is TvShow;
@@ -150,7 +149,8 @@ Map<String, dynamic> catalogueItemToStorageJson(CatalogueItem item) {
   final payload = switch (item) {
     Film film => film.toJson(),
     TvShow show => show.toJson(),
-    _ => throw ArgumentError('Unsupported catalogue item type: ${item.runtimeType}'),
+    _ => throw ArgumentError(
+        'Unsupported catalogue item type: ${item.runtimeType}'),
   };
   return {
     'type': item is Film ? 'film' : 'tv',

@@ -6,7 +6,7 @@ import '../../data/repositories/user_data_store.dart';
 import '../../data/services/tmdb_service.dart';
 import 'episode_signature.dart';
 
-/// Result of checking catalogue TV shows for newly aired episodes.
+/// Result of checking catalogue shows for newly aired episodes.
 class NewEpisodeCheckResult {
   final List<NewEpisodeAlert> newlyDetected;
   final List<NewEpisodeAlert> allAlerts;
@@ -17,7 +17,7 @@ class NewEpisodeCheckResult {
   });
 }
 
-/// Checks catalogue TV shows and surfaces only the immediate next episode
+/// Checks catalogue shows and surfaces only the immediate next episode
 /// after the last registered S/E in watch history.
 class NewEpisodeChecker {
   NewEpisodeChecker({
