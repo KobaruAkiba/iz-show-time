@@ -25,7 +25,7 @@ class MediaCard extends StatelessWidget {
     return voteAverage.toStringAsFixed(1);
   }
 
-  String get _typeLabel => _isFilm ? 'Film' : 'Serie TV';
+  String get _typeLabel => _isFilm ? 'Film' : 'Show';
 
   String? _posterBadgeLabel() {
     if (_isFilm) return null;
@@ -128,20 +128,8 @@ class MediaCard extends StatelessWidget {
                             label: _typeLabel,
                           ),
                           const SizedBox(width: 8),
-                          Icon(
-                            Icons.star_rounded,
-                            size: 14,
-                            color: colorScheme.primary,
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            _formatRating(item.voteAverage),
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: colorScheme.onSurface
-                                  .withValues(alpha: 0.6),
-                            ),
+                          _RatingBadge(
+                            rating: _formatRating(item.voteAverage),
                           ),
                         ],
                       ),
@@ -222,6 +210,43 @@ class _TypeBadge extends StatelessWidget {
   }
 }
 
+class _RatingBadge extends StatelessWidget {
+  final String rating;
+
+  const _RatingBadge({required this.rating});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.star_rounded,
+            size: 12,
+            color: colorScheme.onPrimaryContainer,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            rating,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: colorScheme.onPrimaryContainer,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Poster card for the Home carousel — tappable, no action buttons.
 class MediaPosterCard extends StatelessWidget {
   final CatalogueItem item;
@@ -236,6 +261,13 @@ class MediaPosterCard extends StatelessWidget {
   });
 
   bool get _isFilm => item is Film;
+
+  String get _typeLabel => _isFilm ? 'Film' : 'Show';
+
+  String _formatRating(double voteAverage) {
+    if (voteAverage == 0) return 'N/D';
+    return voteAverage.toStringAsFixed(1);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -291,32 +323,18 @@ class MediaPosterCard extends StatelessWidget {
                 Positioned(
                   top: 12,
                   left: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: Colors.black45,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _isFilm ? Icons.movie_filter : Icons.tv,
-                          size: 14,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          item.voteAverage.toStringAsFixed(1),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
+                  right: 12,
+                  child: Row(
+                    children: [
+                      _TypeBadge(
+                        icon: _isFilm ? Icons.movie_filter : Icons.tv,
+                        label: _typeLabel,
+                      ),
+                      const SizedBox(width: 8),
+                      _RatingBadge(
+                        rating: _formatRating(item.voteAverage),
+                      ),
+                    ],
                   ),
                 ),
                 Positioned(

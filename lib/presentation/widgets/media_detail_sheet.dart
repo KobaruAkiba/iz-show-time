@@ -54,8 +54,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
   }
 
   Future<void> _loadDetails() async {
-    final fetched =
-        await _appServices.tmdbService.getMediaDetails(widget.item);
+    final fetched = await _appServices.tmdbService.getMediaDetails(widget.item);
 
     if (!mounted) return;
     setState(() {
@@ -174,8 +173,8 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     final posterPath = details?.posterPath ?? widget.item.posterPath;
     final posterUrl = ApiConstants.posterUrl(posterPath);
     final isFilm = widget.item is Film;
-    final filmWatched = isFilm &&
-        _appServices.isWatched(mediaId: widget.item.id);
+    final filmWatched =
+        isFilm && _appServices.isWatched(mediaId: widget.item.id);
 
     return DraggableScrollableSheet(
       initialChildSize: isFilm ? 0.55 : 0.75,
@@ -264,13 +263,13 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                                 icon: details.isFilm
                                     ? Icons.movie_filter
                                     : Icons.tv,
-                                label: details.isFilm ? 'Film' : 'TV Show',
+                                label: details.isFilm ? 'Film' : 'Show',
                               ),
                             ],
                           ),
                           if (!isFilm &&
                               _appServices
-                                  .watchedEpisodesCountFor(widget.item.id) >
+                                      .watchedEpisodesCountFor(widget.item.id) >
                                   0) ...[
                             const SizedBox(height: 8),
                             Text(
@@ -410,7 +409,8 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             subtitle: watchedInSeason > 0
-                ? Text('$watchedInSeason / ${season.episodes.length} in catalogue')
+                ? Text(
+                    '$watchedInSeason / ${season.episodes.length} in catalogue')
                 : Text('${season.episodes.length} episodes'),
             trailing: Icon(
               isExpanded ? Icons.expand_less : Icons.expand_more,
@@ -448,9 +448,8 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
         overflow: TextOverflow.ellipsis,
       ),
       trailing: IconButton(
-        tooltip: isWatched
-            ? 'Remove from catalogue'
-            : 'Add episode to catalogue',
+        tooltip:
+            isWatched ? 'Remove from catalogue' : 'Add episode to catalogue',
         icon: Icon(
           isWatched ? Icons.bookmark : Icons.bookmark_add_outlined,
           color: isWatched ? colorScheme.primary : null,

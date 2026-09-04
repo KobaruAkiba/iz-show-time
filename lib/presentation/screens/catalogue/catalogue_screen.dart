@@ -25,7 +25,7 @@ class _CatalogueScreenState extends State<CatalogueScreen>
   MediaSortOption _sortOption = MediaSortOption.none;
   final _appServices = AppServices();
 
-  final List<String> _tabs = ['All', 'Films', 'TV Shows', 'In Progress'];
+  final List<String> _tabs = ['All', 'Films', 'Shows', 'In Progress'];
   late TabController _tabController;
 
   bool get _hasActiveFilters => hasActiveMediaFilters(
