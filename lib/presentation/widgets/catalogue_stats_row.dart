@@ -85,17 +85,35 @@ class _WatchTimeCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Watch Time',
+                  'Total Watch Time',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  formatDurationMinutes(minutes),
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        formatDurationMinutes(minutes),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
+                    ),
+                    if (isAtLeastOneDay(minutes)) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        formatHoursOnlyHint(minutes),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color:
+                                  colorScheme.onSurface.withValues(alpha: 0.5),
+                            ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
