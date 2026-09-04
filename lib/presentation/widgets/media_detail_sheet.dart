@@ -6,6 +6,7 @@ import '../../data/models/catalogue_item.dart';
 import '../../data/models/episode_model.dart';
 import '../../data/models/media_details.dart';
 import '../../data/models/season_model.dart';
+import 'confirm_remove_from_catalogue.dart';
 
 /// Opens a bottom sheet with TMDB details for the tapped carousel item.
 Future<void> showMediaDetailSheet(
@@ -93,8 +94,23 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     setState(() {});
   }
 
-  Future<void> _markFilmWatched() async {
+  Future<void> _toggleFilmWatched() async {
     final film = widget.item as Film;
+
+    if (_appServices.isWatched(mediaId: film.id)) {
+      final confirmed = await confirmRemoveFromCatalogue(context, film);
+      if (!confirmed || !mounted) return;
+
+      await _appServices.removeFromCatalogue(film.id);
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Removed from catalogue')),
+      );
+      _notifyWatchTimeChanged();
+      return;
+    }
+
     final runtime = _details?.runtimeMinutes ?? 0;
     if (runtime <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -124,6 +140,12 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
         ),
       ),
     );
+    _notifyWatchTimeChanged();
+  }
+
+  Future<void> _toggleFilmFavorite() async {
+    await _appServices.toggleFavorite(widget.item.id);
+    if (!mounted) return;
     _notifyWatchTimeChanged();
   }
 
@@ -217,6 +239,8 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     final isFilm = widget.item is Film;
     final filmWatched =
         isFilm && _appServices.isWatched(mediaId: widget.item.id);
+    final filmFavorite =
+        isFilm && _appServices.isFavorite(widget.item.id);
 
     return DraggableScrollableSheet(
       initialChildSize: isFilm ? 0.55 : 0.75,
@@ -332,7 +356,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton.icon(
-                      onPressed: filmWatched ? null : _markFilmWatched,
+                      onPressed: _toggleFilmWatched,
                       icon: Icon(
                         filmWatched
                             ? Icons.check_circle
@@ -343,6 +367,25 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                       ),
                     ),
                   ),
+                  if (filmWatched) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _toggleFilmFavorite,
+                        icon: Icon(
+                          filmFavorite
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                        ),
+                        label: Text(
+                          filmFavorite
+                              ? 'Favorite'
+                              : 'Mark as Favorite',
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
                 if (!isFilm) ...[
                   const SizedBox(height: 24),
