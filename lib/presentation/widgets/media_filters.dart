@@ -33,10 +33,12 @@ bool hasActiveMediaFilters({
   required MediaFilter mediaFilter,
   required MediaSortOption sortOption,
   bool inProgressOnly = false,
+  bool favoritesOnly = false,
 }) {
   return mediaFilter != MediaFilter.all ||
       sortOption != MediaSortOption.none ||
-      inProgressOnly;
+      inProgressOnly ||
+      favoritesOnly;
 }
 
 List<CatalogueItem> applyMediaFilters(
@@ -115,6 +117,7 @@ typedef MediaFiltersResult = ({
   MediaFilter mediaFilter,
   MediaSortOption sortOption,
   bool inProgressOnly,
+  bool favoritesOnly,
 });
 
 Future<MediaFiltersResult?> showMediaFiltersSheet(
@@ -122,11 +125,15 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
   required MediaFilter mediaFilter,
   required MediaSortOption sortOption,
   bool inProgressOnly = false,
+  bool favoritesOnly = false,
   bool showInProgressFilter = false,
+  bool showFavoritesFilter = false,
 }) {
   var draftMediaFilter = mediaFilter;
   var draftSortOption = sortOption;
   var draftInProgressOnly = inProgressOnly;
+  var draftFavoritesOnly = favoritesOnly;
+  final showStatusSection = showInProgressFilter || showFavoritesFilter;
 
   void applyInProgressConstraints() {
     if (!draftInProgressOnly) return;
@@ -194,7 +201,7 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                     });
                   },
                 ),
-                if (showInProgressFilter) ...[
+                if (showStatusSection) ...[
                   const SizedBox(height: 16),
                   Text(
                     'Status',
@@ -203,23 +210,44 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                         ),
                   ),
                   const SizedBox(height: 8),
-                  FilterChip(
-                    label: const Text('In Progress'),
-                    selected: draftInProgressOnly,
-                    avatar: Icon(
-                      draftInProgressOnly
-                          ? Icons.play_circle_filled
-                          : Icons.play_circle_outline,
-                      size: 18,
-                    ),
-                    onSelected: (selected) {
-                      setSheetState(() {
-                        draftInProgressOnly = selected;
-                        applyInProgressConstraints();
-                      });
-                    },
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      if (showFavoritesFilter)
+                        FilterChip(
+                          label: const Text('Favorites'),
+                          selected: draftFavoritesOnly,
+                          avatar: Icon(
+                            draftFavoritesOnly
+                                ? Icons.favorite
+                                : Icons.favorite_border,
+                            size: 18,
+                          ),
+                          onSelected: (selected) {
+                            setSheetState(() => draftFavoritesOnly = selected);
+                          },
+                        ),
+                      if (showInProgressFilter)
+                        FilterChip(
+                          label: const Text('In Progress'),
+                          selected: draftInProgressOnly,
+                          avatar: Icon(
+                            draftInProgressOnly
+                                ? Icons.play_circle_filled
+                                : Icons.play_circle_outline,
+                            size: 18,
+                          ),
+                          onSelected: (selected) {
+                            setSheetState(() {
+                              draftInProgressOnly = selected;
+                              applyInProgressConstraints();
+                            });
+                          },
+                        ),
+                    ],
                   ),
-                  if (draftInProgressOnly)
+                  if (draftInProgressOnly && showInProgressFilter)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
@@ -265,6 +293,7 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                           draftMediaFilter = MediaFilter.all;
                           draftSortOption = MediaSortOption.none;
                           draftInProgressOnly = false;
+                          draftFavoritesOnly = false;
                         });
                       },
                       child: const Text('Reset'),
@@ -280,6 +309,9 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                             sortOption: draftSortOption,
                             inProgressOnly: showInProgressFilter
                                 ? draftInProgressOnly
+                                : false,
+                            favoritesOnly: showFavoritesFilter
+                                ? draftFavoritesOnly
                                 : false,
                           ),
                         );

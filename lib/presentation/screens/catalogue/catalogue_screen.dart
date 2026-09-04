@@ -25,12 +25,14 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
   MediaFilter _mediaFilter = MediaFilter.all;
   MediaSortOption _sortOption = MediaSortOption.none;
   bool _inProgressOnly = false;
+  bool _favoritesOnly = false;
   final _appServices = AppServices();
 
   bool get _hasActiveFilters => hasActiveMediaFilters(
         mediaFilter: _mediaFilter,
         sortOption: _sortOption,
         inProgressOnly: _inProgressOnly,
+        favoritesOnly: _favoritesOnly,
       );
 
   @override
@@ -64,6 +66,10 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
 
   List<CatalogueItem> _filterItems(List<CatalogueItem> items) {
     Iterable<CatalogueItem> filtered = items;
+
+    if (_favoritesOnly) {
+      filtered = filtered.where((item) => item.isFavorite);
+    }
 
     if (_inProgressOnly) {
       final inProgressIds = inProgressShowIds(
@@ -101,13 +107,16 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
       mediaFilter: _mediaFilter,
       sortOption: _sortOption,
       inProgressOnly: _inProgressOnly,
+      favoritesOnly: _favoritesOnly,
       showInProgressFilter: true,
+      showFavoritesFilter: true,
     );
     if (result == null || !mounted) return;
     setState(() {
       _mediaFilter = result.mediaFilter;
       _sortOption = result.sortOption;
       _inProgressOnly = result.inProgressOnly;
+      _favoritesOnly = result.favoritesOnly;
     });
   }
 
@@ -117,6 +126,10 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
 
   void _clearInProgress() {
     setState(() => _inProgressOnly = false);
+  }
+
+  void _clearFavorites() {
+    setState(() => _favoritesOnly = false);
   }
 
   void _clearSort() {
@@ -129,6 +142,12 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
       item,
       onWatchTimeChanged: _refresh,
     );
+  }
+
+  Future<void> _toggleFavorite(CatalogueItem item) async {
+    await _appServices.toggleFavorite(item.id);
+    if (!mounted) return;
+    _refresh();
   }
 
   @override
@@ -202,6 +221,12 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
                 onDeleted: _clearMediaFilter,
                 visualDensity: VisualDensity.compact,
               ),
+            if (_favoritesOnly)
+              InputChip(
+                label: const Text('Favorites'),
+                onDeleted: _clearFavorites,
+                visualDensity: VisualDensity.compact,
+              ),
             if (_inProgressOnly)
               InputChip(
                 label: const Text('In Progress'),
@@ -241,6 +266,7 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
         _mediaFilter,
         _sortOption,
         _inProgressOnly,
+        _favoritesOnly,
         items.length,
         _appServices.newEpisodeAlerts.length,
       ),
@@ -253,7 +279,9 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
           child: MediaCard(
             item: item,
             isBookmarked: true,
+            isFavorite: item.isFavorite,
             onTap: () => _openDetails(item),
+            onToggleFavorite: () => _toggleFavorite(item),
             onAddRemove: () async {
               final confirmed = await confirmRemoveFromCatalogue(context, item);
               if (!confirmed || !mounted) return;
@@ -267,6 +295,13 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
   }
 
   String _emptyStateMessage() {
+    if (_favoritesOnly &&
+        _searchQuery.isEmpty &&
+        !_inProgressOnly &&
+        _mediaFilter == MediaFilter.all) {
+      return 'No favorites yet.\n'
+          'Tap the heart on a catalogue item to mark it as favorite.';
+    }
     if (_inProgressOnly &&
         _searchQuery.isEmpty &&
         _mediaFilter != MediaFilter.filmsOnly) {

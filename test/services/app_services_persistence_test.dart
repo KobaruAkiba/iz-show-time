@@ -140,6 +140,38 @@ void main() {
       expect(store.removedCatalogueIds, [film.id]);
     });
 
+    test('toggleFavorite persists updated tags and clears on remove', () async {
+      const film = Film(id: 42, title: 'Favorite Film');
+      await appServices.addToCatalogue(film);
+      store.savedCatalogueItems.clear();
+
+      expect(appServices.isFavorite(film.id), isFalse);
+
+      await appServices.toggleFavorite(film.id);
+
+      expect(appServices.isFavorite(film.id), isTrue);
+      expect(store.savedCatalogueItems, hasLength(1));
+      expect(store.savedCatalogueItems.single.isFavorite, isTrue);
+      expect(store.savedCatalogueItems.single.tags, contains(kFavoriteTag));
+
+      await appServices.toggleFavorite(film.id);
+      expect(appServices.isFavorite(film.id), isFalse);
+
+      await appServices.toggleFavorite(film.id);
+      store.removedCatalogueIds.clear();
+      await appServices.removeFromCatalogue(film.id);
+
+      expect(appServices.isFavorite(film.id), isFalse);
+      expect(store.removedCatalogueIds, [film.id]);
+    });
+
+    test('toggleFavorite is no-op when item is not in catalogue', () async {
+      await appServices.toggleFavorite(404);
+
+      expect(store.savedCatalogueItems, isEmpty);
+      expect(appServices.isFavorite(404), isFalse);
+    });
+
     test('clearAllData clears store', () async {
       await appServices.clearAllData();
 

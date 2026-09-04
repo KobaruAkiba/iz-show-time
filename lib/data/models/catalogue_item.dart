@@ -1,5 +1,8 @@
 import '../../core/constants/api_constants.dart';
 
+/// Reserved catalogue tag for user favorites.
+const String kFavoriteTag = 'favorite';
+
 /// Base class for all catalogue items (Films and Shows)
 abstract class CatalogueItem {
   final int id;
@@ -24,6 +27,14 @@ extension CatalogueItemExtension on CatalogueItem {
   bool containsTag(String tag) => tags.contains(tag);
 
   List<String> withoutTag(String tag) => tags.where((t) => t != tag).toList();
+
+  bool get isFavorite => containsTag(kFavoriteTag);
+
+  CatalogueItem withFavorite(bool favorite) {
+    if (favorite == isFavorite) return this;
+    if (favorite) return copyWithTags([...tags, kFavoriteTag]);
+    return copyWithTags(withoutTag(kFavoriteTag));
+  }
 
   bool get isFilm => this is Film;
   bool get isTvShow => this is TvShow;

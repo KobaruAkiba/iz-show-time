@@ -183,4 +183,26 @@ void main() {
       expect(season.episodes, hasLength(1));
     });
   });
+
+  group('favorite tag helpers', () {
+    test('withFavorite adds and removes reserved tag', () {
+      const film = Film(id: 1, title: 'Test', tags: ['classic']);
+
+      final favorited = film.withFavorite(true);
+      expect(favorited.isFavorite, isTrue);
+      expect(favorited.tags, ['classic', kFavoriteTag]);
+
+      final cleared = favorited.withFavorite(false);
+      expect(cleared.isFavorite, isFalse);
+      expect(cleared.tags, ['classic']);
+    });
+
+    test('withFavorite is idempotent', () {
+      const film = Film(id: 1, title: 'Test', tags: [kFavoriteTag]);
+
+      final again = film.withFavorite(true);
+      expect(identical(again, film), isTrue);
+      expect(again.tags, [kFavoriteTag]);
+    });
+  });
 }

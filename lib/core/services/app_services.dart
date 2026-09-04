@@ -65,6 +65,13 @@ class AppServices {
 
   bool isInCatalogue(int id) => _catalogue.any((item) => item.id == id);
 
+  bool isFavorite(int id) {
+    for (final item in _catalogue) {
+      if (item.id == id) return item.isFavorite;
+    }
+    return false;
+  }
+
   Future<void> addToCatalogue(CatalogueItem item) async {
     if (isInCatalogue(item.id)) return;
     _catalogue.add(item);
@@ -76,6 +83,16 @@ class AppServices {
     await _persistCatalogueRemoval(id);
     await _removeWatchHistoryForMedia(id);
     await _removeEpisodeDataForShow(id);
+  }
+
+  /// Toggles the favorite flag on a catalogue item. No-op if not in catalogue.
+  Future<void> toggleFavorite(int id) async {
+    final index = _catalogue.indexWhere((item) => item.id == id);
+    if (index < 0) return;
+
+    final updated = _catalogue[index].withFavorite(!_catalogue[index].isFavorite);
+    _catalogue[index] = updated;
+    await _persistCatalogueItem(updated);
   }
 
   Future<void> toggleCatalogueItem(CatalogueItem item) async {

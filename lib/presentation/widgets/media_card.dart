@@ -8,14 +8,18 @@ class MediaCard extends StatelessWidget {
   final CatalogueItem item;
   final VoidCallback? onTap;
   final VoidCallback? onAddRemove;
+  final VoidCallback? onToggleFavorite;
   final bool isBookmarked;
+  final bool isFavorite;
 
   const MediaCard({
     super.key,
     required this.item,
     this.onTap,
     this.onAddRemove,
+    this.onToggleFavorite,
     this.isBookmarked = false,
+    this.isFavorite = false,
   });
 
   bool get _isFilm => item is Film;
@@ -151,6 +155,18 @@ class MediaCard extends StatelessWidget {
                   ),
                 ),
               ),
+              if (onToggleFavorite != null)
+                IconButton(
+                  icon: Icon(
+                    isFavorite ? Icons.favorite : Icons.favorite_border,
+                    size: 24,
+                  ),
+                  color: isFavorite
+                      ? colorScheme.primary
+                      : colorScheme.onSurface.withValues(alpha: 0.6),
+                  tooltip: isFavorite ? 'Remove from favorites' : 'Add to favorites',
+                  onPressed: onToggleFavorite,
+                ),
               IconButton(
                 icon: Icon(
                   isBookmarked ? Icons.bookmark : Icons.bookmark_border,
