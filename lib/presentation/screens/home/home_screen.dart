@@ -149,6 +149,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildTrendingSection(),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Divider(),
+                        ),
                         _buildNewEpisodesSection(),
                       ],
                     ),
