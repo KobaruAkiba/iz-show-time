@@ -166,8 +166,36 @@ void main() {
       await store.saveWatchRecord(record);
       await store.removeCatalogueItem(film.id);
       await store.removeWatchRecord(record.watchKey);
+      await store.flush();
 
       expect(await store.loadCatalogue(), isEmpty);
+      expect(await store.loadWatchHistory(), isEmpty);
+    });
+
+    test('saveWatchRecords and removeWatchRecords batch round-trip', () async {
+      final records = List.generate(
+        50,
+        (index) => WatchRecord(
+          mediaId: 1000,
+          mediaTitle: 'Long Show',
+          isFilm: false,
+          episodeId: 5000 + index,
+          seasonNumber: 1,
+          episodeNumber: index + 1,
+          durationMinutes: 42,
+          watchedAt: DateTime(2026, 1, 1),
+        ),
+      );
+
+      await store.saveWatchRecords(records);
+      await store.flush();
+
+      final loaded = await store.loadWatchHistory();
+      expect(loaded, hasLength(50));
+
+      await store.removeWatchRecords(records.map((record) => record.watchKey));
+      await store.flush();
+
       expect(await store.loadWatchHistory(), isEmpty);
     });
 

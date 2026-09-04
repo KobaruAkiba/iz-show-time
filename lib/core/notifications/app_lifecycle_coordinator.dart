@@ -33,6 +33,9 @@ class AppLifecycleCoordinator with WidgetsBindingObserver {
   }
 
   void _persistForegroundState(bool isOpen) {
-    _appServices.userDataStore.saveAppInForeground(isOpen);
+    Future<void>(() async {
+      await _appServices.userDataStore.saveAppInForeground(isOpen);
+      await _appServices.userDataStore.flush();
+    });
   }
 }

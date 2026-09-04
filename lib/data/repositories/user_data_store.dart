@@ -16,7 +16,13 @@ abstract class UserDataStore {
 
   Future<void> saveWatchRecord(WatchRecord record);
 
+  /// Persists many watch records in one box write (no per-item disk flush).
+  Future<void> saveWatchRecords(Iterable<WatchRecord> records);
+
   Future<void> removeWatchRecord(String watchKey);
+
+  /// Removes many watch records in one box write (no per-item disk flush).
+  Future<void> removeWatchRecords(Iterable<String> watchKeys);
 
   Future<List<NewEpisodeAlert>> loadNewEpisodeAlerts();
 
@@ -29,6 +35,9 @@ abstract class UserDataStore {
   Future<bool> loadAppInForeground();
 
   Future<void> saveAppInForeground(bool isInForeground);
+
+  /// Forces durable write of pending box changes to disk.
+  Future<void> flush();
 
   Future<void> clearAll();
 

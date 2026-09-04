@@ -17,6 +17,7 @@ class EpisodeCheckService {
     return checker.checkShows(
       shows: appServices.tvShows,
       watchHistory: appServices.watchHistory,
+      forceRefresh: true,
     );
   }
 

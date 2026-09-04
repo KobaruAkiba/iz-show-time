@@ -10,6 +10,10 @@ import '../models/watch_record.dart';
 import 'user_data_store.dart';
 
 /// Hive-backed persistence for catalogue and watch history.
+///
+/// Writes update the in-memory box immediately; durable disk sync is deferred
+/// to [flush] so bulk catalogue/watch mutations stay O(batch) instead of
+/// O(items × fsync).
 class HiveUserDataStore implements UserDataStore {
   Box? _catalogueBox;
   Box? _watchHistoryBox;
@@ -67,7 +71,6 @@ class HiveUserDataStore implements UserDataStore {
   Future<void> removeCatalogueItem(int mediaId) async {
     await open();
     await catalogueBox.delete(mediaId);
-    await catalogueBox.flush();
   }
 
   @override
@@ -92,19 +95,31 @@ class HiveUserDataStore implements UserDataStore {
 
   @override
   Future<void> saveWatchRecord(WatchRecord record) async {
+    await saveWatchRecords([record]);
+  }
+
+  @override
+  Future<void> saveWatchRecords(Iterable<WatchRecord> records) async {
     await open();
-    await _putEncodedMap(
-      watchHistoryBox,
-      record.watchKey,
-      record.toJson(),
-    );
+    final encoded = <dynamic, String>{
+      for (final record in records)
+        record.watchKey: jsonEncode(record.toJson()),
+    };
+    if (encoded.isEmpty) return;
+    await watchHistoryBox.putAll(encoded);
   }
 
   @override
   Future<void> removeWatchRecord(String watchKey) async {
+    await removeWatchRecords([watchKey]);
+  }
+
+  @override
+  Future<void> removeWatchRecords(Iterable<String> watchKeys) async {
     await open();
-    await watchHistoryBox.delete(watchKey);
-    await watchHistoryBox.flush();
+    final keys = watchKeys.toList(growable: false);
+    if (keys.isEmpty) return;
+    await watchHistoryBox.deleteAll(keys);
   }
 
   @override
@@ -146,7 +161,6 @@ class HiveUserDataStore implements UserDataStore {
       StorageConstants.newEpisodeAlertsKey,
       jsonEncode(alerts.map((alert) => alert.toJson()).toList()),
     );
-    await metaBox.flush();
   }
 
   @override
@@ -164,7 +178,6 @@ class HiveUserDataStore implements UserDataStore {
       StorageConstants.lastEpisodeCheckKey,
       checkedAt.toIso8601String(),
     );
-    await metaBox.flush();
   }
 
   @override
@@ -179,7 +192,16 @@ class HiveUserDataStore implements UserDataStore {
   Future<void> saveAppInForeground(bool isInForeground) async {
     await open();
     await metaBox.put(StorageConstants.appInForegroundKey, isInForeground);
-    await metaBox.flush();
+  }
+
+  @override
+  Future<void> flush() async {
+    await open();
+    await Future.wait([
+      catalogueBox.flush(),
+      watchHistoryBox.flush(),
+      metaBox.flush(),
+    ]);
   }
 
   @override
@@ -194,9 +216,7 @@ class HiveUserDataStore implements UserDataStore {
       StorageConstants.schemaVersionKey,
       StorageConstants.storageSchemaVersion,
     );
-    await catalogueBox.flush();
-    await watchHistoryBox.flush();
-    await metaBox.flush();
+    await flush();
   }
 
   Map<String, dynamic>? _decodeStoredMap(Object? raw) {
@@ -221,7 +241,6 @@ class HiveUserDataStore implements UserDataStore {
     Map<String, dynamic> json,
   ) async {
     await box.put(key, jsonEncode(json));
-    await box.flush();
   }
 
   @override

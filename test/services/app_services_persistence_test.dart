@@ -37,14 +37,35 @@ class FakeUserDataStore implements UserDataStore {
   @override
   Future<List<WatchRecord>> loadWatchHistory() async => [];
 
+  int flushCount = 0;
+  int saveWatchRecordsCalls = 0;
+  int removeWatchRecordsCalls = 0;
+
   @override
   Future<void> saveWatchRecord(WatchRecord record) async {
-    savedWatchRecords.add(record);
+    await saveWatchRecords([record]);
+  }
+
+  @override
+  Future<void> saveWatchRecords(Iterable<WatchRecord> records) async {
+    saveWatchRecordsCalls++;
+    savedWatchRecords.addAll(records);
   }
 
   @override
   Future<void> removeWatchRecord(String watchKey) async {
-    removedWatchKeys.add(watchKey);
+    await removeWatchRecords([watchKey]);
+  }
+
+  @override
+  Future<void> removeWatchRecords(Iterable<String> watchKeys) async {
+    removeWatchRecordsCalls++;
+    removedWatchKeys.addAll(watchKeys);
+  }
+
+  @override
+  Future<void> flush() async {
+    flushCount++;
   }
 
   @override
@@ -331,6 +352,33 @@ void main() {
         store.savedWatchRecords.map((record) => record.episodeId),
         [aired.id, undated.id],
       );
+      expect(store.saveWatchRecordsCalls, 1);
+      expect(store.flushCount, 1);
+    });
+
+    test('persists a season in one batch write and one flush', () async {
+      const show = TvShow(id: 8, title: 'Batch Show');
+      final episodes = List.generate(
+        20,
+        (index) => EpisodeModel.fromJson({
+          'id': 300 + index,
+          'season_number': 1,
+          'episode_number': index + 1,
+          'name': 'E${index + 1}',
+          'air_date': '2020-01-01',
+          'runtime': 40,
+        }),
+      );
+
+      final addedCount = await appServices.addSeasonToCatalogue(
+        show: show,
+        episodes: episodes,
+      );
+
+      expect(addedCount, 20);
+      expect(store.savedWatchRecords, hasLength(20));
+      expect(store.saveWatchRecordsCalls, 1);
+      expect(store.flushCount, 1);
     });
   });
 }

@@ -30,9 +30,16 @@ class NewEpisodeChecker {
   final TmdbService _tmdbService;
   final UserDataStore _userDataStore;
 
+  /// Checks [shows] and persists alerts.
+  ///
+  /// When [mergeWithExisting] is true, alerts for shows not in [shows] are kept.
+  /// Use [forceRefresh] for background/network freshness; UI paths should leave
+  /// it false so TMDB cache is reused.
   Future<NewEpisodeCheckResult> checkShows({
     required List<TvShow> shows,
     required List<WatchRecord> watchHistory,
+    bool forceRefresh = false,
+    bool mergeWithExisting = false,
   }) async {
     await _userDataStore.open();
 
@@ -41,7 +48,7 @@ class NewEpisodeChecker {
       for (final alert in existingAlerts) alert.episodeId: alert,
     };
     final newlyDetected = <NewEpisodeAlert>[];
-    final allAlerts = <NewEpisodeAlert>[];
+    final checkedAlerts = <NewEpisodeAlert>[];
     final now = DateTime.now();
 
     for (final show in shows) {
@@ -49,13 +56,25 @@ class NewEpisodeChecker {
         show: show,
         watchHistory: watchHistory,
         checkedAt: now,
+        forceRefresh: forceRefresh,
       );
       if (nextAlert == null) continue;
 
-      allAlerts.add(nextAlert);
+      checkedAlerts.add(nextAlert);
       if (!existingByEpisodeId.containsKey(nextAlert.episodeId)) {
         newlyDetected.add(nextAlert);
       }
+    }
+
+    final List<NewEpisodeAlert> allAlerts;
+    if (mergeWithExisting) {
+      final checkedShowIds = {for (final show in shows) show.id};
+      allAlerts = [
+        ...existingAlerts.where((alert) => !checkedShowIds.contains(alert.showId)),
+        ...checkedAlerts,
+      ];
+    } else {
+      allAlerts = checkedAlerts;
     }
 
     allAlerts.sort(
@@ -78,6 +97,7 @@ class NewEpisodeChecker {
     required TvShow show,
     required List<WatchRecord> watchHistory,
     required DateTime checkedAt,
+    required bool forceRefresh,
   }) async {
     final lastRegistered = lastRegisteredEpisodeForShow(show.id, watchHistory);
     if (lastRegistered == null) return null;
@@ -90,6 +110,7 @@ class NewEpisodeChecker {
       tvId: show.id,
       lastRegistered: lastRegistered,
       seasonCount: seasonCount,
+      forceRefresh: forceRefresh,
     );
 
     if (nextEpisode == null ||
@@ -114,12 +135,13 @@ class NewEpisodeChecker {
     required int tvId,
     required EpisodeSignature lastRegistered,
     required int seasonCount,
+    required bool forceRefresh,
   }) async {
     if (lastRegistered.seasonNumber <= seasonCount) {
       final seasonEpisodes = await _tmdbService.getSeasonEpisodes(
         tvId: tvId,
         seasonNumber: lastRegistered.seasonNumber,
-        forceRefresh: true,
+        forceRefresh: forceRefresh,
       );
       final nextInSeason = _episodeWithNumber(
         seasonEpisodes,
@@ -134,7 +156,7 @@ class NewEpisodeChecker {
     final nextSeasonEpisodes = await _tmdbService.getSeasonEpisodes(
       tvId: tvId,
       seasonNumber: nextSeason,
-      forceRefresh: true,
+      forceRefresh: forceRefresh,
     );
     return _episodeWithNumber(nextSeasonEpisodes, 1);
   }

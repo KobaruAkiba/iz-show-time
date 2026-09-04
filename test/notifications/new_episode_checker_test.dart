@@ -32,7 +32,16 @@ class FakeEpisodeCheckStore implements UserDataStore {
   Future<void> saveWatchRecord(WatchRecord record) async {}
 
   @override
+  Future<void> saveWatchRecords(Iterable<WatchRecord> records) async {}
+
+  @override
   Future<void> removeWatchRecord(String watchKey) async {}
+
+  @override
+  Future<void> removeWatchRecords(Iterable<String> watchKeys) async {}
+
+  @override
+  Future<void> flush() async {}
 
   @override
   Future<List<NewEpisodeAlert>> loadNewEpisodeAlerts() async =>
