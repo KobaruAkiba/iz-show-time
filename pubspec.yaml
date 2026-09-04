@@ -29,10 +29,10 @@ flutter_launcher_icons:
   android: true
   ios: true
   remove_alpha_ios: true
-  image_path: assets/images/IzShowTimeIcon.png
+  image_path: assets/icons/IzShowTimeIcon.png
   web:
     generate: true
-    image_path: assets/images/IzShowTimeIcon.png
+    image_path: assets/icons/IzShowTimeIcon.png
     background_color: "#FFD700"
     theme_color: "#FFD700"
 

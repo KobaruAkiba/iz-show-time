@@ -28,7 +28,7 @@ class NotificationService {
       macOS: DarwinInitializationSettings(),
       linux: LinuxInitializationSettings(defaultActionName: 'Open'),
       windows: WindowsInitializationSettings(
-        appName: 'Film/TV Tracker',
+        appName: 'IzShowTime',
         appUserModelId: 'com.izshowtime.tracker',
         guid: '6f8d2b1a-4c3e-4a5b-9d0e-1f2a3b4c5d6e',
       ),

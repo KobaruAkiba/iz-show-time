@@ -4,7 +4,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <application
-        android:label="iz_show_time_tracker"
+        android:label="IzShowTime"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

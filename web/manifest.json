@@ -1,6 +1,6 @@
 {
-    "name": "Iz Show Time",
-    "short_name": "Iz Show Time",
+    "name": "IzShowTime",
+    "short_name": "IzShowTime",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#FFD700",
