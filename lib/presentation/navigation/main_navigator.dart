@@ -76,23 +76,23 @@ class _MainNavigatorState extends State<MainNavigator> {
         },
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.home),
-            selectedIcon: Icon(Icons.home_outlined, size: 32),
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home, size: 32),
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(Icons.search),
-            selectedIcon: Icon(Icons.search_rounded, size: 32),
+            icon: Icon(Icons.search_outlined),
+            selectedIcon: Icon(Icons.search, size: 32),
             label: 'Search',
           ),
           NavigationDestination(
             icon: Icon(Icons.bookmark_border),
-            selectedIcon: Icon(Icons.bookmark_outline_rounded, size: 32),
+            selectedIcon: Icon(Icons.bookmark, size: 32),
             label: 'Catalogue',
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings),
-            selectedIcon: Icon(Icons.settings_rounded, size: 32),
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings, size: 32),
             label: 'Settings',
           ),
         ],
