@@ -67,8 +67,8 @@
     }
   },
 
-  "addedToCatalogue": "Aggiunto a catalogo",
-  "removedFromCatalogue": "Rimosso da catalogo",
+  "addedToCatalogue": "Added to catalogue",
+  "removedFromCatalogue": "Removed from catalogue",
   "runtimeNotAvailableForFilm": "Runtime not available for this film",
   "alreadyMarkedAsWatched": "Already marked as watched",
   "episodeHasNotAiredYet": "Episode has not aired yet",

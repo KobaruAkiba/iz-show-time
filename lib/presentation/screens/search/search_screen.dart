@@ -237,6 +237,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 onSubmitted: _performSearch,
               ),
             ),
+            const SizedBox(height: 12),
             Expanded(child: _buildBody()),
           ],
         ),

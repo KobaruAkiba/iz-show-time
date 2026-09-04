@@ -145,10 +145,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get addedToCatalogue => 'Aggiunto a catalogo';
+  String get addedToCatalogue => 'Added to catalogue';
 
   @override
-  String get removedFromCatalogue => 'Rimosso da catalogo';
+  String get removedFromCatalogue => 'Removed from catalogue';
 
   @override
   String get runtimeNotAvailableForFilm =>

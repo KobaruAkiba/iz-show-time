@@ -355,13 +355,13 @@ abstract class AppLocalizations {
   /// No description provided for @addedToCatalogue.
   ///
   /// In en, this message translates to:
-  /// **'Aggiunto a catalogo'**
+  /// **'Added to catalogue'**
   String get addedToCatalogue;
 
   /// No description provided for @removedFromCatalogue.
   ///
   /// In en, this message translates to:
-  /// **'Rimosso da catalogo'**
+  /// **'Removed from catalogue'**
   String get removedFromCatalogue;
 
   /// No description provided for @runtimeNotAvailableForFilm.
