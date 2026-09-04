@@ -7,6 +7,7 @@ class AppPageHeader extends StatelessWidget {
   const AppPageHeader({super.key, this.actions});
 
   static const _titleAsset = 'assets/images/IzShowTimeTitle.png';
+  static const _tmdbIconAsset = 'assets/icons/TmdbIcon.png';
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +28,18 @@ class AppPageHeader extends StatelessWidget {
               ),
             ),
             if (actions != null) ...actions!,
+            Text(
+              'powered by TMDb',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+            ),
+            const SizedBox(width: 6),
+            Image.asset(
+              _tmdbIconAsset,
+              height: 40,
+              fit: BoxFit.contain,
+            ),
           ],
         ),
       ),

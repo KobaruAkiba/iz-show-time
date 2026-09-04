@@ -7,6 +7,7 @@ class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   static const _appVersion = '1.0.0';
+  static const _tmdbLogoAsset = 'assets/images/TmdbLogo.jpg';
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +26,7 @@ class SettingsScreen extends StatelessWidget {
                     title: Text('Version'),
                     subtitle: Text(_appVersion),
                   ),
+                  _buildTmdbAttribution(context),
                   const Divider(),
                   _buildSectionTitle(context, 'Data Management'),
                   ListTile(
@@ -58,6 +60,38 @@ class SettingsScreen extends StatelessWidget {
               fontWeight: FontWeight.bold,
               color: Colors.grey[600],
             ),
+      ),
+    );
+  }
+
+  Widget _buildTmdbAttribution(BuildContext context) {
+    final bodyStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: Colors.grey[700],
+        );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Data and images provided from The Movie Database',
+            style: bodyStyle,
+          ),
+          const SizedBox(height: 12),
+          Center(
+            child: Image.asset(
+              _tmdbLogoAsset,
+              height: 40,
+              fit: BoxFit.contain,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'This product uses the TMDB API but is not endorsed or certified by TMDB.',
+            style: bodyStyle,
+          ),
+        ],
       ),
     );
   }
