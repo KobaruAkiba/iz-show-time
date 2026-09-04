@@ -337,15 +337,15 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                     ),
                   ),
                 ],
+                if (!isFilm) ...[
+                  const SizedBox(height: 24),
+                  _buildSeasonsSection(),
+                ],
                 if (details.director != null &&
                     details.director!.isNotEmpty) ...[
                   const SizedBox(height: 20),
-                  Text(
+                  _buildSectionLabel(
                     details.isFilm ? 'Director' : 'Created by',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -353,16 +353,16 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                     style: Theme.of(context).textTheme.bodyLarge,
                   ),
                 ],
+                if (details.cast.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  _buildSectionLabel('Cast'),
+                  const SizedBox(height: 8),
+                  ...details.cast.map(_buildCastMember),
+                ],
                 if (details.overview != null &&
                     details.overview!.isNotEmpty) ...[
                   const SizedBox(height: 20),
-                  Text(
-                    'Overview',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
+                  _buildSectionLabel('Overview'),
                   const SizedBox(height: 4),
                   Text(
                     details.overview!,
@@ -372,15 +372,84 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                         ),
                   ),
                 ],
-                if (!isFilm) ...[
-                  const SizedBox(height: 24),
-                  _buildSeasonsSection(),
-                ],
               ],
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildSectionLabel(String label) {
+    return Text(
+      label,
+      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            color: Theme.of(context).colorScheme.primary,
+            fontWeight: FontWeight.w600,
+          ),
+    );
+  }
+
+  Widget _buildCastMember(MediaCastMember member) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final profileUrl =
+        ApiConstants.posterUrl(member.profilePath, size: ApiConstants.w342Image);
+    final character = member.character;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: 40,
+              height: 40,
+              child: profileUrl.isNotEmpty
+                  ? Image.network(
+                      profileUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          _castAvatarFallback(context),
+                    )
+                  : _castAvatarFallback(context),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  member.name,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                ),
+                if (character != null && character.isNotEmpty)
+                  Text(
+                    character,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurface.withValues(alpha: 0.65),
+                        ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _castAvatarFallback(BuildContext context) {
+    return Container(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Icon(
+        Icons.person,
+        size: 22,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+      ),
     );
   }
 
@@ -390,13 +459,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Episodes',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: colorScheme.primary,
-                fontWeight: FontWeight.w600,
-              ),
-        ),
+        _buildSectionLabel('Episodes'),
         const SizedBox(height: 8),
         if (_isLoadingSeasons)
           const Padding(
