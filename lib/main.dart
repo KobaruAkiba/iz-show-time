@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/app_scroll_behavior.dart';
@@ -10,6 +11,7 @@ import 'core/notifications/notification_service.dart';
 import 'core/notifications/app_lifecycle_coordinator.dart';
 import 'core/background/native_background_scheduler.dart';
 import 'core/routing/app_router.dart';
+import 'l10n/l10n.dart';
 import 'presentation/navigation/main_navigator.dart';
 
 void main() async {
@@ -64,13 +66,24 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'IzShowTime',
+      onGenerateTitle: (context) => context.l10n.appTitle,
       debugShowCheckedModeBanner: false,
       scrollBehavior: AppScrollBehavior(),
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
       navigatorKey: appNavigatorKey,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      builder: (context, child) {
+        AppL10n.updateLocale(Localizations.localeOf(context));
+        return child ?? const SizedBox.shrink();
+      },
       home: const MainNavigator(),
       onGenerateRoute: AppRouter.onGenerateRoute,
     );

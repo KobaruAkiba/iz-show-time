@@ -9,6 +9,7 @@ import '../../widgets/lazy_paged_list_view.dart';
 import '../../../data/models/catalogue_item.dart';
 import '../../../core/notifications/show_in_progress.dart';
 import '../../../core/services/app_services.dart';
+import '../../../l10n/l10n.dart';
 
 /// Screen displaying the user's catalogue of films and shows
 class CatalogueScreen extends StatefulWidget {
@@ -152,6 +153,7 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final films = _appServices.films;
     final tvShows = _appServices.tvShows;
     final catalogue = _appServices.catalogue;
@@ -179,7 +181,7 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
                       onChanged: (value) =>
                           setState(() => _searchQuery = value),
                       decoration: InputDecoration(
-                        hintText: 'Search catalogue...',
+                        hintText: l10n.catalogueSearchHint,
                         prefixIcon: const Icon(Icons.search),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -208,6 +210,8 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
   }
 
   Widget _buildActiveFilterChips() {
+    final l10n = context.l10n;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Align(
@@ -218,25 +222,25 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
           children: [
             if (_mediaFilter != MediaFilter.all)
               InputChip(
-                label: Text(mediaFilterLabel(_mediaFilter)),
+                label: Text(mediaFilterLabel(_mediaFilter, l10n)),
                 onDeleted: _clearMediaFilter,
                 visualDensity: VisualDensity.compact,
               ),
             if (_favoritesOnly)
               InputChip(
-                label: const Text('Favorites'),
+                label: Text(l10n.filtersFavorites),
                 onDeleted: _clearFavorites,
                 visualDensity: VisualDensity.compact,
               ),
             if (_inProgressOnly)
               InputChip(
-                label: const Text('In Progress'),
+                label: Text(l10n.filtersInProgress),
                 onDeleted: _clearInProgress,
                 visualDensity: VisualDensity.compact,
               ),
             if (_sortOption != MediaSortOption.none)
               InputChip(
-                label: Text(mediaSortOptionLabel(_sortOption)),
+                label: Text(mediaSortOptionLabel(_sortOption, l10n)),
                 onDeleted: _clearSort,
                 visualDensity: VisualDensity.compact,
               ),
@@ -247,12 +251,14 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
   }
 
   Widget _buildItemList(List<CatalogueItem> items) {
+    final l10n = context.l10n;
+
     if (items.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Text(
-            _emptyStateMessage(),
+            _emptyStateMessage(l10n),
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyLarge,
           ),
@@ -273,7 +279,7 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
       ),
       totalItemCount: items.length,
       onRefresh: () async => _refresh(),
-      itemBuilder: (context, index) {
+      itemBuilder: (_, index) {
         final item = items[index];
         return Padding(
           padding: const EdgeInsets.only(bottom: 8),
@@ -284,9 +290,16 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
             onTap: () => _openDetails(item),
             onToggleFavorite: () => _toggleFavorite(item),
             onAddRemove: () async {
-              final confirmed = await confirmRemoveFromCatalogue(context, item);
+              final confirmed =
+                  await confirmRemoveFromCatalogue(context, item);
               if (!confirmed || !mounted) return;
               await _appServices.removeFromCatalogue(item.id);
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(l10n.removedFromCatalogue),
+                ),
+              );
               _refresh();
             },
           ),
@@ -295,23 +308,21 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
     );
   }
 
-  String _emptyStateMessage() {
+  String _emptyStateMessage(AppLocalizations l10n) {
     if (_favoritesOnly &&
         _searchQuery.isEmpty &&
         !_inProgressOnly &&
         _mediaFilter == MediaFilter.all) {
-      return 'No favorites yet.\n'
-          'Tap the heart on a catalogue item to mark it as favorite.';
+      return l10n.catalogueNoFavorites;
     }
     if (_inProgressOnly &&
         _searchQuery.isEmpty &&
         _mediaFilter != MediaFilter.filmsOnly) {
-      return 'No shows currently in progress.\n'
-          'Register an episode, then when the next one airs it will show up here.';
+      return l10n.catalogueNoInProgress;
     }
     if (_hasActiveFilters || _searchQuery.isNotEmpty) {
-      return 'No results match your filters';
+      return l10n.catalogueNoFilterMatches;
     }
-    return 'Your catalogue is empty';
+    return l10n.catalogueEmpty;
   }
 }

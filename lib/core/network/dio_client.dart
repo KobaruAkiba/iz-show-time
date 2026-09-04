@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import '../constants/app_constants.dart';
 import '../constants/api_constants.dart';
+import '../../l10n/l10n.dart';
 
 /// Custom error types for API responses
 enum ApiErrorType {
@@ -41,17 +42,18 @@ class ApiResult<T> {
       );
 
   static String _getErrorMessage(ApiErrorType type) {
+    final l10n = AppL10n.current;
     switch (type) {
       case ApiErrorType.rateLimit:
-        return 'Too many requests. Please wait a moment.';
+        return l10n.errorTooManyRequests;
       case ApiErrorType.notFound:
-        return 'Resource not found.';
+        return l10n.errorResourceNotFound;
       case ApiErrorType.unauthorized:
-        return 'Access denied. API key may be invalid.';
+        return l10n.errorAccessDenied;
       case ApiErrorType.invalidResponse:
-        return 'Invalid response from server.';
+        return l10n.errorInvalidResponse;
       default:
-        return 'An error occurred';
+        return l10n.errorGeneric;
     }
   }
 }

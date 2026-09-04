@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../data/models/catalogue_item.dart';
+import '../../l10n/l10n.dart';
 
 enum MediaFilter { all, filmsOnly, tvOnly }
 
@@ -11,21 +12,21 @@ enum MediaSortOption {
   ratingDesc,
 }
 
-String mediaFilterLabel(MediaFilter filter) {
+String mediaFilterLabel(MediaFilter filter, AppLocalizations l10n) {
   return switch (filter) {
-    MediaFilter.all => 'All',
-    MediaFilter.filmsOnly => 'Films',
-    MediaFilter.tvOnly => 'TV',
+    MediaFilter.all => l10n.filterAll,
+    MediaFilter.filmsOnly => l10n.filterFilms,
+    MediaFilter.tvOnly => l10n.filterTv,
   };
 }
 
-String mediaSortOptionLabel(MediaSortOption option) {
+String mediaSortOptionLabel(MediaSortOption option, AppLocalizations l10n) {
   return switch (option) {
-    MediaSortOption.none => 'Default order',
-    MediaSortOption.titleAsc => 'Title (A → Z)',
-    MediaSortOption.titleDesc => 'Title (Z → A)',
-    MediaSortOption.ratingDesc => 'Rating (high → low)',
-    MediaSortOption.ratingAsc => 'Rating (low → high)',
+    MediaSortOption.none => l10n.sortDefault,
+    MediaSortOption.titleAsc => l10n.sortTitleAsc,
+    MediaSortOption.titleDesc => l10n.sortTitleDesc,
+    MediaSortOption.ratingDesc => l10n.sortRatingDesc,
+    MediaSortOption.ratingAsc => l10n.sortRatingAsc,
   };
 }
 
@@ -91,6 +92,8 @@ class MediaFiltersButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return Badge(
       isLabelVisible: isActive,
       label: const Text(''),
@@ -99,12 +102,12 @@ class MediaFiltersButton extends StatelessWidget {
           ? IconButton.outlined(
               onPressed: onPressed,
               icon: const Icon(Icons.tune),
-              tooltip: 'Filters & sort',
+              tooltip: l10n.filtersAndSort,
             )
           : OutlinedButton.icon(
               onPressed: onPressed,
               icon: const Icon(Icons.tune, size: 18),
-              label: const Text('Filters & sort'),
+              label: Text(l10n.filtersAndSort),
               style: OutlinedButton.styleFrom(
                 visualDensity: VisualDensity.compact,
               ),
@@ -148,6 +151,8 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
     showDragHandle: true,
     isScrollControlled: true,
     builder: (context) {
+      final l10n = context.l10n;
+
       return StatefulBuilder(
         builder: (context, setSheetState) {
           return Padding(
@@ -161,14 +166,14 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Filters & sort',
+                  l10n.filtersAndSort,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Show',
+                  l10n.filtersShowSection,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -176,21 +181,21 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                 const SizedBox(height: 8),
                 SegmentedButton<MediaFilter>(
                   segments: [
-                    const ButtonSegment(
+                    ButtonSegment(
                       value: MediaFilter.all,
-                      label: Text('All'),
-                      icon: Icon(Icons.grid_view, size: 18),
+                      label: Text(l10n.filterAll),
+                      icon: const Icon(Icons.grid_view, size: 18),
                     ),
                     ButtonSegment(
                       value: MediaFilter.filmsOnly,
-                      label: const Text('Films'),
+                      label: Text(l10n.filterFilms),
                       icon: const Icon(Icons.movie_filter, size: 18),
                       enabled: !draftInProgressOnly,
                     ),
-                    const ButtonSegment(
+                    ButtonSegment(
                       value: MediaFilter.tvOnly,
-                      label: Text('TV'),
-                      icon: Icon(Icons.tv_outlined, size: 18),
+                      label: Text(l10n.filterTv),
+                      icon: const Icon(Icons.tv_outlined, size: 18),
                     ),
                   ],
                   selected: {draftMediaFilter},
@@ -204,7 +209,7 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                 if (showStatusSection) ...[
                   const SizedBox(height: 16),
                   Text(
-                    'Status',
+                    l10n.filtersStatusSection,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -216,7 +221,7 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                     children: [
                       if (showFavoritesFilter)
                         FilterChip(
-                          label: const Text('Favorites'),
+                          label: Text(l10n.filtersFavorites),
                           selected: draftFavoritesOnly,
                           avatar: Icon(
                             draftFavoritesOnly
@@ -230,7 +235,7 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                         ),
                       if (showInProgressFilter)
                         FilterChip(
-                          label: const Text('In Progress'),
+                          label: Text(l10n.filtersInProgress),
                           selected: draftInProgressOnly,
                           avatar: Icon(
                             draftInProgressOnly
@@ -251,7 +256,7 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
-                        'Shows with the next episode already aired and not yet registered.',
+                        l10n.filtersInProgressHint,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Theme.of(context)
                                   .colorScheme
@@ -263,7 +268,7 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                 ],
                 const SizedBox(height: 20),
                 Text(
-                  'Sort by',
+                  l10n.filtersSortBy,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -279,7 +284,7 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                           : Icons.radio_button_off,
                       size: 20,
                     ),
-                    title: Text(mediaSortOptionLabel(option)),
+                    title: Text(mediaSortOptionLabel(option, l10n)),
                     onTap: () =>
                         setSheetState(() => draftSortOption = option),
                   ),
@@ -296,7 +301,7 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                           draftFavoritesOnly = false;
                         });
                       },
-                      child: const Text('Reset'),
+                      child: Text(l10n.filtersReset),
                     ),
                     const Spacer(),
                     FilledButton(
@@ -316,7 +321,7 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                           ),
                         );
                       },
-                      child: const Text('Apply'),
+                      child: Text(l10n.filtersApply),
                     ),
                   ],
                 ),

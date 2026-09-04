@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../widgets/app_page_header.dart';
 import '../../../core/services/app_services.dart';
+import '../../../l10n/l10n.dart';
 
 /// Settings screen with app preferences
 class SettingsScreen extends StatelessWidget {
@@ -11,6 +12,8 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -20,34 +23,29 @@ class SettingsScreen extends StatelessWidget {
             Expanded(
               child: ListView(
                 children: [
-                  _buildSectionTitle(context, 'About'),
-                  const ListTile(
-                    leading: Icon(Icons.info_outline),
-                    title: Text('Version'),
-                    subtitle: Text(_appVersion),
+                  _buildSectionTitle(context, l10n.settingsAbout),
+                  ListTile(
+                    leading: const Icon(Icons.info_outline),
+                    title: Text(l10n.settingsVersion),
+                    subtitle: const Text(_appVersion),
                   ),
                   _buildTmdbAttribution(context),
                   const Divider(),
-                  _buildSectionTitle(context, 'Data Management'),
+                  _buildSectionTitle(context, l10n.settingsDataManagement),
                   ListTile(
                     leading: const Icon(Icons.cleaning_services_outlined),
-                    title: const Text('Clear Cache Data'),
-                    subtitle: const Text(
-                      'Free space by removing cached API responses. '
-                      'Catalogue and watch history are kept',
-                    ),
+                    title: Text(l10n.settingsClearCacheTitle),
+                    subtitle: Text(l10n.settingsClearCacheSubtitle),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => _showClearCacheDialog(context),
                   ),
                   ListTile(
                     leading: Icon(Icons.delete_outline, color: Colors.red[500]),
                     title: Text(
-                      'Clear All Data',
+                      l10n.settingsClearAllTitle,
                       style: TextStyle(color: Colors.red[700]),
                     ),
-                    subtitle: const Text(
-                      'Remove catalogue, watch history, and cached data',
-                    ),
+                    subtitle: Text(l10n.settingsClearAllSubtitle),
                     trailing: Icon(Icons.chevron_right, color: Colors.red[400]),
                     onTap: () => _showClearDataDialog(context),
                   ),
@@ -75,6 +73,7 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Widget _buildTmdbAttribution(BuildContext context) {
+    final l10n = context.l10n;
     final bodyStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
           color: Colors.grey[700],
         );
@@ -85,7 +84,7 @@ class SettingsScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Data and images provided from The Movie Database',
+            l10n.settingsTmdbAttribution,
             style: bodyStyle,
           ),
           const SizedBox(height: 12),
@@ -98,7 +97,7 @@ class SettingsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'This product uses the TMDB API but is not endorsed or certified by TMDB.',
+            l10n.settingsTmdbDisclaimer,
             style: bodyStyle,
           ),
         ],
@@ -107,19 +106,18 @@ class SettingsScreen extends StatelessWidget {
   }
 
   void _showClearCacheDialog(BuildContext context) {
+    final l10n = context.l10n;
+
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         icon: const Icon(Icons.cleaning_services_outlined),
-        title: const Text('Clear Cache Data'),
-        content: const Text(
-          'This will remove cached API responses to free space on your device.\n\n'
-          'Your catalogue and watch history will not be deleted.',
-        ),
+        title: Text(l10n.settingsClearCacheTitle),
+        content: Text(l10n.settingsClearCacheBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+            child: Text(l10n.actionCancel),
           ),
           FilledButton(
             onPressed: () {
@@ -127,13 +125,13 @@ class SettingsScreen extends StatelessWidget {
               if (dialogContext.mounted) Navigator.pop(dialogContext);
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Cache data cleared successfully'),
+                  SnackBar(
+                    content: Text(l10n.cacheClearedSuccessfully),
                   ),
                 );
               }
             },
-            child: const Text('Clear Cache'),
+            child: Text(l10n.settingsClearCacheConfirm),
           ),
         ],
       ),
@@ -141,20 +139,18 @@ class SettingsScreen extends StatelessWidget {
   }
 
   void _showClearDataDialog(BuildContext context) {
+    final l10n = context.l10n;
+
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         icon: Icon(Icons.warning_amber_rounded, color: Colors.red[700]),
-        title: const Text('Clear All Data'),
-        content: const Text(
-          'This will permanently delete your catalogue, watch history, '
-          'and cached data.\n\n'
-          'Your data cannot be recovered after this action.',
-        ),
+        title: Text(l10n.settingsClearAllTitle),
+        content: Text(l10n.settingsClearAllBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+            child: Text(l10n.actionCancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
@@ -166,13 +162,13 @@ class SettingsScreen extends StatelessWidget {
               if (dialogContext.mounted) Navigator.pop(dialogContext);
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('All data cleared successfully'),
+                  SnackBar(
+                    content: Text(l10n.allDataClearedSuccessfully),
                   ),
                 );
               }
             },
-            child: const Text('Delete All Data'),
+            child: Text(l10n.settingsClearAllConfirm),
           ),
         ],
       ),

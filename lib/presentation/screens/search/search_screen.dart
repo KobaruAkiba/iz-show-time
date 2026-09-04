@@ -7,6 +7,7 @@ import '../../widgets/confirm_remove_from_catalogue.dart';
 import '../../widgets/lazy_paged_list_view.dart';
 import '../../../data/models/catalogue_item.dart';
 import '../../../core/services/app_services.dart';
+import '../../../l10n/l10n.dart';
 
 /// Search screen for finding films and shows via TMDB
 class SearchScreen extends StatefulWidget {
@@ -158,7 +159,7 @@ class _SearchScreenState extends State<SearchScreen> {
       if (!mounted || _lastQuery != trimmedQuery) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Search failed. Check your API key and connection.';
+        _errorMessage = context.l10n.searchFailed;
       });
     }
   }
@@ -197,6 +198,8 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -209,7 +212,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 autofocus: widget.initialQuery.isEmpty,
                 textInputAction: TextInputAction.search,
                 decoration: InputDecoration(
-                  hintText: 'Search films and shows...',
+                  hintText: l10n.searchHint,
                   prefixIcon: const Icon(Icons.search),
                   suffixIcon: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -221,7 +224,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         ),
                       IconButton(
                         icon: const Icon(Icons.arrow_forward),
-                        tooltip: 'Search',
+                        tooltip: l10n.searchAction,
                         onPressed: () => _performSearch(_controller.text),
                       ),
                     ],
@@ -242,6 +245,8 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildBody() {
+    final l10n = context.l10n;
+
     if (!_hasSearched) {
       return _buildEmptyState();
     }
@@ -265,8 +270,8 @@ class _SearchScreenState extends State<SearchScreen> {
             child: Center(
               child: Text(
                 totalCount > 0
-                    ? 'No results match your filters'
-                    : 'No results for "$_lastQuery"',
+                    ? l10n.searchNoFilterMatches
+                    : l10n.searchNoResultsForQuery(_lastQuery),
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
             ),
@@ -309,14 +314,15 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildFiltersBar(int totalCount, {required int filteredCount}) {
+    final l10n = context.l10n;
     final countLabel = _hasActiveFilters && filteredCount != totalCount
-        ? '$filteredCount of $totalCount'
-        : '$totalCount';
+        ? l10n.searchFilteredOfTotal(filteredCount, totalCount)
+        : l10n.searchResultsCount('$totalCount');
 
     return Row(
       children: [
         Text(
-          '$countLabel results',
+          countLabel,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context)
                     .colorScheme
@@ -365,6 +371,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _toggleItem(CatalogueItem item) async {
+    final l10n = context.l10n;
     final wasInCatalogue = _appServices.isInCatalogue(item.id);
     if (wasInCatalogue) {
       final confirmed = await confirmRemoveFromCatalogue(context, item);
@@ -377,13 +384,17 @@ class _SearchScreenState extends State<SearchScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          wasInCatalogue ? 'Removed from catalogue' : 'Added to catalogue',
+          wasInCatalogue
+              ? l10n.removedFromCatalogue
+              : l10n.addedToCatalogue,
         ),
       ),
     );
   }
 
   Widget _buildEmptyState() {
+    final l10n = context.l10n;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -396,14 +407,14 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Search for films and shows',
+            l10n.searchEmptyTitle,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w500,
                 ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Type a title and press Enter or the search button',
+            l10n.searchEmptySubtitle,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context)
                       .colorScheme

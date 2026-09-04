@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/services/app_services.dart';
-import '../../core/utils/duration_format.dart';
 import '../../data/models/catalogue_item.dart';
 import '../../data/models/episode_model.dart';
 import '../../data/models/media_details.dart';
 import '../../data/models/season_model.dart';
+import '../../l10n/l10n.dart';
 import 'confirm_remove_from_catalogue.dart';
 
 /// Opens a bottom sheet with TMDB details for the tapped carousel item.
@@ -96,6 +97,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
 
   Future<void> _toggleFilmWatched() async {
     final film = widget.item as Film;
+    final l10n = context.l10n;
 
     if (_appServices.isWatched(mediaId: film.id)) {
       final confirmed = await confirmRemoveFromCatalogue(context, film);
@@ -105,7 +107,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Removed from catalogue')),
+        SnackBar(content: Text(l10n.removedFromCatalogue)),
       );
       _notifyWatchTimeChanged();
       return;
@@ -114,7 +116,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     final runtime = _details?.runtimeMinutes ?? 0;
     if (runtime <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Runtime not available for this film')),
+        SnackBar(content: Text(l10n.runtimeNotAvailableForFilm)),
       );
       return;
     }
@@ -128,17 +130,13 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
 
     if (record == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Already marked as watched')),
+        SnackBar(content: Text(l10n.alreadyMarkedAsWatched)),
       );
       return;
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Added ${formatDurationMinutes(runtime)} to watch time',
-        ),
-      ),
+      SnackBar(content: Text(l10n.addedToCatalogue)),
     );
     _notifyWatchTimeChanged();
   }
@@ -151,6 +149,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
 
   Future<void> _addEpisodeToCatalogue(EpisodeModel episode) async {
     final show = widget.item as TvShow;
+    final l10n = context.l10n;
     final isWatched =
         _appServices.isWatched(mediaId: show.id, episodeId: episode.id);
 
@@ -162,7 +161,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
 
     if (episode.isUpcoming) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Episode has not aired yet')),
+        SnackBar(content: Text(l10n.episodeHasNotAiredYet)),
       );
       return;
     }
@@ -177,7 +176,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
 
     if (record == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Episode runtime not available')),
+        SnackBar(content: Text(l10n.episodeRuntimeNotAvailable)),
       );
       return;
     }
@@ -189,6 +188,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     if (season.episodes.isEmpty || season.isUpcoming) return;
 
     final show = widget.item as TvShow;
+    final l10n = context.l10n;
     final allInCatalogue = season.episodes.every(
       (episode) => _appServices.isWatched(
         mediaId: show.id,
@@ -212,7 +212,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
 
     if (addedCount == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Episode runtime not available')),
+        SnackBar(content: Text(l10n.episodeRuntimeNotAvailable)),
       );
       return;
     }
@@ -233,6 +233,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final details = _details;
     final posterPath = details?.posterPath ?? widget.item.posterPath;
     final posterUrl = ApiConstants.posterUrl(posterPath);
@@ -329,7 +330,9 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                                 icon: details.isFilm
                                     ? Icons.movie_filter
                                     : Icons.tv,
-                                label: details.isFilm ? 'Film' : 'Show',
+                                label: details.isFilm
+                                    ? l10n.mediaTypeFilm
+                                    : l10n.mediaTypeShow,
                               ),
                             ],
                           ),
@@ -339,7 +342,10 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                                   0) ...[
                             const SizedBox(height: 8),
                             Text(
-                              '${_appServices.watchedEpisodesCountFor(widget.item.id)} episode(s) in catalogue',
+                              l10n.episodesInCatalogue(
+                                _appServices
+                                    .watchedEpisodesCountFor(widget.item.id),
+                              ),
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall
@@ -363,7 +369,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                             : Icons.play_circle_outline,
                       ),
                       label: Text(
-                        filmWatched ? 'Watched' : 'Mark as Watched',
+                        filmWatched ? l10n.watched : l10n.markAsWatched,
                       ),
                     ),
                   ),
@@ -379,9 +385,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                               : Icons.favorite_border,
                         ),
                         label: Text(
-                          filmFavorite
-                              ? 'Favorite'
-                              : 'Mark as Favorite',
+                          filmFavorite ? l10n.favorite : l10n.markAsFavorite,
                         ),
                       ),
                     ),
@@ -395,7 +399,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                     details.director!.isNotEmpty) ...[
                   const SizedBox(height: 20),
                   _buildSectionLabel(
-                    details.isFilm ? 'Director' : 'Created by',
+                    details.isFilm ? l10n.director : l10n.createdBy,
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -405,14 +409,14 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                 ],
                 if (details.cast.isNotEmpty) ...[
                   const SizedBox(height: 20),
-                  _buildSectionLabel('Cast'),
+                  _buildSectionLabel(l10n.cast),
                   const SizedBox(height: 12),
                   _buildCastCarousel(details.cast),
                 ],
                 if (details.overview != null &&
                     details.overview!.isNotEmpty) ...[
                   const SizedBox(height: 20),
-                  _buildSectionLabel('Overview'),
+                  _buildSectionLabel(l10n.overview),
                   const SizedBox(height: 4),
                   Text(
                     details.overview!,
@@ -518,11 +522,12 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
 
   Widget _buildSeasonsSection() {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionLabel('Episodes'),
+        _buildSectionLabel(l10n.episodes),
         const SizedBox(height: 8),
         if (_isLoadingSeasons)
           const Padding(
@@ -533,7 +538,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Text(
-              'No episodes found.',
+              l10n.noEpisodesFound,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
@@ -547,6 +552,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
 
   Widget _buildSeasonSection(SeasonModel season) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final isExpanded = _expandedSeasons.contains(season.seasonNumber);
     final watchedInSeason = season.episodes
         .where(
@@ -560,16 +566,18 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
         season.episodes.isNotEmpty && watchedInSeason == season.episodes.length;
     final canAddSeason = season.episodes.isNotEmpty && !season.isUpcoming;
 
-    String subtitle;
+    final String subtitle;
     if (season.isUpcoming) {
       subtitle = season.airDate != null
-          ? 'Upcoming · ${_formatShortAirDate(season.airDate!)}'
-          : 'Upcoming';
+          ? l10n.upcomingWithDate(_formatShortAirDate(season.airDate!))
+          : l10n.upcoming;
     } else if (watchedInSeason > 0) {
-      subtitle =
-          '$watchedInSeason / ${season.episodes.length} in catalogue';
+      subtitle = l10n.seasonProgressInCatalogue(
+        watchedInSeason,
+        season.episodes.length,
+      );
     } else {
-      subtitle = '${season.episodes.length} episodes';
+      subtitle = l10n.episodeCountLabel(season.episodes.length);
     }
 
     return Card(
@@ -600,8 +608,8 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
               children: [
                 IconButton(
                   tooltip: allInCatalogue
-                      ? 'Remove season from catalogue'
-                      : 'Add season to catalogue',
+                      ? l10n.removeSeasonFromCatalogue
+                      : l10n.addSeasonToCatalogue,
                   icon: Icon(
                     allInCatalogue
                         ? Icons.bookmark
@@ -629,6 +637,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
 
   Widget _buildEpisodeTile(EpisodeModel episode) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final isWatched = _appServices.isWatched(
       mediaId: widget.item.id,
       episodeId: episode.id,
@@ -653,8 +662,10 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
       subtitle: isUpcoming
           ? Text(
               episode.airDate != null
-                  ? 'Upcoming · ${_formatShortAirDate(episode.airDate!)}'
-                  : 'Upcoming',
+                  ? l10n.upcomingWithDate(
+                      _formatShortAirDate(episode.airDate!),
+                    )
+                  : l10n.upcoming,
             )
           : null,
       trailing: Row(
@@ -666,10 +677,10 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
           ],
           IconButton(
             tooltip: isUpcoming
-                ? 'Episode has not aired yet'
+                ? l10n.episodeHasNotAiredYet
                 : isWatched
-                    ? 'Remove from catalogue'
-                    : 'Add episode to catalogue',
+                    ? l10n.removeFromCatalogue
+                    : l10n.addEpisodeToCatalogue,
             icon: Icon(
               isWatched ? Icons.bookmark : Icons.bookmark_add_outlined,
               color: isWatched ? colorScheme.primary : null,
@@ -683,21 +694,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
   }
 
   String _formatShortAirDate(DateTime date) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+    return DateFormat.yMMMd().format(date);
   }
 
   Widget _posterFallback(BuildContext context) {
@@ -756,7 +753,7 @@ class _UpcomingBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        'Upcoming',
+        context.l10n.upcoming,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: colorScheme.onTertiaryContainer,
               fontWeight: FontWeight.w600,

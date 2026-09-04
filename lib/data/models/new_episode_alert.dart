@@ -1,3 +1,5 @@
+import '../../l10n/l10n.dart';
+
 /// A newly detected episode for a catalogue TV show.
 class NewEpisodeAlert {
   final int showId;
@@ -48,10 +50,14 @@ class NewEpisodeAlert {
         'detected_at': detectedAt.toIso8601String(),
       };
 
-  String get episodeCode => 'S$seasonNumber E$episodeNumber';
+  String get episodeCode {
+    final l10n = AppL10n.current;
+    return '${l10n.seasonCode(seasonNumber)} ${l10n.episodeCode(episodeNumber)}';
+  }
 
-  String get displayTitle =>
-      episodeName.isNotEmpty ? episodeName : 'Episode $episodeNumber';
+  String get displayTitle => episodeName.isNotEmpty
+      ? episodeName
+      : AppL10n.current.episodeFallbackTitle(episodeNumber);
 
   @override
   bool operator ==(Object other) =>

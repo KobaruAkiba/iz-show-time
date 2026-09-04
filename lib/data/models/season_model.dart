@@ -1,3 +1,4 @@
+import '../../l10n/l10n.dart';
 import 'episode_model.dart';
 
 /// A TV season with its episodes, used in detail views.
@@ -24,8 +25,7 @@ class SeasonModel {
     );
   }
 
-  String get label =>
-      seasonNumber == 1 ? 'Season 1' : 'Season $seasonNumber';
+  String get label => AppL10n.current.seasonLabel(seasonNumber);
 
   /// True when the season has not started airing yet:
   /// empty placeholder seasons, or seasons where nothing has aired and

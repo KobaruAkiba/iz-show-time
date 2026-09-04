@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/services/app_services.dart';
 import '../../data/models/catalogue_item.dart';
 import '../../core/constants/api_constants.dart';
+import '../../l10n/l10n.dart';
 
 /// Shared card widget for films and shows
 class MediaCard extends StatelessWidget {
@@ -24,24 +25,28 @@ class MediaCard extends StatelessWidget {
 
   bool get _isFilm => item is Film;
 
-  String _formatRating(double voteAverage) {
-    if (voteAverage == 0) return 'N/D';
+  String _formatRating(double voteAverage, AppLocalizations l10n) {
+    if (voteAverage == 0) return l10n.ratingUnavailable;
     return voteAverage.toStringAsFixed(1);
   }
 
-  String get _typeLabel => _isFilm ? 'Film' : 'Show';
+  String _typeLabel(AppLocalizations l10n) =>
+      _isFilm ? l10n.mediaTypeFilm : l10n.mediaTypeShow;
 
-  String? _posterBadgeLabel() {
+  String? _posterBadgeLabel(AppLocalizations l10n) {
     if (_isFilm) return null;
     final watchedCount = AppServices().watchedEpisodesCountFor(item.id);
     if (watchedCount <= 0) return null;
-    return watchedCount == 1 ? '1 ep' : '$watchedCount ep';
+    return watchedCount == 1
+        ? l10n.episodeCountBadgeOne
+        : l10n.episodeCountBadge(watchedCount);
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final posterUrl = ApiConstants.posterUrl(item.posterPath);
-    final badgeLabel = _posterBadgeLabel();
+    final badgeLabel = _posterBadgeLabel(l10n);
     final colorScheme = Theme.of(context).colorScheme;
 
     return Material(
@@ -128,11 +133,11 @@ class MediaCard extends StatelessWidget {
                         children: [
                           _TypeBadge(
                             icon: _isFilm ? Icons.movie_filter : Icons.tv,
-                            label: _typeLabel,
+                            label: _typeLabel(l10n),
                           ),
                           const SizedBox(width: 8),
                           _RatingBadge(
-                            rating: _formatRating(item.voteAverage),
+                            rating: _formatRating(item.voteAverage, l10n),
                           ),
                         ],
                       ),
@@ -164,7 +169,9 @@ class MediaCard extends StatelessWidget {
                   color: isFavorite
                       ? colorScheme.primary
                       : colorScheme.onSurface.withValues(alpha: 0.6),
-                  tooltip: isFavorite ? 'Remove from favorites' : 'Add to favorites',
+                  tooltip: isFavorite
+                      ? l10n.removeFromFavorites
+                      : l10n.addToFavorites,
                   onPressed: onToggleFavorite,
                 ),
               IconButton(
@@ -276,15 +283,17 @@ class MediaPosterCard extends StatelessWidget {
 
   bool get _isFilm => item is Film;
 
-  String get _typeLabel => _isFilm ? 'Film' : 'Show';
+  String _typeLabel(AppLocalizations l10n) =>
+      _isFilm ? l10n.mediaTypeFilm : l10n.mediaTypeShow;
 
-  String _formatRating(double voteAverage) {
-    if (voteAverage == 0) return 'N/D';
+  String _formatRating(double voteAverage, AppLocalizations l10n) {
+    if (voteAverage == 0) return l10n.ratingUnavailable;
     return voteAverage.toStringAsFixed(1);
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final posterUrl = ApiConstants.posterUrl(item.posterPath);
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -342,11 +351,11 @@ class MediaPosterCard extends StatelessWidget {
                     children: [
                       _TypeBadge(
                         icon: _isFilm ? Icons.movie_filter : Icons.tv,
-                        label: _typeLabel,
+                        label: _typeLabel(l10n),
                       ),
                       const SizedBox(height: 8),
                       _RatingBadge(
-                        rating: _formatRating(item.voteAverage),
+                        rating: _formatRating(item.voteAverage, l10n),
                       ),
                     ],
                   ),
@@ -373,7 +382,7 @@ class MediaPosterCard extends StatelessWidget {
                       if (isActive) ...[
                         const SizedBox(height: 6),
                         Text(
-                          'Tap for details',
+                          l10n.tapForDetails,
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.7),
                             fontSize: 12,

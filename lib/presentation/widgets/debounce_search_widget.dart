@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../l10n/l10n.dart';
 
 /// A search input widget with built-in debounce functionality to reduce API calls.
 ///
@@ -38,7 +39,7 @@ class _DebounceSearchWidgetState extends State<DebounceSearchWidget> {
       controller: _textController,
       onChanged: _handleTextChange,
       decoration: InputDecoration(
-        hintText: 'Search...',
+        hintText: context.l10n.searchEllipsis,
         prefixIcon: const Icon(Icons.search),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

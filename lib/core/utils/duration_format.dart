@@ -1,11 +1,14 @@
+import '../../l10n/l10n.dart';
+
 /// Formats a duration in minutes as a human-readable string.
 ///
 /// Units: years (y), months (M), days (d), hours (h), minutes (m).
 /// Ratios: 60m = 1h, 24h = 1d, 30d = 1M, 12M = 1y.
 /// Only units from the highest reached scale down to minutes are shown
 /// (e.g. 55h → "2d 7h 0m", with no years or months).
-String formatDurationMinutes(int minutes) {
-  if (minutes <= 0) return '0m';
+String formatDurationMinutes(int minutes, {AppLocalizations? l10n}) {
+  final strings = l10n ?? AppL10n.current;
+  if (minutes <= 0) return strings.durationZeroMinutes;
 
   const minutesPerHour = 60;
   const minutesPerDay = 24 * minutesPerHour;
@@ -25,25 +28,25 @@ String formatDurationMinutes(int minutes) {
   final parts = <String>[];
 
   if (years > 0) {
-    parts.add('${years}y');
-    parts.add('${months}M');
-    parts.add('${days}d');
-    parts.add('${hours}h');
-    parts.add('${mins}m');
+    parts.add(strings.durationYears(years));
+    parts.add(strings.durationMonths(months));
+    parts.add(strings.durationDays(days));
+    parts.add(strings.durationHours(hours));
+    parts.add(strings.durationMinutes(mins));
   } else if (months > 0) {
-    parts.add('${months}M');
-    parts.add('${days}d');
-    parts.add('${hours}h');
-    parts.add('${mins}m');
+    parts.add(strings.durationMonths(months));
+    parts.add(strings.durationDays(days));
+    parts.add(strings.durationHours(hours));
+    parts.add(strings.durationMinutes(mins));
   } else if (days > 0) {
-    parts.add('${days}d');
-    parts.add('${hours}h');
-    parts.add('${mins}m');
+    parts.add(strings.durationDays(days));
+    parts.add(strings.durationHours(hours));
+    parts.add(strings.durationMinutes(mins));
   } else if (hours > 0) {
-    parts.add('${hours}h');
-    parts.add('${mins}m');
+    parts.add(strings.durationHours(hours));
+    parts.add(strings.durationMinutes(mins));
   } else {
-    parts.add('${mins}m');
+    parts.add(strings.durationMinutes(mins));
   }
 
   return parts.join(' ');
@@ -56,7 +59,10 @@ int totalHoursFromMinutes(int minutes) => minutes <= 0 ? 0 : minutes ~/ 60;
 bool isAtLeastOneDay(int minutes) => minutes >= 24 * 60;
 
 /// Low-emphasis hours-only summary, e.g. "that's 55 hours".
-String formatHoursOnlyHint(int minutes) {
+String formatHoursOnlyHint(int minutes, {AppLocalizations? l10n}) {
+  final strings = l10n ?? AppL10n.current;
   final hours = totalHoursFromMinutes(minutes);
-  return hours == 1 ? "that's 1 hour" : "that's $hours hours";
+  return hours == 1
+      ? strings.hoursOnlyHintOne
+      : strings.hoursOnlyHintOther(hours);
 }

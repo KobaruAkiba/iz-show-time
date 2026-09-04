@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/utils/duration_format.dart';
+import '../../l10n/l10n.dart';
 
 /// Summary counts for films, shows, total catalogue items, and watch time.
 class CatalogueStatsRow extends StatelessWidget {
@@ -18,6 +19,8 @@ class CatalogueStatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: Column(
@@ -26,7 +29,7 @@ class CatalogueStatsRow extends StatelessWidget {
             children: [
               Expanded(
                 child: _StatCard(
-                  label: 'Shows',
+                  label: l10n.statsShows,
                   value: tvShowCount,
                   icon: Icons.tv,
                 ),
@@ -34,7 +37,7 @@ class CatalogueStatsRow extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: _StatCard(
-                  label: 'Films',
+                  label: l10n.statsFilms,
                   value: filmCount,
                   icon: Icons.movie_filter,
                 ),
@@ -42,7 +45,7 @@ class CatalogueStatsRow extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: _StatCard(
-                  label: 'Total',
+                  label: l10n.statsTotal,
                   value: totalCount,
                   icon: Icons.collections_bookmark,
                 ),
@@ -65,6 +68,7 @@ class _WatchTimeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
 
     return Container(
       width: double.infinity,
@@ -85,7 +89,7 @@ class _WatchTimeCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Total Watch Time',
+                  l10n.statsTotalWatchTime,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
@@ -97,7 +101,7 @@ class _WatchTimeCard extends StatelessWidget {
                   children: [
                     Flexible(
                       child: Text(
-                        formatDurationMinutes(minutes),
+                        formatDurationMinutes(minutes, l10n: l10n),
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
@@ -106,7 +110,7 @@ class _WatchTimeCard extends StatelessWidget {
                     if (isAtLeastOneDay(minutes)) ...[
                       const SizedBox(width: 8),
                       Text(
-                        formatHoursOnlyHint(minutes),
+                        formatHoursOnlyHint(minutes, l10n: l10n),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color:
                                   colorScheme.onSurface.withValues(alpha: 0.5),

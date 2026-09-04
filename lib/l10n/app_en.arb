@@ -1,0 +1,286 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "IzShowTime",
+
+  "navHome": "Home",
+  "navSearch": "Search",
+  "navCatalogue": "Catalogue",
+  "navSettings": "Settings",
+
+  "poweredByTmdb": "powered by TMDb",
+  "searchEllipsis": "Search...",
+  "ratingUnavailable": "N/D",
+
+  "mediaTypeFilm": "Film",
+  "mediaTypeShow": "Show",
+  "episodeCountBadge": "{count} ep",
+  "@episodeCountBadge": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "episodeCountBadgeOne": "1 ep",
+  "addToFavorites": "Add to favorites",
+  "removeFromFavorites": "Remove from favorites",
+  "tapForDetails": "Tap for details",
+
+  "statsShows": "Shows",
+  "statsFilms": "Films",
+  "statsTotal": "Total",
+  "statsTotalWatchTime": "Total Watch Time",
+
+  "filterAll": "All",
+  "filterFilms": "Films",
+  "filterTv": "TV",
+  "sortDefault": "Default order",
+  "sortTitleAsc": "Title (A → Z)",
+  "sortTitleDesc": "Title (Z → A)",
+  "sortRatingDesc": "Rating (high → low)",
+  "sortRatingAsc": "Rating (low → high)",
+  "filtersAndSort": "Filters & sort",
+  "filtersShowSection": "Show",
+  "filtersStatusSection": "Status",
+  "filtersFavorites": "Favorites",
+  "filtersInProgress": "In Progress",
+  "filtersInProgressHint": "Shows with the next episode already aired and not yet registered.",
+  "filtersSortBy": "Sort by",
+  "filtersReset": "Reset",
+  "filtersApply": "Apply",
+
+  "actionCancel": "Cancel",
+  "actionRemove": "Remove",
+  "actionRetry": "Retry",
+  "actionOpen": "Open",
+
+  "confirmRemoveFromCatalogueTitle": "Remove from Catalogue",
+  "confirmRemoveFilmBody": "Remove the film \"{title}\" from your catalogue?\n\nWatch history for this title will be permanently deleted.",
+  "@confirmRemoveFilmBody": {
+    "placeholders": {
+      "title": {"type": "String"}
+    }
+  },
+  "confirmRemoveShowBody": "Remove the show \"{title}\" from your catalogue?\n\nAll watched episodes will be permanently deleted from your watch history.",
+  "@confirmRemoveShowBody": {
+    "placeholders": {
+      "title": {"type": "String"}
+    }
+  },
+
+  "addedToCatalogue": "Aggiunto a catalogo",
+  "removedFromCatalogue": "Rimosso da catalogo",
+  "runtimeNotAvailableForFilm": "Runtime not available for this film",
+  "alreadyMarkedAsWatched": "Already marked as watched",
+  "episodeHasNotAiredYet": "Episode has not aired yet",
+  "episodeRuntimeNotAvailable": "Episode runtime not available",
+  "cacheClearedSuccessfully": "Cache data cleared successfully",
+  "allDataClearedSuccessfully": "All data cleared successfully",
+
+  "watched": "Watched",
+  "markAsWatched": "Mark as Watched",
+  "favorite": "Favorite",
+  "markAsFavorite": "Mark as Favorite",
+  "director": "Director",
+  "createdBy": "Created by",
+  "cast": "Cast",
+  "overview": "Overview",
+  "episodes": "Episodes",
+  "noEpisodesFound": "No episodes found.",
+  "upcoming": "Upcoming",
+  "upcomingWithDate": "Upcoming · {date}",
+  "@upcomingWithDate": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "episodesInCatalogue": "{count} episode(s) in catalogue",
+  "@episodesInCatalogue": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "seasonProgressInCatalogue": "{watched} / {total} in catalogue",
+  "@seasonProgressInCatalogue": {
+    "placeholders": {
+      "watched": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "episodeCountLabel": "{count} episodes",
+  "@episodeCountLabel": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "addSeasonToCatalogue": "Add season to catalogue",
+  "removeSeasonFromCatalogue": "Remove season from catalogue",
+  "addEpisodeToCatalogue": "Add episode to catalogue",
+  "removeFromCatalogue": "Remove from catalogue",
+  "seasonLabel": "Season {number}",
+  "@seasonLabel": {
+    "placeholders": {
+      "number": {"type": "int"}
+    }
+  },
+  "episodeFallbackTitle": "Episode {number}",
+  "@episodeFallbackTitle": {
+    "placeholders": {
+      "number": {"type": "int"}
+    }
+  },
+  "seasonCode": "S{number}",
+  "@seasonCode": {
+    "placeholders": {
+      "number": {"type": "int"}
+    }
+  },
+  "episodeCode": "E{number}",
+  "@episodeCode": {
+    "placeholders": {
+      "number": {"type": "int"}
+    }
+  },
+  "runtimeHoursMinutes": "{hours}h {minutes}m",
+  "@runtimeHoursMinutes": {
+    "placeholders": {
+      "hours": {"type": "int"},
+      "minutes": {"type": "int"}
+    }
+  },
+  "runtimeHoursOnly": "{hours}h",
+  "@runtimeHoursOnly": {
+    "placeholders": {
+      "hours": {"type": "int"}
+    }
+  },
+  "runtimeMinutesOnly": "{minutes}m",
+  "@runtimeMinutesOnly": {
+    "placeholders": {
+      "minutes": {"type": "int"}
+    }
+  },
+  "seasonsCountOne": "1 season",
+  "seasonsCountOther": "{count} seasons",
+  "@seasonsCountOther": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+
+  "durationZeroMinutes": "0m",
+  "durationYears": "{count}y",
+  "@durationYears": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "durationMonths": "{count}M",
+  "@durationMonths": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "durationDays": "{count}d",
+  "@durationDays": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "durationHours": "{count}h",
+  "@durationHours": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "durationMinutes": "{count}m",
+  "@durationMinutes": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "hoursOnlyHintOne": "that's 1 hour",
+  "hoursOnlyHintOther": "that's {hours} hours",
+  "@hoursOnlyHintOther": {
+    "placeholders": {
+      "hours": {"type": "int"}
+    }
+  },
+
+  "homeTrendingLoadFailed": "Failed to load trending content",
+  "homeNoTrending": "No trending content available. Check your TMDB API key.",
+  "homeTrendingNow": "Trending Now",
+  "homeTrendingSubtitle": "Swipe to explore · tap for details",
+  "homeNewEpisodes": "New Episodes",
+  "homeNewEpisodesSubtitle": "The next episode to watch after your last registered one",
+  "homeNewEpisodesEmptyTitle": "Nothing here yet",
+  "homeNewEpisodesEmptyBody": "Register an episode in your catalogue and the next one in order will appear here.",
+  "homeAiredOn": "Aired {date}",
+  "@homeAiredOn": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+
+  "searchHint": "Search films and shows...",
+  "searchAction": "Search",
+  "searchFailed": "Search failed. Check your API key and connection.",
+  "searchNoFilterMatches": "No results match your filters",
+  "searchNoResultsForQuery": "No results for \"{query}\"",
+  "@searchNoResultsForQuery": {
+    "placeholders": {
+      "query": {"type": "String"}
+    }
+  },
+  "searchResultsCount": "{count} results",
+  "@searchResultsCount": {
+    "placeholders": {
+      "count": {"type": "String"}
+    }
+  },
+  "searchFilteredOfTotal": "{filtered} of {total}",
+  "@searchFilteredOfTotal": {
+    "placeholders": {
+      "filtered": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "searchEmptyTitle": "Search for films and shows",
+  "searchEmptySubtitle": "Type a title and press Enter or the search button",
+
+  "catalogueSearchHint": "Search catalogue...",
+  "catalogueEmpty": "Your catalogue is empty",
+  "catalogueNoFilterMatches": "No results match your filters",
+  "catalogueNoFavorites": "No favorites yet.\nTap the heart on a catalogue item to mark it as favorite.",
+  "catalogueNoInProgress": "No shows currently in progress.\nRegister an episode, then when the next one airs it will show up here.",
+
+  "settingsAbout": "About",
+  "settingsVersion": "Version",
+  "settingsDataManagement": "Data Management",
+  "settingsClearCacheTitle": "Clear Cache Data",
+  "settingsClearCacheSubtitle": "Free space by removing cached API responses. Catalogue and watch history are kept",
+  "settingsClearCacheBody": "This will remove cached API responses to free space on your device.\n\nYour catalogue and watch history will not be deleted.",
+  "settingsClearCacheConfirm": "Clear Cache",
+  "settingsClearAllTitle": "Clear All Data",
+  "settingsClearAllSubtitle": "Remove catalogue, watch history, and cached data",
+  "settingsClearAllBody": "This will permanently delete your catalogue, watch history, and cached data.\n\nYour data cannot be recovered after this action.",
+  "settingsClearAllConfirm": "Delete All Data",
+  "settingsTmdbAttribution": "Data and images provided from The Movie Database",
+  "settingsTmdbDisclaimer": "This product uses the TMDB API but is not endorsed or certified by TMDB.",
+
+  "notificationChannelName": "New Episodes",
+  "notificationChannelDescription": "Alerts when new TV episodes are detected",
+  "notificationTitle": "New episodes available",
+  "notificationBodyOne": "A new episode is waiting in your catalogue. Open Home and check New Episodes.",
+  "notificationBodyOther": "{count} new episodes are available. Open Home and check New Episodes.",
+  "@notificationBodyOther": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+
+  "errorTooManyRequests": "Too many requests. Please wait a moment.",
+  "errorResourceNotFound": "Resource not found.",
+  "errorAccessDenied": "Access denied. API key may be invalid.",
+  "errorInvalidResponse": "Invalid response from server.",
+  "errorGeneric": "An error occurred"
+}

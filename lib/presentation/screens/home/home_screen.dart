@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../widgets/media_card.dart';
 import '../../widgets/media_detail_sheet.dart';
 import '../../widgets/app_page_header.dart';
@@ -8,6 +9,7 @@ import '../../../data/models/new_episode_alert.dart';
 import '../../../core/services/app_services.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../l10n/l10n.dart';
 
 /// Main home screen showing trending content carousel
 class HomeScreen extends StatefulWidget {
@@ -69,7 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'Failed to load trending content';
+        _errorMessage = context.l10n.homeTrendingLoadFailed;
       });
     } finally {
       if (mounted) {
@@ -92,6 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     _pageController ??= PageController(viewportFraction: 0.82);
+    final l10n = context.l10n;
 
     return Scaffold(
       body: SafeArea(
@@ -122,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 12),
                       FilledButton(
                         onPressed: _loadTrending,
-                        child: const Text('Retry'),
+                        child: Text(l10n.actionRetry),
                       ),
                     ],
                   ),
@@ -166,11 +169,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTrendingSection() {
+    final l10n = context.l10n;
+
     if (_trendingItems.isEmpty) {
       return Padding(
         padding: const EdgeInsets.all(24),
         child: Text(
-          'No trending content available. Check your TMDB API key.',
+          l10n.homeNoTrending,
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodyMedium,
         ),
@@ -183,7 +188,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
           child: Text(
-            'Trending Now',
+            l10n.homeTrendingNow,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -192,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
           child: Text(
-            'Swipe to explore · tap for details',
+            l10n.homeTrendingSubtitle,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context)
                       .colorScheme
@@ -264,6 +269,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildNewEpisodesSection() {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final alerts = _appServices.newEpisodeAlerts;
     final visibleCount = _visibleNewEpisodes.clamp(0, alerts.length);
     final visibleAlerts = alerts.take(visibleCount);
@@ -274,14 +280,14 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'New Episodes',
+            l10n.homeNewEpisodes,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
           ),
           const SizedBox(height: 4),
           Text(
-            'The next episode to watch after your last registered one',
+            l10n.homeNewEpisodesSubtitle,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurface.withValues(alpha: 0.5),
                 ),
@@ -297,6 +303,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildNewEpisodesEmptyState(ColorScheme colorScheme) {
+    final l10n = context.l10n;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
@@ -316,14 +324,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Nothing here yet',
+            l10n.homeNewEpisodesEmptyTitle,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
           ),
           const SizedBox(height: 6),
           Text(
-            'Register an episode in your catalogue and the next one in order will appear here.',
+            l10n.homeNewEpisodesEmptyBody,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurface.withValues(alpha: 0.6),
@@ -421,21 +429,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _formatAirDate(DateTime date) {
-    final months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return 'Aired ${months[date.month - 1]} ${date.day}, ${date.year}';
+    return context.l10n.homeAiredOn(DateFormat.yMMMd().format(date));
   }
 
   void _openNewEpisodeDetails(NewEpisodeAlert alert) {

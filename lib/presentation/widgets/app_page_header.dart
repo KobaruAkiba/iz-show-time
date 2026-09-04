@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/l10n.dart';
 
 /// Shared page header used across all main screens.
 class AppPageHeader extends StatelessWidget {
@@ -29,7 +30,7 @@ class AppPageHeader extends StatelessWidget {
             ),
             if (actions != null) ...actions!,
             Text(
-              'powered by TMDb',
+              context.l10n.poweredByTmdb,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Colors.grey[600],
                   ),

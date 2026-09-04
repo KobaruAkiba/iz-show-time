@@ -1,4 +1,5 @@
 import '../../core/constants/api_constants.dart';
+import '../../l10n/l10n.dart';
 import 'season_model.dart';
 
 /// Lightweight cast entry parsed from TMDB credits / aggregate_credits.
@@ -196,14 +197,20 @@ class MediaDetails {
     if (runtimeMinutes == null || runtimeMinutes! <= 0) return null;
     final hours = runtimeMinutes! ~/ 60;
     final minutes = runtimeMinutes! % 60;
-    if (hours > 0 && minutes > 0) return '${hours}h ${minutes}m';
-    if (hours > 0) return '${hours}h';
-    return '${minutes}m';
+    final l10n = AppL10n.current;
+    if (hours > 0 && minutes > 0) {
+      return l10n.runtimeHoursMinutes(hours, minutes);
+    }
+    if (hours > 0) return l10n.runtimeHoursOnly(hours);
+    return l10n.runtimeMinutesOnly(minutes);
   }
 
   String? get formattedSeasons {
     if (numberOfSeasons == null || numberOfSeasons! <= 0) return null;
-    return numberOfSeasons == 1 ? '1 season' : '$numberOfSeasons seasons';
+    final l10n = AppL10n.current;
+    return numberOfSeasons == 1
+        ? l10n.seasonsCountOne
+        : l10n.seasonsCountOther(numberOfSeasons!);
   }
 }
 

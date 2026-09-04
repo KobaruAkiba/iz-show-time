@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../../l10n/l10n.dart';
+
 /// Sends local system notifications for newly detected TV episodes.
 /// Called only from native background scheduling, not while the app is open.
 class NotificationService {
@@ -17,18 +19,18 @@ class NotificationService {
 
   static const int _newEpisodesNotificationId = 1;
   static const String _channelId = 'new_episodes';
-  static const String _channelName = 'New Episodes';
 
   Future<void> initialize() async {
     if (_initialized) return;
 
-    const initSettings = InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-      iOS: DarwinInitializationSettings(),
-      macOS: DarwinInitializationSettings(),
-      linux: LinuxInitializationSettings(defaultActionName: 'Open'),
+    final l10n = AppL10n.current;
+    final initSettings = InitializationSettings(
+      android: const AndroidInitializationSettings('@mipmap/ic_launcher'),
+      iOS: const DarwinInitializationSettings(),
+      macOS: const DarwinInitializationSettings(),
+      linux: LinuxInitializationSettings(defaultActionName: l10n.actionOpen),
       windows: WindowsInitializationSettings(
-        appName: 'IzShowTime',
+        appName: l10n.appTitle,
         appUserModelId: 'com.izshowtime.tracker',
         guid: '6f8d2b1a-4c3e-4a5b-9d0e-1f2a3b4c5d6e',
       ),
@@ -41,23 +43,24 @@ class NotificationService {
   Future<void> showNewEpisodesNotification({required int count}) async {
     if (!_initialized || count <= 0) return;
 
-    const title = 'New episodes available';
+    final l10n = AppL10n.current;
+    final title = l10n.notificationTitle;
     final body = count == 1
-        ? 'A new episode is waiting in your catalogue. Open Home and check New Episodes.'
-        : '$count new episodes are available. Open Home and check New Episodes.';
+        ? l10n.notificationBodyOne
+        : l10n.notificationBodyOther(count);
 
-    const details = NotificationDetails(
+    final details = NotificationDetails(
       android: AndroidNotificationDetails(
         _channelId,
-        _channelName,
-        channelDescription: 'Alerts when new TV episodes are detected',
+        l10n.notificationChannelName,
+        channelDescription: l10n.notificationChannelDescription,
         importance: Importance.defaultImportance,
         priority: Priority.defaultPriority,
       ),
-      iOS: DarwinNotificationDetails(),
-      macOS: DarwinNotificationDetails(),
-      linux: LinuxNotificationDetails(),
-      windows: WindowsNotificationDetails(),
+      iOS: const DarwinNotificationDetails(),
+      macOS: const DarwinNotificationDetails(),
+      linux: const LinuxNotificationDetails(),
+      windows: const WindowsNotificationDetails(),
     );
 
     try {

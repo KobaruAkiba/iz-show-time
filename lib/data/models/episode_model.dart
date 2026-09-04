@@ -1,3 +1,5 @@
+import '../../l10n/l10n.dart';
+
 /// Lightweight model for a single TV episode shown in detail views.
 class EpisodeModel {
   final int id;
@@ -90,14 +92,15 @@ class EpisodeModel {
     return d1 > d2;
   }
 
-  String get seasonLabel => 'S$seasonNumber';
+  String get seasonLabel => AppL10n.current.seasonCode(seasonNumber);
 
-  String get episodeLabel => 'E$episodeNumber';
+  String get episodeLabel => AppL10n.current.episodeCode(episodeNumber);
 
   String get codeLabel => '$seasonLabel $episodeLabel';
 
-  String get displayTitle =>
-      name.isNotEmpty ? name : 'Episode $episodeNumber';
+  String get displayTitle => name.isNotEmpty
+      ? name
+      : AppL10n.current.episodeFallbackTitle(episodeNumber);
 
   @override
   String toString() => 'Episode($codeLabel, $name)';

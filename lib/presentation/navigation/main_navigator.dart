@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/routing/app_router.dart';
+import '../../l10n/l10n.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/search/search_screen.dart';
 import '../screens/catalogue/catalogue_screen.dart';
@@ -45,6 +46,8 @@ class _MainNavigatorState extends State<MainNavigator> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
@@ -74,26 +77,26 @@ class _MainNavigatorState extends State<MainNavigator> {
             _selectTab(index);
           }
         },
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home, size: 32),
-            label: 'Home',
+            icon: const Icon(Icons.home_outlined),
+            selectedIcon: const Icon(Icons.home, size: 32),
+            label: l10n.navHome,
           ),
           NavigationDestination(
-            icon: Icon(Icons.search_outlined),
-            selectedIcon: Icon(Icons.search, size: 32),
-            label: 'Search',
+            icon: const Icon(Icons.search_outlined),
+            selectedIcon: const Icon(Icons.search, size: 32),
+            label: l10n.navSearch,
           ),
           NavigationDestination(
-            icon: Icon(Icons.bookmark_border),
-            selectedIcon: Icon(Icons.bookmark, size: 32),
-            label: 'Catalogue',
+            icon: const Icon(Icons.bookmark_border),
+            selectedIcon: const Icon(Icons.bookmark, size: 32),
+            label: l10n.navCatalogue,
           ),
           NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings, size: 32),
-            label: 'Settings',
+            icon: const Icon(Icons.settings_outlined),
+            selectedIcon: const Icon(Icons.settings, size: 32),
+            label: l10n.navSettings,
           ),
         ],
       ),
