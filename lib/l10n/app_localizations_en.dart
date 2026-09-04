@@ -74,7 +74,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get filterFilms => 'Films';
 
   @override
-  String get filterTv => 'TV';
+  String get filterTv => 'Shows';
 
   @override
   String get sortDefault => 'Default order';

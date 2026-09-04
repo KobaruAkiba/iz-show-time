@@ -223,7 +223,7 @@ abstract class AppLocalizations {
   /// No description provided for @filterTv.
   ///
   /// In en, this message translates to:
-  /// **'TV'**
+  /// **'Shows'**
   String get filterTv;
 
   /// No description provided for @sortDefault.
