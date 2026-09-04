@@ -5,6 +5,7 @@ import '../../data/models/watch_record.dart';
 import '../../data/repositories/user_data_store.dart';
 import '../../data/services/tmdb_service.dart';
 import 'episode_signature.dart';
+import 'show_in_progress.dart';
 
 /// Result of checking catalogue shows for newly aired episodes.
 class NewEpisodeCheckResult {
@@ -92,8 +93,7 @@ class NewEpisodeChecker {
     );
 
     if (nextEpisode == null ||
-        !nextEpisode.hasAired ||
-        isEpisodeRegisteredInCatalogue(nextEpisode, watchHistory)) {
+        !isAvailableImmediateNextEpisode(nextEpisode, watchHistory)) {
       return null;
     }
 

@@ -11,6 +11,14 @@ enum MediaSortOption {
   ratingDesc,
 }
 
+String mediaFilterLabel(MediaFilter filter) {
+  return switch (filter) {
+    MediaFilter.all => 'All',
+    MediaFilter.filmsOnly => 'Films',
+    MediaFilter.tvOnly => 'TV',
+  };
+}
+
 String mediaSortOptionLabel(MediaSortOption option) {
   return switch (option) {
     MediaSortOption.none => 'Default order',
@@ -24,8 +32,11 @@ String mediaSortOptionLabel(MediaSortOption option) {
 bool hasActiveMediaFilters({
   required MediaFilter mediaFilter,
   required MediaSortOption sortOption,
+  bool inProgressOnly = false,
 }) {
-  return mediaFilter != MediaFilter.all || sortOption != MediaSortOption.none;
+  return mediaFilter != MediaFilter.all ||
+      sortOption != MediaSortOption.none ||
+      inProgressOnly;
 }
 
 List<CatalogueItem> applyMediaFilters(
@@ -100,17 +111,32 @@ class MediaFiltersButton extends StatelessWidget {
   }
 }
 
-Future<({MediaFilter mediaFilter, MediaSortOption sortOption})?>
-    showMediaFiltersSheet(
+typedef MediaFiltersResult = ({
+  MediaFilter mediaFilter,
+  MediaSortOption sortOption,
+  bool inProgressOnly,
+});
+
+Future<MediaFiltersResult?> showMediaFiltersSheet(
   BuildContext context, {
   required MediaFilter mediaFilter,
   required MediaSortOption sortOption,
+  bool inProgressOnly = false,
+  bool showInProgressFilter = false,
 }) {
   var draftMediaFilter = mediaFilter;
   var draftSortOption = sortOption;
+  var draftInProgressOnly = inProgressOnly;
 
-  return showModalBottomSheet<
-      ({MediaFilter mediaFilter, MediaSortOption sortOption})>(
+  void applyInProgressConstraints() {
+    if (!draftInProgressOnly) return;
+    // In Progress is TV-only: films-only is incompatible.
+    if (draftMediaFilter == MediaFilter.filmsOnly) {
+      draftMediaFilter = MediaFilter.tvOnly;
+    }
+  }
+
+  return showModalBottomSheet<MediaFiltersResult>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
@@ -142,18 +168,19 @@ Future<({MediaFilter mediaFilter, MediaSortOption sortOption})?>
                 ),
                 const SizedBox(height: 8),
                 SegmentedButton<MediaFilter>(
-                  segments: const [
-                    ButtonSegment(
+                  segments: [
+                    const ButtonSegment(
                       value: MediaFilter.all,
                       label: Text('All'),
                       icon: Icon(Icons.grid_view, size: 18),
                     ),
                     ButtonSegment(
                       value: MediaFilter.filmsOnly,
-                      label: Text('Films'),
-                      icon: Icon(Icons.movie_filter, size: 18),
+                      label: const Text('Films'),
+                      icon: const Icon(Icons.movie_filter, size: 18),
+                      enabled: !draftInProgressOnly,
                     ),
-                    ButtonSegment(
+                    const ButtonSegment(
                       value: MediaFilter.tvOnly,
                       label: Text('TV'),
                       icon: Icon(Icons.tv_outlined, size: 18),
@@ -161,9 +188,51 @@ Future<({MediaFilter mediaFilter, MediaSortOption sortOption})?>
                   ],
                   selected: {draftMediaFilter},
                   onSelectionChanged: (selection) {
-                    setSheetState(() => draftMediaFilter = selection.first);
+                    setSheetState(() {
+                      draftMediaFilter = selection.first;
+                      applyInProgressConstraints();
+                    });
                   },
                 ),
+                if (showInProgressFilter) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'Status',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  FilterChip(
+                    label: const Text('In Progress'),
+                    selected: draftInProgressOnly,
+                    avatar: Icon(
+                      draftInProgressOnly
+                          ? Icons.play_circle_filled
+                          : Icons.play_circle_outline,
+                      size: 18,
+                    ),
+                    onSelected: (selected) {
+                      setSheetState(() {
+                        draftInProgressOnly = selected;
+                        applyInProgressConstraints();
+                      });
+                    },
+                  ),
+                  if (draftInProgressOnly)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        'Shows with the next episode already aired and not yet registered.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.7),
+                            ),
+                      ),
+                    ),
+                ],
                 const SizedBox(height: 20),
                 Text(
                   'Sort by',
@@ -195,6 +264,7 @@ Future<({MediaFilter mediaFilter, MediaSortOption sortOption})?>
                         setSheetState(() {
                           draftMediaFilter = MediaFilter.all;
                           draftSortOption = MediaSortOption.none;
+                          draftInProgressOnly = false;
                         });
                       },
                       child: const Text('Reset'),
@@ -202,11 +272,15 @@ Future<({MediaFilter mediaFilter, MediaSortOption sortOption})?>
                     const Spacer(),
                     FilledButton(
                       onPressed: () {
+                        applyInProgressConstraints();
                         Navigator.pop(
                           context,
                           (
                             mediaFilter: draftMediaFilter,
                             sortOption: draftSortOption,
+                            inProgressOnly: showInProgressFilter
+                                ? draftInProgressOnly
+                                : false,
                           ),
                         );
                       },

@@ -7,6 +7,7 @@ import '../../widgets/catalogue_stats_row.dart';
 import '../../widgets/confirm_remove_from_catalogue.dart';
 import '../../widgets/lazy_paged_list_view.dart';
 import '../../../data/models/catalogue_item.dart';
+import '../../../core/notifications/show_in_progress.dart';
 import '../../../core/services/app_services.dart';
 
 /// Screen displaying the user's catalogue of films and shows
@@ -19,25 +20,23 @@ class CatalogueScreen extends StatefulWidget {
   State<CatalogueScreen> createState() => _CatalogueScreenState();
 }
 
-class _CatalogueScreenState extends State<CatalogueScreen>
-    with SingleTickerProviderStateMixin {
+class _CatalogueScreenState extends State<CatalogueScreen> {
   String _searchQuery = '';
   MediaFilter _mediaFilter = MediaFilter.all;
   MediaSortOption _sortOption = MediaSortOption.none;
+  bool _inProgressOnly = false;
   final _appServices = AppServices();
-
-  final List<String> _tabs = ['All', 'Films', 'Shows', 'In Progress'];
-  late TabController _tabController;
 
   bool get _hasActiveFilters => hasActiveMediaFilters(
         mediaFilter: _mediaFilter,
         sortOption: _sortOption,
+        inProgressOnly: _inProgressOnly,
       );
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
+    _appServices.newEpisodeAlertsListenable.addListener(_onAlertsChanged);
     if (widget.isActive) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
     }
@@ -53,20 +52,43 @@ class _CatalogueScreenState extends State<CatalogueScreen>
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _appServices.newEpisodeAlertsListenable.removeListener(_onAlertsChanged);
     super.dispose();
+  }
+
+  void _onAlertsChanged() {
+    if (_inProgressOnly && mounted) {
+      setState(() {});
+    }
   }
 
   List<CatalogueItem> _filterItems(List<CatalogueItem> items) {
     Iterable<CatalogueItem> filtered = items;
+
+    if (_inProgressOnly) {
+      final inProgressIds = inProgressShowIds(
+        alerts: _appServices.newEpisodeAlerts,
+      );
+      filtered = filtered.where(
+        (item) => item.isTvShow && inProgressIds.contains(item.id),
+      );
+    }
+
     if (_searchQuery.isNotEmpty) {
       final query = _searchQuery.toLowerCase();
       filtered =
           filtered.where((item) => item.title.toLowerCase().contains(query));
     }
+
+    // In Progress implies TV-only even when media filter is "All".
+    final effectiveMediaFilter =
+        _inProgressOnly && _mediaFilter == MediaFilter.all
+            ? MediaFilter.tvOnly
+            : _mediaFilter;
+
     return applyMediaFilters(
       filtered,
-      mediaFilter: _mediaFilter,
+      mediaFilter: effectiveMediaFilter,
       sortOption: _sortOption,
     );
   }
@@ -78,12 +100,27 @@ class _CatalogueScreenState extends State<CatalogueScreen>
       context,
       mediaFilter: _mediaFilter,
       sortOption: _sortOption,
+      inProgressOnly: _inProgressOnly,
+      showInProgressFilter: true,
     );
     if (result == null || !mounted) return;
     setState(() {
       _mediaFilter = result.mediaFilter;
       _sortOption = result.sortOption;
+      _inProgressOnly = result.inProgressOnly;
     });
+  }
+
+  void _clearMediaFilter() {
+    setState(() => _mediaFilter = MediaFilter.all);
+  }
+
+  void _clearInProgress() {
+    setState(() => _inProgressOnly = false);
+  }
+
+  void _clearSort() {
+    setState(() => _sortOption = MediaSortOption.none);
   }
 
   void _openDetails(CatalogueItem item) {
@@ -100,6 +137,7 @@ class _CatalogueScreenState extends State<CatalogueScreen>
     final tvShows = _appServices.tvShows;
     final catalogue = _appServices.catalogue;
     final watchTime = _appServices.totalWatchTimeMinutes;
+    final items = _filterItems(catalogue);
 
     return Scaffold(
       body: SafeArea(
@@ -141,48 +179,70 @@ class _CatalogueScreenState extends State<CatalogueScreen>
                 ],
               ),
             ),
-            TabBar(
-              controller: _tabController,
-              isScrollable: true,
-              tabs: _tabs.map((tab) => Tab(text: tab)).toList(),
-            ),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildItemList(_filterItems(catalogue), tabIndex: 0),
-                  _buildItemList(_filterItems(films), tabIndex: 1),
-                  _buildItemList(_filterItems(tvShows), tabIndex: 2),
-                  _buildItemList(_filterItems(tvShows), tabIndex: 3),
-                ],
-              ),
-            ),
+            if (_hasActiveFilters) _buildActiveFilterChips(),
+            Expanded(child: _buildItemList(items)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildItemList(List<CatalogueItem> items, {required int tabIndex}) {
+  Widget _buildActiveFilterChips() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          children: [
+            if (_mediaFilter != MediaFilter.all)
+              InputChip(
+                label: Text(mediaFilterLabel(_mediaFilter)),
+                onDeleted: _clearMediaFilter,
+                visualDensity: VisualDensity.compact,
+              ),
+            if (_inProgressOnly)
+              InputChip(
+                label: const Text('In Progress'),
+                onDeleted: _clearInProgress,
+                visualDensity: VisualDensity.compact,
+              ),
+            if (_sortOption != MediaSortOption.none)
+              InputChip(
+                label: Text(mediaSortOptionLabel(_sortOption)),
+                onDeleted: _clearSort,
+                visualDensity: VisualDensity.compact,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildItemList(List<CatalogueItem> items) {
     if (items.isEmpty) {
       return Center(
-        child: Text(
-          _hasActiveFilters || _searchQuery.isNotEmpty
-              ? 'No results match your filters'
-              : 'Your catalogue is empty',
-          style: Theme.of(context).textTheme.bodyLarge,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text(
+            _emptyStateMessage(),
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
         ),
       );
     }
 
     return LazyPagedListView(
-      // Local catalogue only — no remote API. Window resets on filter/tab data change.
+      // Local catalogue only — no remote API. Window resets on filter change.
       resetKey: Object.hash(
-        tabIndex,
         _searchQuery,
         _mediaFilter,
         _sortOption,
+        _inProgressOnly,
         items.length,
+        _appServices.newEpisodeAlerts.length,
       ),
       totalItemCount: items.length,
       onRefresh: () async => _refresh(),
@@ -204,5 +264,18 @@ class _CatalogueScreenState extends State<CatalogueScreen>
         );
       },
     );
+  }
+
+  String _emptyStateMessage() {
+    if (_inProgressOnly &&
+        _searchQuery.isEmpty &&
+        _mediaFilter != MediaFilter.filmsOnly) {
+      return 'No shows currently in progress.\n'
+          'Register an episode, then when the next one airs it will show up here.';
+    }
+    if (_hasActiveFilters || _searchQuery.isNotEmpty) {
+      return 'No results match your filters';
+    }
+    return 'Your catalogue is empty';
   }
 }
