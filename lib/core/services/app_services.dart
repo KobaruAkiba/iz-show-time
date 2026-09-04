@@ -491,8 +491,15 @@ class AppServices {
     };
   }
 
+  /// Clears in-memory API/call cache only. Catalogue and watch history are kept.
+  void clearCacheData() {
+    cacheManager.clearAll();
+    apiCacheService.clearPending();
+  }
+
   Future<void> clearAllData() async {
     cacheManager.clearAll();
+    apiCacheService.clearPending();
     _catalogue.clear();
     _watchHistory.clear();
     _newEpisodeAlerts.clear();

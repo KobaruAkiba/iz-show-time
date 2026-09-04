@@ -30,6 +30,16 @@ class SettingsScreen extends StatelessWidget {
                   const Divider(),
                   _buildSectionTitle(context, 'Data Management'),
                   ListTile(
+                    leading: const Icon(Icons.cleaning_services_outlined),
+                    title: const Text('Clear Cache Data'),
+                    subtitle: const Text(
+                      'Free space by removing cached API responses. '
+                      'Catalogue and watch history are kept',
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _showClearCacheDialog(context),
+                  ),
+                  ListTile(
                     leading: Icon(Icons.delete_outline, color: Colors.red[500]),
                     title: Text(
                       'Clear All Data',
@@ -90,6 +100,40 @@ class SettingsScreen extends StatelessWidget {
           Text(
             'This product uses the TMDB API but is not endorsed or certified by TMDB.',
             style: bodyStyle,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showClearCacheDialog(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(Icons.cleaning_services_outlined),
+        title: const Text('Clear Cache Data'),
+        content: const Text(
+          'This will remove cached API responses to free space on your device.\n\n'
+          'Your catalogue and watch history will not be deleted.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              AppServices().clearCacheData();
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Cache data cleared successfully'),
+                  ),
+                );
+              }
+            },
+            child: const Text('Clear Cache'),
           ),
         ],
       ),
