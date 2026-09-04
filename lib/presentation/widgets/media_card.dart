@@ -323,14 +323,14 @@ class MediaPosterCard extends StatelessWidget {
                 Positioned(
                   top: 12,
                   left: 12,
-                  right: 12,
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _TypeBadge(
                         icon: _isFilm ? Icons.movie_filter : Icons.tv,
                         label: _typeLabel,
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(height: 8),
                       _RatingBadge(
                         rating: _formatRating(item.voteAverage),
                       ),
