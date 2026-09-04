@@ -156,6 +156,41 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     _notifyWatchTimeChanged();
   }
 
+  Future<void> _toggleSeasonInCatalogue(SeasonModel season) async {
+    if (season.episodes.isEmpty) return;
+
+    final show = widget.item as TvShow;
+    final allInCatalogue = season.episodes.every(
+      (episode) => _appServices.isWatched(
+        mediaId: show.id,
+        episodeId: episode.id,
+      ),
+    );
+
+    if (allInCatalogue) {
+      await _appServices.removeSeasonFromCatalogue(episodes: season.episodes);
+      _notifyWatchTimeChanged();
+      return;
+    }
+
+    final addedCount = await _appServices.addSeasonToCatalogue(
+      show: show,
+      episodes: season.episodes,
+      fallbackRuntimeMinutes: _details?.averageEpisodeRuntimeMinutes,
+    );
+
+    if (!mounted) return;
+
+    if (addedCount == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Episode runtime not available')),
+      );
+      return;
+    }
+
+    _notifyWatchTimeChanged();
+  }
+
   void _toggleSeason(int seasonNumber) {
     setState(() {
       if (_expandedSeasons.contains(seasonNumber)) {
@@ -395,6 +430,8 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
           ),
         )
         .length;
+    final allInCatalogue =
+        season.episodes.isNotEmpty && watchedInSeason == season.episodes.length;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -412,8 +449,27 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                 ? Text(
                     '$watchedInSeason / ${season.episodes.length} in catalogue')
                 : Text('${season.episodes.length} episodes'),
-            trailing: Icon(
-              isExpanded ? Icons.expand_less : Icons.expand_more,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  tooltip: allInCatalogue
+                      ? 'Remove season from catalogue'
+                      : 'Add season to catalogue',
+                  icon: Icon(
+                    allInCatalogue
+                        ? Icons.bookmark
+                        : Icons.bookmark_add_outlined,
+                    color: allInCatalogue ? colorScheme.primary : null,
+                  ),
+                  onPressed: season.episodes.isEmpty
+                      ? null
+                      : () => _toggleSeasonInCatalogue(season),
+                ),
+                Icon(
+                  isExpanded ? Icons.expand_less : Icons.expand_more,
+                ),
+              ],
             ),
           ),
           if (isExpanded)

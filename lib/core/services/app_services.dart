@@ -138,6 +138,74 @@ class AppServices {
     );
   }
 
+  /// Adds every episode of a season to the catalogue.
+  /// Returns how many episodes were newly added.
+  Future<int> addSeasonToCatalogue({
+    required TvShow show,
+    required List<EpisodeModel> episodes,
+    int? fallbackRuntimeMinutes,
+  }) async {
+    if (episodes.isEmpty) return 0;
+
+    if (!isInCatalogue(show.id)) {
+      await addToCatalogue(show);
+    }
+
+    var addedCount = 0;
+    for (final episode in episodes) {
+      if (isWatched(mediaId: show.id, episodeId: episode.id)) continue;
+
+      final duration = episode.runtimeMinutes ?? fallbackRuntimeMinutes ?? 0;
+      if (duration <= 0) continue;
+
+      final record = WatchRecord(
+        mediaId: show.id,
+        mediaTitle: show.title,
+        isFilm: false,
+        episodeId: episode.id,
+        seasonNumber: episode.seasonNumber,
+        episodeNumber: episode.episodeNumber,
+        durationMinutes: duration,
+        watchedAt: DateTime.now(),
+      );
+      _watchHistory.add(record);
+      await _persistWatchRecord(record);
+      addedCount++;
+    }
+
+    if (addedCount > 0) {
+      await _refreshNewEpisodeAlerts();
+    }
+    return addedCount;
+  }
+
+  /// Removes every episode of a season from the catalogue.
+  /// Returns how many episodes were removed.
+  Future<int> removeSeasonFromCatalogue({
+    required List<EpisodeModel> episodes,
+  }) async {
+    if (episodes.isEmpty) return 0;
+
+    var removedCount = 0;
+    for (final episode in episodes) {
+      final removedRecords = _watchHistory
+          .where((record) => record.episodeId == episode.id)
+          .toList(growable: false);
+      if (removedRecords.isEmpty) continue;
+
+      _watchHistory.removeWhere((record) => record.episodeId == episode.id);
+      for (final record in removedRecords) {
+        await _persistWatchRecordRemoval(record.watchKey);
+      }
+      removedCount++;
+    }
+
+    if (removedCount > 0) {
+      await _refreshNewEpisodeAlerts();
+    }
+    return removedCount;
+  }
+
   bool isWatched({required int mediaId, int? episodeId}) {
     if (episodeId != null) {
       return _watchHistory.any((record) => record.episodeId == episodeId);
