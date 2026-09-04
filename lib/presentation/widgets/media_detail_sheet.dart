@@ -356,8 +356,8 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                 if (details.cast.isNotEmpty) ...[
                   const SizedBox(height: 20),
                   _buildSectionLabel('Cast'),
-                  const SizedBox(height: 8),
-                  ...details.cast.map(_buildCastMember),
+                  const SizedBox(height: 12),
+                  _buildCastCarousel(details.cast),
                 ],
                 if (details.overview != null &&
                     details.overview!.isNotEmpty) ...[
@@ -390,22 +390,34 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     );
   }
 
+  Widget _buildCastCarousel(List<MediaCastMember> cast) {
+    return SizedBox(
+      height: 198,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: cast.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (context, index) => _buildCastMember(cast[index]),
+      ),
+    );
+  }
+
   Widget _buildCastMember(MediaCastMember member) {
     final colorScheme = Theme.of(context).colorScheme;
     final profileUrl =
         ApiConstants.posterUrl(member.profilePath, size: ApiConstants.w342Image);
     final character = member.character;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+    return SizedBox(
+      width: 88,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
             child: SizedBox(
-              width: 40,
-              height: 40,
+              width: 88,
+              height: 110,
               child: profileUrl.isNotEmpty
                   ? Image.network(
                       profileUrl,
@@ -416,27 +428,28 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                   : _castAvatarFallback(context),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  member.name,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
+          const SizedBox(height: 8),
+          Text(
+            member.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  height: 1.2,
                 ),
-                if (character != null && character.isNotEmpty)
-                  Text(
-                    character,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurface.withValues(alpha: 0.65),
-                        ),
-                  ),
-              ],
-            ),
           ),
+          if (character != null && character.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              character,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: colorScheme.onSurface.withValues(alpha: 0.65),
+                    height: 1.2,
+                  ),
+            ),
+          ],
         ],
       ),
     );
@@ -447,7 +460,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
       child: Icon(
         Icons.person,
-        size: 22,
+        size: 36,
         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
       ),
     );
