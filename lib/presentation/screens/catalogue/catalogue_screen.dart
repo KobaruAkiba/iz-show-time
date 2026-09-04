@@ -199,6 +199,7 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
               ),
             ),
             if (_hasActiveFilters) _buildActiveFilterChips(),
+            const SizedBox(height: 12),
             Expanded(child: _buildItemList(items)),
           ],
         ),
