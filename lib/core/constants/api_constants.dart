@@ -19,6 +19,20 @@ class ApiConstants {
     if (path == null || path.isEmpty) return '';
     return '$imageBaseUrl$size$path';
   }
+
+  /// Region used when reading [watch/providers] from appended detail payloads.
+  static const String watchProviderRegion = 'US';
+
+  /// Movie detail appends (excludes videos/images; poster/backdrop stay on base).
+  static const String movieAppendToResponse =
+      'credits,keywords,external_ids,release_dates,watch/providers,'
+      'recommendations,similar,alternative_titles,reviews';
+
+  /// TV detail appends (excludes videos/images; poster/backdrop stay on base).
+  static const String tvAppendToResponse =
+      'aggregate_credits,credits,keywords,external_ids,content_ratings,'
+      'watch/providers,recommendations,similar,alternative_titles,reviews,'
+      'episode_groups';
 }
 
 /// API Key management class

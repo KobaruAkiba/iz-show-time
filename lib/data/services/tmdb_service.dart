@@ -81,7 +81,11 @@ class TmdbService {
     final path = isFilm ? 'movie/${item.id}' : 'tv/${item.id}';
     final data = await _fetchSingle(
       path,
-      extraParams: isFilm ? {'append_to_response': 'credits'} : null,
+      extraParams: {
+        'append_to_response': isFilm
+            ? ApiConstants.movieAppendToResponse
+            : ApiConstants.tvAppendToResponse,
+      },
       ttlMinutes: isFilm
           ? AppConstants.movieDetailsCacheTTL
           : AppConstants.tvDetailsCacheTTL,
