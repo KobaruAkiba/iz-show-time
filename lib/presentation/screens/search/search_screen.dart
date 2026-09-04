@@ -3,6 +3,7 @@ import '../../widgets/media_card.dart';
 import '../../widgets/media_detail_sheet.dart';
 import '../../widgets/media_filters.dart';
 import '../../widgets/app_page_header.dart';
+import '../../widgets/confirm_remove_from_catalogue.dart';
 import '../../widgets/lazy_paged_list_view.dart';
 import '../../../data/models/catalogue_item.dart';
 import '../../../core/services/app_services.dart';
@@ -355,15 +356,21 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _toggleItem(CatalogueItem item) async {
+    final wasInCatalogue = _appServices.isInCatalogue(item.id);
+    if (wasInCatalogue) {
+      final confirmed = await confirmRemoveFromCatalogue(context, item);
+      if (!confirmed || !mounted) return;
+    }
+
     await _appServices.toggleCatalogueItemAsync(item);
     if (!mounted) return;
     setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          _appServices.isInCatalogue(item.id)
-              ? 'Added to catalogue'
-              : 'Removed from catalogue',
+          wasInCatalogue
+              ? 'Removed from catalogue'
+              : 'Added to catalogue',
         ),
       ),
     );

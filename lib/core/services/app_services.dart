@@ -74,6 +74,7 @@ class AppServices {
   Future<void> removeFromCatalogue(int id) async {
     _catalogue.removeWhere((item) => item.id == id);
     await _persistCatalogueRemoval(id);
+    await _removeWatchHistoryForMedia(id);
     await _removeEpisodeDataForShow(id);
   }
 
@@ -378,6 +379,18 @@ class AppServices {
       debugPrint(
         'Failed to refresh new episode alerts: $error\n$stackTrace',
       );
+    }
+  }
+
+  Future<void> _removeWatchHistoryForMedia(int mediaId) async {
+    final removedRecords = _watchHistory
+        .where((record) => record.mediaId == mediaId)
+        .toList(growable: false);
+    if (removedRecords.isEmpty) return;
+
+    _watchHistory.removeWhere((record) => record.mediaId == mediaId);
+    for (final record in removedRecords) {
+      await _persistWatchRecordRemoval(record.watchKey);
     }
   }
 

@@ -4,6 +4,7 @@ import '../../widgets/media_card.dart';
 import '../../widgets/media_filters.dart';
 import '../../widgets/app_page_header.dart';
 import '../../widgets/catalogue_stats_row.dart';
+import '../../widgets/confirm_remove_from_catalogue.dart';
 import '../../widgets/lazy_paged_list_view.dart';
 import '../../../data/models/catalogue_item.dart';
 import '../../../core/services/app_services.dart';
@@ -194,6 +195,9 @@ class _CatalogueScreenState extends State<CatalogueScreen>
             isBookmarked: true,
             onTap: () => _openDetails(item),
             onAddRemove: () async {
+              final confirmed =
+                  await confirmRemoveFromCatalogue(context, item);
+              if (!confirmed || !mounted) return;
               await _appServices.removeFromCatalogue(item.id);
               _refresh();
             },
