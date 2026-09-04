@@ -138,6 +138,13 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
       return;
     }
 
+    if (episode.isUpcoming) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Episode has not aired yet')),
+      );
+      return;
+    }
+
     final record = await _appServices.addEpisodeToCatalogue(
       show: show,
       episode: episode,
@@ -157,7 +164,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
   }
 
   Future<void> _toggleSeasonInCatalogue(SeasonModel season) async {
-    if (season.episodes.isEmpty) return;
+    if (season.episodes.isEmpty || season.isUpcoming) return;
 
     final show = widget.item as TvShow;
     final allInCatalogue = season.episodes.every(
@@ -508,6 +515,19 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
         .length;
     final allInCatalogue =
         season.episodes.isNotEmpty && watchedInSeason == season.episodes.length;
+    final canAddSeason = season.episodes.isNotEmpty && !season.isUpcoming;
+
+    String subtitle;
+    if (season.isUpcoming) {
+      subtitle = season.airDate != null
+          ? 'Upcoming · ${_formatShortAirDate(season.airDate!)}'
+          : 'Upcoming';
+    } else if (watchedInSeason > 0) {
+      subtitle =
+          '$watchedInSeason / ${season.episodes.length} in catalogue';
+    } else {
+      subtitle = '${season.episodes.length} episodes';
+    }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -517,14 +537,21 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
         children: [
           ListTile(
             onTap: () => _toggleSeason(season.seasonNumber),
-            title: Text(
-              season.label,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+            title: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    season.label,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                if (season.isUpcoming) ...[
+                  const SizedBox(width: 8),
+                  const _UpcomingBadge(),
+                ],
+              ],
             ),
-            subtitle: watchedInSeason > 0
-                ? Text(
-                    '$watchedInSeason / ${season.episodes.length} in catalogue')
-                : Text('${season.episodes.length} episodes'),
+            subtitle: Text(subtitle),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -538,9 +565,9 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                         : Icons.bookmark_add_outlined,
                     color: allInCatalogue ? colorScheme.primary : null,
                   ),
-                  onPressed: season.episodes.isEmpty
-                      ? null
-                      : () => _toggleSeasonInCatalogue(season),
+                  onPressed: canAddSeason
+                      ? () => _toggleSeasonInCatalogue(season)
+                      : null,
                 ),
                 Icon(
                   isExpanded ? Icons.expand_less : Icons.expand_more,
@@ -563,6 +590,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
       mediaId: widget.item.id,
       episodeId: episode.id,
     );
+    final isUpcoming = episode.isUpcoming;
 
     return ListTile(
       dense: true,
@@ -579,16 +607,54 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
       ),
-      trailing: IconButton(
-        tooltip:
-            isWatched ? 'Remove from catalogue' : 'Add episode to catalogue',
-        icon: Icon(
-          isWatched ? Icons.bookmark : Icons.bookmark_add_outlined,
-          color: isWatched ? colorScheme.primary : null,
-        ),
-        onPressed: () => _addEpisodeToCatalogue(episode),
+      subtitle: isUpcoming
+          ? Text(
+              episode.airDate != null
+                  ? 'Upcoming · ${_formatShortAirDate(episode.airDate!)}'
+                  : 'Upcoming',
+            )
+          : null,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isUpcoming) ...[
+            const _UpcomingBadge(),
+            const SizedBox(width: 4),
+          ],
+          IconButton(
+            tooltip: isUpcoming
+                ? 'Episode has not aired yet'
+                : isWatched
+                    ? 'Remove from catalogue'
+                    : 'Add episode to catalogue',
+            icon: Icon(
+              isWatched ? Icons.bookmark : Icons.bookmark_add_outlined,
+              color: isWatched ? colorScheme.primary : null,
+            ),
+            onPressed:
+                isUpcoming ? null : () => _addEpisodeToCatalogue(episode),
+          ),
+        ],
       ),
     );
+  }
+
+  String _formatShortAirDate(DateTime date) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 
   Widget _posterFallback(BuildContext context) {
@@ -629,6 +695,29 @@ class _MetaChip extends StatelessWidget {
                 ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _UpcomingBadge extends StatelessWidget {
+  const _UpcomingBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: colorScheme.tertiaryContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        'Upcoming',
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: colorScheme.onTertiaryContainer,
+              fontWeight: FontWeight.w600,
+            ),
       ),
     );
   }

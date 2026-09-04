@@ -103,6 +103,19 @@ void main() {
       });
 
       expect(episode.hasAired, isFalse);
+      expect(episode.isUpcoming, isTrue);
+    });
+
+    test('does not mark missing air dates as upcoming', () {
+      final episode = EpisodeModel.fromJson({
+        'id': 12,
+        'episode_number': 2,
+        'season_number': 1,
+        'name': '',
+      });
+
+      expect(episode.hasAired, isFalse);
+      expect(episode.isUpcoming, isFalse);
     });
   });
 

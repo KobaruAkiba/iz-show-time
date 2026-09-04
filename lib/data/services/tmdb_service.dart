@@ -292,13 +292,26 @@ class TmdbService {
     required int seasonNumber,
     bool forceRefresh = false,
   }) async {
-    final results = await _fetchResults(
+    final season = await getSeason(
+      tvId: tvId,
+      seasonNumber: seasonNumber,
+      forceRefresh: forceRefresh,
+    );
+    return season?.episodes ?? const [];
+  }
+
+  Future<SeasonModel?> getSeason({
+    required int tvId,
+    required int seasonNumber,
+    bool forceRefresh = false,
+  }) async {
+    final data = await _fetchSingle(
       'tv/$tvId/season/$seasonNumber',
       ttlMinutes: AppConstants.episodeCacheTTL,
-      resultsKey: 'episodes',
       bypassCache: forceRefresh,
     );
-    return results.map(EpisodeModel.fromJson).toList();
+    if (data == null) return null;
+    return SeasonModel.fromTmdbSeasonJson(data);
   }
 
   Future<List<SeasonModel>> getTvSeasons({
@@ -310,7 +323,7 @@ class TmdbService {
     final seasons = await Future.wait(
       List.generate(
         numberOfSeasons,
-        (index) => getSeasonEpisodes(
+        (index) => getSeason(
           tvId: tvId,
           seasonNumber: index + 1,
         ),
@@ -319,7 +332,8 @@ class TmdbService {
 
     return [
       for (var i = 0; i < seasons.length; i++)
-        SeasonModel(seasonNumber: i + 1, episodes: seasons[i]),
+        seasons[i] ??
+            SeasonModel(seasonNumber: i + 1, episodes: const []),
     ];
   }
 
@@ -430,18 +444,23 @@ class TmdbService {
     String path, {
     Map<String, String>? extraParams,
     int? ttlMinutes,
+    bool bypassCache = false,
   }) async {
     final params = _baseParams(extraParams);
     final cacheKey = _buildCacheKey(path, params);
 
-    final cached = _cache.get<Map<String, dynamic>>(cacheKey);
-    if (cached != null) return cached;
+    if (!bypassCache) {
+      final cached = _cache.get<Map<String, dynamic>>(cacheKey);
+      if (cached != null) return cached;
+    }
 
     if (AppApiKey.tmdb.isEmpty) return null;
 
     return _dedupe(cacheKey, () async {
-      final cachedAfterWait = _cache.get<Map<String, dynamic>>(cacheKey);
-      if (cachedAfterWait != null) return cachedAfterWait;
+      if (!bypassCache) {
+        final cachedAfterWait = _cache.get<Map<String, dynamic>>(cacheKey);
+        if (cachedAfterWait != null) return cachedAfterWait;
+      }
 
       try {
         final result = await DioClient.instance.get<Map<String, dynamic>>(

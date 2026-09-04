@@ -23,19 +23,35 @@ class EpisodeModel {
       seasonNumber: json['season_number'] as int? ?? 1,
       name: json['name'] as String? ?? '',
       runtimeMinutes: json['runtime'] as int?,
-      airDate: _parseAirDate(json['air_date'] as String?),
+      airDate: parseAirDate(json['air_date'] as String?),
     );
   }
 
   /// Whether this episode has already aired (air date today or earlier).
   bool get hasAired {
     if (airDate == null) return false;
-    final today = DateTime.now();
-    final aired = airDate!;
-    return !_isAfterDate(
-      aired.year,
-      aired.month,
-      aired.day,
+    return !isAirDateUpcoming(airDate!);
+  }
+
+  /// Whether this episode is scheduled for a future air date.
+  /// Missing dates are not treated as upcoming (incomplete TMDB data).
+  bool get isUpcoming {
+    if (airDate == null) return false;
+    return isAirDateUpcoming(airDate!);
+  }
+
+  static DateTime? parseAirDate(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    return DateTime.tryParse(raw);
+  }
+
+  /// True when [date] is strictly after today (date-only, local).
+  static bool isAirDateUpcoming(DateTime date, {DateTime? now}) {
+    final today = now ?? DateTime.now();
+    return _isAfterDate(
+      date.year,
+      date.month,
+      date.day,
       today.year,
       today.month,
       today.day,
@@ -59,11 +75,6 @@ class EpisodeModel {
     final seasonCompare = a.seasonNumber.compareTo(b.seasonNumber);
     if (seasonCompare != 0) return seasonCompare;
     return a.episodeNumber.compareTo(b.episodeNumber);
-  }
-
-  static DateTime? _parseAirDate(String? raw) {
-    if (raw == null || raw.isEmpty) return null;
-    return DateTime.tryParse(raw);
   }
 
   static bool _isAfterDate(
