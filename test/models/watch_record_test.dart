@@ -50,7 +50,6 @@ void main() {
     test('uses film key for movies', () {
       final record = WatchRecord(
         mediaId: 550,
-        mediaTitle: 'Fight Club',
         isFilm: true,
         durationMinutes: 139,
         watchedAt: DateTime(2024, 1, 1),
@@ -62,7 +61,6 @@ void main() {
     test('uses episode id for TV episodes', () {
       final record = WatchRecord(
         mediaId: 1399,
-        mediaTitle: 'Game of Thrones',
         isFilm: false,
         episodeId: 63056,
         seasonNumber: 1,
@@ -77,7 +75,6 @@ void main() {
     test('round-trips through JSON', () {
       final original = WatchRecord(
         mediaId: 1399,
-        mediaTitle: 'Game of Thrones',
         isFilm: false,
         episodeId: 63056,
         seasonNumber: 1,
@@ -92,6 +89,21 @@ void main() {
       expect(restored.episodeId, original.episodeId);
       expect(restored.durationMinutes, original.durationMinutes);
       expect(restored.isFilm, false);
+      expect(original.toJson().containsKey('media_title'), isFalse);
+    });
+
+    test('reads legacy payloads that still include media_title', () {
+      final restored = WatchRecord.fromJson({
+        'media_id': 550,
+        'media_title': 'Fight Club',
+        'is_film': true,
+        'duration_minutes': 139,
+        'watched_at': '2024-01-01T00:00:00.000',
+      });
+
+      expect(restored.mediaId, 550);
+      expect(restored.isFilm, isTrue);
+      expect(restored.durationMinutes, 139);
     });
   });
 }

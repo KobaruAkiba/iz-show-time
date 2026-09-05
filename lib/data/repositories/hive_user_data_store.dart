@@ -25,15 +25,70 @@ class HiveUserDataStore implements UserDataStore {
 
   @override
   Future<void> open() async {
+    final wasClosed = _metaBox == null;
     _catalogueBox ??= await Hive.openBox(StorageConstants.catalogueBoxName);
     _watchHistoryBox ??=
         await Hive.openBox(StorageConstants.watchHistoryBoxName);
     _metaBox ??= await Hive.openBox(StorageConstants.metaBoxName);
 
-    await metaBox.put(
-      StorageConstants.schemaVersionKey,
-      StorageConstants.storageSchemaVersion,
-    );
+    if (!wasClosed) return;
+    await _ensureSchema();
+  }
+
+  Future<void> _ensureSchema() async {
+    final rawVersion = metaBox.get(StorageConstants.schemaVersionKey);
+    final version = rawVersion is int ? rawVersion : 0;
+
+    if (version < 2) {
+      await _migrateCompactPayloadsV2();
+    }
+
+    if (version != StorageConstants.storageSchemaVersion) {
+      await metaBox.put(
+        StorageConstants.schemaVersionKey,
+        StorageConstants.storageSchemaVersion,
+      );
+      await flush();
+    }
+  }
+
+  /// Rewrites catalogue/watch payloads without overview / media_title.
+  Future<void> _migrateCompactPayloadsV2() async {
+    final catalogueEntries = <dynamic, String>{};
+    for (final key in catalogueBox.keys) {
+      try {
+        final json = _decodeStoredMap(catalogueBox.get(key));
+        if (json == null) continue;
+        final item = catalogueItemFromStorageJson(json);
+        if (item == null) continue;
+        catalogueEntries[key] =
+            jsonEncode(catalogueItemToStorageJson(item));
+      } catch (error, stackTrace) {
+        debugPrint(
+          'Skipping catalogue migration for $key: $error\n$stackTrace',
+        );
+      }
+    }
+    if (catalogueEntries.isNotEmpty) {
+      await catalogueBox.putAll(catalogueEntries);
+    }
+
+    final watchEntries = <dynamic, String>{};
+    for (final key in watchHistoryBox.keys) {
+      try {
+        final json = _decodeStoredMap(watchHistoryBox.get(key));
+        if (json == null) continue;
+        final record = WatchRecord.fromJson(json);
+        watchEntries[key] = jsonEncode(record.toJson());
+      } catch (error, stackTrace) {
+        debugPrint(
+          'Skipping watch migration for $key: $error\n$stackTrace',
+        );
+      }
+    }
+    if (watchEntries.isNotEmpty) {
+      await watchHistoryBox.putAll(watchEntries);
+    }
   }
 
   @override

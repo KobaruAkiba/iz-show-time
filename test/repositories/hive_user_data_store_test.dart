@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -46,14 +47,12 @@ void main() {
       );
       final filmRecord = WatchRecord(
         mediaId: film.id,
-        mediaTitle: film.title,
         isFilm: true,
         durationMinutes: 139,
         watchedAt: DateTime(2026, 1, 15, 20, 30),
       );
       final episodeRecord = WatchRecord(
         mediaId: show.id,
-        mediaTitle: show.title,
         isFilm: false,
         episodeId: 63056,
         seasonNumber: 1,
@@ -79,6 +78,11 @@ void main() {
         loadedCatalogue.firstWhere((item) => item.id == 550).tags,
         ['classic'],
       );
+      expect(loadedCatalogue.firstWhere((item) => item.id == 550).overview, isNull);
+      final rawFilm = store.catalogueBox.get(550) as String;
+      expect(rawFilm.contains('overview'), isFalse);
+      final rawWatch = store.watchHistoryBox.get(filmRecord.watchKey) as String;
+      expect(rawWatch.contains('media_title'), isFalse);
 
       expect(loadedHistory, hasLength(2));
       expect(
@@ -96,7 +100,6 @@ void main() {
       await store.saveWatchRecord(
         WatchRecord(
           mediaId: 1,
-          mediaTitle: 'Test Film',
           isFilm: true,
           durationMinutes: 90,
           watchedAt: DateTime(2026, 3, 1),
@@ -156,7 +159,6 @@ void main() {
       const film = Film(id: 42, title: 'Removed Film');
       final record = WatchRecord(
         mediaId: film.id,
-        mediaTitle: film.title,
         isFilm: true,
         durationMinutes: 100,
         watchedAt: DateTime(2026, 4, 1),
@@ -177,7 +179,6 @@ void main() {
         50,
         (index) => WatchRecord(
           mediaId: 1000,
-          mediaTitle: 'Long Show',
           isFilm: false,
           episodeId: 5000 + index,
           seasonNumber: 1,
@@ -205,6 +206,50 @@ void main() {
 
       final raw = store.catalogueBox.get(film.id);
       expect(raw, isA<String>());
+    });
+
+    test('migrates legacy bulky payloads to schema v2', () async {
+      await store.catalogueBox.put(
+        1,
+        jsonEncode({
+          'type': 'film',
+          'id': 1,
+          'title': 'Legacy',
+          'overview': 'Huge overview text that should be dropped',
+          'poster_path': '/x.jpg',
+          'vote_average': 1.0,
+          'tags': <String>[],
+        }),
+      );
+      await store.watchHistoryBox.put(
+        'film_1',
+        jsonEncode({
+          'media_id': 1,
+          'media_title': 'Legacy',
+          'is_film': true,
+          'duration_minutes': 90,
+          'watched_at': '2026-01-01T00:00:00.000',
+        }),
+      );
+      await store.metaBox.put(StorageConstants.schemaVersionKey, 1);
+      await store.flush();
+      await store.close();
+
+      store = HiveUserDataStore();
+      await store.open();
+
+      final catalogueRaw = store.catalogueBox.get(1) as String;
+      expect(catalogueRaw.contains('overview'), isFalse);
+      final watchRaw = store.watchHistoryBox.get('film_1') as String;
+      expect(watchRaw.contains('media_title'), isFalse);
+      expect(
+        store.metaBox.get(StorageConstants.schemaVersionKey),
+        StorageConstants.storageSchemaVersion,
+      );
+
+      final loaded = await store.loadCatalogue();
+      expect(loaded.single.overview, isNull);
+      expect(loaded.single.title, 'Legacy');
     });
   });
 
@@ -234,16 +279,51 @@ void main() {
         isNull,
       );
     });
+    test('ignores legacy overview on restore', () {
+      final film = catalogueItemFromStorageJson({
+        'type': 'film',
+        'id': 1,
+        'title': 'Film',
+        'overview': 'Should be dropped',
+        'tags': ['a'],
+      });
+
+      expect(film, isA<Film>());
+      expect(film?.overview, isNull);
+    });
   });
 
   group('catalogueItemToStorageJson', () {
-    test('includes type discriminator', () {
+    test('includes type discriminator and omits overview', () {
       final json = catalogueItemToStorageJson(
-        const Film(id: 10, title: 'Inception'),
+        const Film(
+          id: 10,
+          title: 'Inception',
+          overview: 'A thief who steals corporate secrets...',
+        ),
       );
 
       expect(json['type'], 'film');
       expect(json['title'], 'Inception');
+      expect(json.containsKey('overview'), isFalse);
+    });
+  });
+
+  group('catalogueItemForLocalStore', () {
+    test('drops overview while keeping list fields', () {
+      const film = Film(
+        id: 1,
+        title: 'Test',
+        overview: 'Long text',
+        posterPath: '/p.jpg',
+        voteAverage: 7.5,
+        tags: [kFavoriteTag],
+      );
+
+      final trimmed = catalogueItemForLocalStore(film) as Film;
+      expect(trimmed.overview, isNull);
+      expect(trimmed.posterPath, '/p.jpg');
+      expect(trimmed.tags, [kFavoriteTag]);
     });
   });
 }

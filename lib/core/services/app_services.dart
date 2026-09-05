@@ -75,9 +75,11 @@ class AppServices {
 
   Future<void> addToCatalogue(CatalogueItem item) async {
     if (isInCatalogue(item.id)) return;
-    _catalogue.add(item);
-    _catalogueById[item.id] = item;
-    await _persistCatalogueItem(item);
+    final localItem =
+        item.overview == null ? item : catalogueItemForLocalStore(item);
+    _catalogue.add(localItem);
+    _catalogueById[localItem.id] = localItem;
+    await _persistCatalogueItem(localItem);
   }
 
   Future<void> removeFromCatalogue(int id) async {
@@ -192,7 +194,6 @@ class AppServices {
         toAdd.add(
           WatchRecord(
             mediaId: show.id,
-            mediaTitle: show.title,
             isFilm: false,
             episodeId: episode.id,
             seasonNumber: episode.seasonNumber,
@@ -265,7 +266,6 @@ class AppServices {
 
       final record = WatchRecord(
         mediaId: film.id,
-        mediaTitle: film.title,
         isFilm: true,
         durationMinutes: durationMinutes,
         watchedAt: DateTime.now(),
@@ -291,7 +291,6 @@ class AppServices {
     return _withDeferredFlush(() async {
       final record = WatchRecord(
         mediaId: show.id,
-        mediaTitle: show.title,
         isFilm: false,
         episodeId: episode.id,
         seasonNumber: episode.seasonNumber,

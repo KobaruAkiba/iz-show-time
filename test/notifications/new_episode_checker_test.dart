@@ -119,7 +119,6 @@ void main() {
       final watchHistory = [
         WatchRecord(
           mediaId: 42,
-          mediaTitle: 'Sample Show',
           isFilm: false,
           episodeId: 100,
           seasonNumber: 1,
@@ -171,7 +170,6 @@ void main() {
       final watchHistory = [
         WatchRecord(
           mediaId: 42,
-          mediaTitle: 'Sample Show',
           isFilm: false,
           episodeId: 200,
           seasonNumber: 2,
@@ -231,7 +229,6 @@ void main() {
       final watchHistory = [
         WatchRecord(
           mediaId: 42,
-          mediaTitle: 'Sample Show',
           isFilm: false,
           episodeId: 300,
           seasonNumber: 1,

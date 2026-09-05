@@ -29,7 +29,6 @@ void main() {
       final history = [
         WatchRecord(
           mediaId: 42,
-          mediaTitle: 'Show',
           isFilm: false,
           episodeId: 101,
           seasonNumber: 1,

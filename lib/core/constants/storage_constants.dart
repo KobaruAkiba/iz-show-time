@@ -5,7 +5,8 @@ class StorageConstants {
   static const String metaBoxName = 'meta';
 
   static const String schemaVersionKey = 'schema_version';
-  static const int storageSchemaVersion = 1;
+  /// v2: catalogue without overview; watch records without media_title.
+  static const int storageSchemaVersion = 2;
 
   static const String newEpisodeAlertsKey = 'new_episode_alerts';
   static const String lastEpisodeCheckKey = 'last_episode_check_at';

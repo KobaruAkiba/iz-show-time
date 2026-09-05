@@ -124,7 +124,6 @@ void main() {
       final history = [
         WatchRecord(
           mediaId: 10,
-          mediaTitle: 'Show',
           isFilm: false,
           episodeId: 1,
           seasonNumber: 1,
@@ -134,7 +133,6 @@ void main() {
         ),
         WatchRecord(
           mediaId: 10,
-          mediaTitle: 'Show',
           isFilm: false,
           episodeId: 2,
           seasonNumber: 2,

@@ -155,27 +155,66 @@ List<String> _parseTags(Object? raw) {
   return raw.map((entry) => entry.toString()).toList(growable: false);
 }
 
-/// Serializes a catalogue item for local storage with a type discriminator.
-Map<String, dynamic> catalogueItemToStorageJson(CatalogueItem item) {
-  final payload = switch (item) {
-    Film film => film.toJson(),
-    TvShow show => show.toJson(),
+/// Drops bulky fields (overview) kept only for API/search display.
+/// Use before persisting or holding items long-term in the local catalogue.
+CatalogueItem catalogueItemForLocalStore(CatalogueItem item) {
+  return switch (item) {
+    Film film => Film(
+        id: film.id,
+        title: film.title,
+        posterPath: film.posterPath,
+        voteAverage: film.voteAverage,
+        tags: film.tags,
+      ),
+    TvShow show => TvShow(
+        id: show.id,
+        title: show.title,
+        posterPath: show.posterPath,
+        voteAverage: show.voteAverage,
+        tags: show.tags,
+      ),
     _ => throw ArgumentError(
         'Unsupported catalogue item type: ${item.runtimeType}'),
   };
+}
+
+/// Serializes a catalogue item for local storage with a type discriminator.
+/// Omits overview to keep on-device catalogue payloads small.
+Map<String, dynamic> catalogueItemToStorageJson(CatalogueItem item) {
+  final trimmed = catalogueItemForLocalStore(item);
+  final payload = switch (trimmed) {
+    Film film => {
+        'id': film.id,
+        'title': film.title,
+        'poster_path': film.posterPath,
+        'vote_average': film.voteAverage,
+        'tags': film.tags,
+      },
+    TvShow show => {
+        'id': show.id,
+        'name': show.title,
+        'poster_path': show.posterPath,
+        'vote_average': show.voteAverage,
+        'tags': show.tags,
+      },
+    _ => throw ArgumentError(
+        'Unsupported catalogue item type: ${trimmed.runtimeType}'),
+  };
   return {
-    'type': item is Film ? 'film' : 'tv',
+    'type': trimmed is Film ? 'film' : 'tv',
     ...payload,
   };
 }
 
 /// Restores a catalogue item from local storage JSON.
+/// Legacy `overview` blobs are ignored so old installs shrink on rewrite.
 CatalogueItem? catalogueItemFromStorageJson(Map<String, dynamic> json) {
-  switch (json['type']) {
+  final cleaned = Map<String, dynamic>.from(json)..remove('overview');
+  switch (cleaned['type']) {
     case 'film':
-      return Film.fromJson(json);
+      return Film.fromJson(cleaned);
     case 'tv':
-      return TvShow.fromJson(json);
+      return TvShow.fromJson(cleaned);
     default:
       return null;
   }

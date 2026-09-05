@@ -1,7 +1,6 @@
 /// A single watched film or TV episode entry used to accumulate watch time.
 class WatchRecord {
   final int mediaId;
-  final String mediaTitle;
   final bool isFilm;
   final int? episodeId;
   final int? seasonNumber;
@@ -11,7 +10,6 @@ class WatchRecord {
 
   const WatchRecord({
     required this.mediaId,
-    required this.mediaTitle,
     required this.isFilm,
     this.episodeId,
     this.seasonNumber,
@@ -26,11 +24,10 @@ class WatchRecord {
 
   Map<String, dynamic> toJson() => {
         'media_id': mediaId,
-        'media_title': mediaTitle,
         'is_film': isFilm,
-        'episode_id': episodeId,
-        'season_number': seasonNumber,
-        'episode_number': episodeNumber,
+        if (episodeId != null) 'episode_id': episodeId,
+        if (seasonNumber != null) 'season_number': seasonNumber,
+        if (episodeNumber != null) 'episode_number': episodeNumber,
         'duration_minutes': durationMinutes,
         'watched_at': watchedAt.toIso8601String(),
       };
@@ -38,7 +35,6 @@ class WatchRecord {
   factory WatchRecord.fromJson(Map<String, dynamic> json) {
     return WatchRecord(
       mediaId: json['media_id'] as int,
-      mediaTitle: json['media_title'] as String? ?? '',
       isFilm: json['is_film'] as bool? ?? true,
       episodeId: json['episode_id'] as int?,
       seasonNumber: json['season_number'] as int?,
