@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -18,7 +20,8 @@ class NotificationService {
   bool _initialized = false;
 
   static const int _newEpisodesNotificationId = 1;
-  static const String _channelId = 'new_episodes';
+  // Channel id bumped so Android applies high importance (immutable after create).
+  static const String _channelId = 'new_episodes_v2';
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -38,6 +41,30 @@ class NotificationService {
 
     await _plugin.initialize(settings: initSettings);
     _initialized = true;
+    // Do not await permission prompts before/during early startup.
+    unawaited(_requestPermissions());
+  }
+
+  Future<void> _requestPermissions() async {
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (android != null) {
+      await android.requestNotificationsPermission();
+      return;
+    }
+
+    final ios = _plugin.resolvePlatformSpecificImplementation<
+        IOSFlutterLocalNotificationsPlugin>();
+    if (ios != null) {
+      await ios.requestPermissions(alert: true, badge: true, sound: true);
+      return;
+    }
+
+    final macOs = _plugin.resolvePlatformSpecificImplementation<
+        MacOSFlutterLocalNotificationsPlugin>();
+    if (macOs != null) {
+      await macOs.requestPermissions(alert: true, badge: true, sound: true);
+    }
   }
 
   Future<void> showNewEpisodesNotification({required int count}) async {
@@ -54,8 +81,9 @@ class NotificationService {
         _channelId,
         l10n.notificationChannelName,
         channelDescription: l10n.notificationChannelDescription,
-        importance: Importance.defaultImportance,
-        priority: Priority.defaultPriority,
+        importance: Importance.high,
+        priority: Priority.high,
+        playSound: true,
       ),
       iOS: const DarwinNotificationDetails(),
       macOS: const DarwinNotificationDetails(),

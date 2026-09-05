@@ -11,4 +11,5 @@ class StorageConstants {
   static const String newEpisodeAlertsKey = 'new_episode_alerts';
   static const String lastEpisodeCheckKey = 'last_episode_check_at';
   static const String appInForegroundKey = 'app_in_foreground';
+  static const String notifiedEpisodeIdsKey = 'notified_episode_ids';
 }

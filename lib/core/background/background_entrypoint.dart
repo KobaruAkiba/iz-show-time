@@ -8,15 +8,21 @@ import '../notifications/episode_check_service.dart';
 @pragma('vm:entry-point')
 void backgroundCallbackDispatcher() {
   Workmanager().executeTask((taskName, inputData) async {
-    switch (taskName) {
-      case BackgroundTaskConstants.episodeCheckTaskName:
-      case BackgroundTaskConstants.episodeCheckUniqueName:
-      case Workmanager.iOSBackgroundTask:
-        final appServices = await BackgroundBootstrap.initializeAppServices();
-        await EpisodeCheckService.runNativeBackgroundCheck(appServices);
-        return true;
-      default:
-        return false;
+    try {
+      switch (taskName) {
+        case BackgroundTaskConstants.episodeCheckTaskName:
+        case BackgroundTaskConstants.episodeCheckUniqueName:
+        case Workmanager.iOSBackgroundTask:
+          final appServices = await BackgroundBootstrap.initializeAppServices();
+          await EpisodeCheckService.runNativeBackgroundCheck(appServices);
+          return true;
+        default:
+          return false;
+      }
+    } catch (error, stackTrace) {
+      // ignore: avoid_print — background isolate; surfaces in logcat
+      print('WorkManager episode check failed: $error\n$stackTrace');
+      return false;
     }
   });
 }

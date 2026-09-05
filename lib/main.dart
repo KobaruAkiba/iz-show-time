@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -26,12 +28,9 @@ void main() async {
 
   final appServices = AppServices();
   await appServices.initialize();
-  await NotificationService().initialize();
-  await NativeBackgroundScheduler.instance.initialize();
-  await NativeBackgroundScheduler.instance.registerEpisodeChecks();
   await appServices.userDataStore.saveAppInForeground(true);
-  await appServices.startBackgroundTasks();
 
+  // Native plugins can hang before an Activity exists — bootstrap after first frame.
   runApp(MyApp(appServices: appServices));
 }
 
@@ -54,6 +53,20 @@ class _MyAppState extends State<MyApp> {
       appServices: widget.appServices,
     );
     _lifecycleCoordinator.attach();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_bootstrapAfterFirstFrame());
+    });
+  }
+
+  Future<void> _bootstrapAfterFirstFrame() async {
+    try {
+      await NotificationService().initialize();
+      await NativeBackgroundScheduler.instance.initialize();
+      await NativeBackgroundScheduler.instance.registerEpisodeChecks();
+      await widget.appServices.startBackgroundTasks();
+    } catch (error, stackTrace) {
+      debugPrint('Post-frame bootstrap failed: $error\n$stackTrace');
+    }
   }
 
   @override

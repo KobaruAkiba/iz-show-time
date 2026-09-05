@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 
 import '../services/app_services.dart';
@@ -11,7 +13,7 @@ class AppLifecycleCoordinator with WidgetsBindingObserver {
 
   void attach() {
     WidgetsBinding.instance.addObserver(this);
-    _persistForegroundState(_isOpenState(AppLifecycleState.resumed));
+    unawaited(_persistForegroundState(_isOpenState(AppLifecycleState.resumed)));
   }
 
   void detach() {
@@ -20,22 +22,20 @@ class AppLifecycleCoordinator with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    _persistForegroundState(_isOpenState(state));
+    unawaited(_persistForegroundState(_isOpenState(state)));
 
     if (state == AppLifecycleState.resumed) {
       _appServices.reloadNewEpisodeAlertsFromStore();
     }
   }
 
+  /// Only [AppLifecycleState.resumed] counts as open.
   bool _isOpenState(AppLifecycleState state) {
-    return state == AppLifecycleState.resumed ||
-        state == AppLifecycleState.inactive;
+    return state == AppLifecycleState.resumed;
   }
 
-  void _persistForegroundState(bool isOpen) {
-    Future<void>(() async {
-      await _appServices.userDataStore.saveAppInForeground(isOpen);
-      await _appServices.userDataStore.flush();
-    });
+  Future<void> _persistForegroundState(bool isOpen) async {
+    await _appServices.userDataStore.saveAppInForeground(isOpen);
+    await _appServices.userDataStore.flush();
   }
 }

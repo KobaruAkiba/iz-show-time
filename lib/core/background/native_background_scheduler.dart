@@ -25,11 +25,17 @@ class NativeBackgroundScheduler {
   Future<void> registerEpisodeChecks() async {
     if (!isSupported) return;
 
+    // Android clamps periodic frequency to ≥15 minutes. Initial delay uses the
+    // same floor so the first closed-app check is not deferred a full interval.
     await Workmanager().registerPeriodicTask(
       BackgroundTaskConstants.episodeCheckUniqueName,
       BackgroundTaskConstants.episodeCheckTaskName,
-      frequency: const Duration(hours: AppConstants.notificationCheckIntervalHours),
-      initialDelay: const Duration(hours: AppConstants.notificationCheckIntervalHours),
+      frequency: const Duration(
+        hours: AppConstants.notificationCheckIntervalHours,
+      ),
+      initialDelay: const Duration(
+        minutes: AppConstants.notificationCheckInitialDelayMinutes,
+      ),
       constraints: Constraints(
         networkType: NetworkType.connected,
       ),

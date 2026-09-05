@@ -250,6 +250,36 @@ class HiveUserDataStore implements UserDataStore {
   }
 
   @override
+  Future<Set<int>> loadNotifiedEpisodeIds() async {
+    await open();
+    final raw = metaBox.get(StorageConstants.notifiedEpisodeIdsKey);
+    if (raw is! String || raw.isEmpty) return <int>{};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return <int>{};
+      return {
+        for (final value in decoded)
+          if (value is int)
+            value
+          else if (value is num)
+            value.toInt(),
+      };
+    } catch (_) {
+      return <int>{};
+    }
+  }
+
+  @override
+  Future<void> saveNotifiedEpisodeIds(Set<int> episodeIds) async {
+    await open();
+    final sorted = episodeIds.toList()..sort();
+    await metaBox.put(
+      StorageConstants.notifiedEpisodeIdsKey,
+      jsonEncode(sorted),
+    );
+  }
+
+  @override
   Future<void> flush() async {
     await open();
     await Future.wait([
@@ -267,6 +297,7 @@ class HiveUserDataStore implements UserDataStore {
     await metaBox.delete(StorageConstants.newEpisodeAlertsKey);
     await metaBox.delete(StorageConstants.lastEpisodeCheckKey);
     await metaBox.delete(StorageConstants.appInForegroundKey);
+    await metaBox.delete(StorageConstants.notifiedEpisodeIdsKey);
     await metaBox.put(
       StorageConstants.schemaVersionKey,
       StorageConstants.storageSchemaVersion,

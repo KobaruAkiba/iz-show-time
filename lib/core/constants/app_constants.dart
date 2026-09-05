@@ -20,8 +20,11 @@ class AppConstants {
   static const int airingScheduleCacheTTL =
       1440; // Daily for new episode checks
 
-  // Notification settings
+  // Notification / background episode-check settings
   static const int notificationCheckIntervalHours = 4;
+
+  /// First WorkManager run after registration (Android minimum ~15 minutes).
+  static const int notificationCheckInitialDelayMinutes = 15;
 
   // Search debounce delay (milliseconds)
   static const int searchDebounceDelayMs = 500;

@@ -60,6 +60,20 @@ class EpisodeModel {
     );
   }
 
+  /// True when [date] falls on the same local calendar day as [now].
+  static bool isSameCalendarDay(DateTime date, {DateTime? now}) {
+    final today = now ?? DateTime.now();
+    return date.year == today.year &&
+        date.month == today.month &&
+        date.day == today.day;
+  }
+
+  /// True when [airDate] is today's local calendar day (TMDB air date).
+  static bool isAiredToday(DateTime? airDate, {DateTime? now}) {
+    if (airDate == null) return false;
+    return isSameCalendarDay(airDate, now: now);
+  }
+
   /// Compares [a] vs [b] by season then episode number.
   /// Returns negative if [a] is earlier, positive if later, 0 if equal.
   static int compareBySeasonAndNumber(

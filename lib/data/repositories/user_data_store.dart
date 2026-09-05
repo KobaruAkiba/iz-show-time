@@ -36,6 +36,11 @@ abstract class UserDataStore {
 
   Future<void> saveAppInForeground(bool isInForeground);
 
+  /// Episode IDs that already triggered a system notification.
+  Future<Set<int>> loadNotifiedEpisodeIds();
+
+  Future<void> saveNotifiedEpisodeIds(Set<int> episodeIds);
+
   /// Forces durable write of pending box changes to disk.
   Future<void> flush();
 

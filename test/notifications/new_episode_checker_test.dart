@@ -68,10 +68,22 @@ class FakeEpisodeCheckStore implements UserDataStore {
     appInForeground = isInForeground;
   }
 
+  Set<int> notifiedEpisodeIds = {};
+
+  @override
+  Future<Set<int>> loadNotifiedEpisodeIds() async =>
+      Set<int>.from(notifiedEpisodeIds);
+
+  @override
+  Future<void> saveNotifiedEpisodeIds(Set<int> episodeIds) async {
+    notifiedEpisodeIds = Set<int>.from(episodeIds);
+  }
+
   @override
   Future<void> clearAll() async {
     alerts = [];
     lastCheck = null;
+    notifiedEpisodeIds = {};
   }
 
   @override
