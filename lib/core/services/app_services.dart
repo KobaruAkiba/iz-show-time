@@ -144,6 +144,24 @@ class AppServices {
   int watchedEpisodesCountFor(int mediaId) =>
       _episodeCountByMediaId[mediaId] ?? 0;
 
+  /// Whether removing [episodeIds] would leave the show with no catalogued
+  /// episodes. Bookmark-only shows (zero episodes) return `false`.
+  bool wouldRemoveLastCataloguedEpisodes({
+    required int mediaId,
+    required Iterable<int> episodeIds,
+  }) {
+    final total = watchedEpisodesCountFor(mediaId);
+    if (total == 0) return false;
+
+    var removing = 0;
+    for (final episodeId in episodeIds) {
+      if (isWatched(mediaId: mediaId, episodeId: episodeId)) {
+        removing++;
+      }
+    }
+    return removing >= total;
+  }
+
   List<WatchRecord> watchedEpisodesFor(int mediaId) => _watchHistory
       .where((record) => !record.isFilm && record.mediaId == mediaId)
       .toList(growable: false);
@@ -154,17 +172,11 @@ class AppServices {
     required EpisodeModel episode,
     int? fallbackRuntimeMinutes,
   }) async {
-    return _withDeferredFlush(() async {
-      if (!isInCatalogue(show.id)) {
-        await addToCatalogue(show);
-      }
-
-      return await markEpisodeWatched(
-        show: show,
-        episode: episode,
-        fallbackRuntimeMinutes: fallbackRuntimeMinutes,
-      );
-    });
+    return markEpisodeWatched(
+      show: show,
+      episode: episode,
+      fallbackRuntimeMinutes: fallbackRuntimeMinutes,
+    );
   }
 
   /// Adds every non-upcoming episode of a season to the catalogue.
@@ -178,10 +190,6 @@ class AppServices {
     if (episodes.isEmpty) return 0;
 
     return _withDeferredFlush(() async {
-      if (!isInCatalogue(show.id)) {
-        await addToCatalogue(show);
-      }
-
       final now = DateTime.now();
       final toAdd = <WatchRecord>[];
       for (final episode in episodes) {
@@ -205,6 +213,10 @@ class AppServices {
       }
 
       if (toAdd.isEmpty) return 0;
+
+      if (!isInCatalogue(show.id)) {
+        await addToCatalogue(show);
+      }
 
       for (final record in toAdd) {
         _addWatchRecordInMemory(record);
@@ -276,8 +288,8 @@ class AppServices {
     });
   }
 
-  /// Records a watched episode. Returns the new record, or null if already watched
-  /// or duration is invalid.
+  /// Records a watched episode. Ensures the series is in the catalogue.
+  /// Returns the new record, or null if already watched or duration is invalid.
   Future<WatchRecord?> markEpisodeWatched({
     required TvShow show,
     required EpisodeModel episode,
@@ -289,6 +301,10 @@ class AppServices {
     if (duration <= 0) return null;
 
     return _withDeferredFlush(() async {
+      if (!isInCatalogue(show.id)) {
+        await addToCatalogue(show);
+      }
+
       final record = WatchRecord(
         mediaId: show.id,
         isFilm: false,

@@ -141,7 +141,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     _notifyWatchTimeChanged();
   }
 
-  Future<void> _toggleFilmFavorite() async {
+  Future<void> _toggleFavorite() async {
     await _appServices.toggleFavorite(widget.item.id);
     if (!mounted) return;
     _notifyWatchTimeChanged();
@@ -154,6 +154,23 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
         _appServices.isWatched(mediaId: show.id, episodeId: episode.id);
 
     if (isWatched) {
+      if (_appServices.wouldRemoveLastCataloguedEpisodes(
+        mediaId: show.id,
+        episodeIds: [episode.id],
+      )) {
+        final confirmed = await confirmRemoveFromCatalogue(context, show);
+        if (!confirmed || !mounted) return;
+
+        await _appServices.removeFromCatalogue(show.id);
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.removedFromCatalogue)),
+        );
+        _notifyWatchTimeChanged();
+        return;
+      }
+
       await _appServices.unmarkEpisodeWatched(episode.id);
       _notifyWatchTimeChanged();
       return;
@@ -202,6 +219,23 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     );
 
     if (allInCatalogue) {
+      if (_appServices.wouldRemoveLastCataloguedEpisodes(
+        mediaId: show.id,
+        episodeIds: catalogueEpisodes.map((episode) => episode.id),
+      )) {
+        final confirmed = await confirmRemoveFromCatalogue(context, show);
+        if (!confirmed || !mounted) return;
+
+        await _appServices.removeFromCatalogue(show.id);
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.removedFromCatalogue)),
+        );
+        _notifyWatchTimeChanged();
+        return;
+      }
+
       await _appServices.removeSeasonFromCatalogue(
         episodes: catalogueEpisodes,
       );
@@ -245,10 +279,10 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     final posterPath = details?.posterPath ?? widget.item.posterPath;
     final posterUrl = ApiConstants.posterUrl(posterPath);
     final isFilm = widget.item is Film;
+    final inCatalogue = _appServices.isInCatalogue(widget.item.id);
+    final isFavorite = _appServices.isFavorite(widget.item.id);
     final filmWatched =
         isFilm && _appServices.isWatched(mediaId: widget.item.id);
-    final filmFavorite =
-        isFilm && _appServices.isFavorite(widget.item.id);
 
     return DraggableScrollableSheet(
       initialChildSize: isFilm ? 0.55 : 0.75,
@@ -382,23 +416,14 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                   ),
                   if (filmWatched) ...[
                     const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: _toggleFilmFavorite,
-                        icon: Icon(
-                          filmFavorite
-                              ? Icons.favorite
-                              : Icons.favorite_border,
-                        ),
-                        label: Text(
-                          filmFavorite ? l10n.favorite : l10n.markAsFavorite,
-                        ),
-                      ),
-                    ),
+                    _buildFavoriteButton(isFavorite: isFavorite),
                   ],
                 ],
                 if (!isFilm) ...[
+                  if (inCatalogue) ...[
+                    const SizedBox(height: 20),
+                    _buildFavoriteButton(isFavorite: isFavorite),
+                  ],
                   const SizedBox(height: 24),
                   _buildSeasonsSection(),
                 ],
@@ -438,6 +463,22 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildFavoriteButton({required bool isFavorite}) {
+    final l10n = context.l10n;
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: _toggleFavorite,
+        icon: Icon(
+          isFavorite ? Icons.favorite : Icons.favorite_border,
+        ),
+        label: Text(
+          isFavorite ? l10n.favorite : l10n.markAsFavorite,
+        ),
+      ),
     );
   }
 

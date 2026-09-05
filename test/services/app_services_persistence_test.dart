@@ -335,6 +335,8 @@ void main() {
       );
 
       expect(addedCount, 2);
+      expect(appServices.isInCatalogue(show.id), isTrue);
+      expect(appServices.tvShows, hasLength(1));
       expect(
         appServices.isWatched(mediaId: show.id, episodeId: aired.id),
         isTrue,
@@ -376,9 +378,176 @@ void main() {
       );
 
       expect(addedCount, 20);
+      expect(appServices.isInCatalogue(show.id), isTrue);
       expect(store.savedWatchRecords, hasLength(20));
       expect(store.saveWatchRecordsCalls, 1);
       expect(store.flushCount, 1);
+    });
+
+    test('does not add show when no episodes can be catalogued', () async {
+      const show = TvShow(id: 9, title: 'Empty Season Show');
+      final upcoming = EpisodeModel.fromJson({
+        'id': 401,
+        'season_number': 1,
+        'episode_number': 1,
+        'name': 'Upcoming',
+        'air_date': '2099-06-01',
+        'runtime': 42,
+      });
+
+      final addedCount = await appServices.addSeasonToCatalogue(
+        show: show,
+        episodes: [upcoming],
+      );
+
+      expect(addedCount, 0);
+      expect(appServices.isInCatalogue(show.id), isFalse);
+      expect(store.savedCatalogueItems, isEmpty);
+    });
+  });
+
+  group('AppServices addEpisodeToCatalogue', () {
+    late AppServices appServices;
+    late FakeUserDataStore store;
+
+    setUp(() async {
+      appServices = AppServices();
+      store = FakeUserDataStore();
+      appServices.userDataStore = store;
+      await appServices.clearAllData();
+      store.cleared = false;
+    });
+
+    test('adds the show to catalogue when an episode is added', () async {
+      const show = TvShow(id: 50, title: 'Catalogue Show');
+      final episode = EpisodeModel.fromJson({
+        'id': 501,
+        'season_number': 1,
+        'episode_number': 1,
+        'name': 'Pilot',
+        'air_date': '2020-01-01',
+        'runtime': 45,
+      });
+
+      expect(appServices.isInCatalogue(show.id), isFalse);
+
+      final record = await appServices.addEpisodeToCatalogue(
+        show: show,
+        episode: episode,
+      );
+
+      expect(record, isNotNull);
+      expect(appServices.isInCatalogue(show.id), isTrue);
+      expect(appServices.tvShows.single.id, show.id);
+      expect(store.savedCatalogueItems.single.id, show.id);
+      expect(
+        appServices.isWatched(mediaId: show.id, episodeId: episode.id),
+        isTrue,
+      );
+    });
+
+    test('does not add show when episode runtime is unavailable', () async {
+      const show = TvShow(id: 51, title: 'No Runtime Show');
+      final episode = EpisodeModel.fromJson({
+        'id': 502,
+        'season_number': 1,
+        'episode_number': 1,
+        'name': 'Pilot',
+        'air_date': '2020-01-01',
+      });
+
+      final record = await appServices.addEpisodeToCatalogue(
+        show: show,
+        episode: episode,
+      );
+
+      expect(record, isNull);
+      expect(appServices.isInCatalogue(show.id), isFalse);
+      expect(store.savedCatalogueItems, isEmpty);
+    });
+  });
+
+  group('AppServices wouldRemoveLastCataloguedEpisodes', () {
+    late AppServices appServices;
+    late FakeUserDataStore store;
+
+    setUp(() async {
+      appServices = AppServices();
+      store = FakeUserDataStore();
+      appServices.userDataStore = store;
+      await appServices.clearAllData();
+      store.cleared = false;
+    });
+
+    test('is false for bookmark-only shows with no episodes', () async {
+      const show = TvShow(id: 60, title: 'Bookmarked Show');
+      await appServices.addToCatalogue(show);
+
+      expect(
+        appServices.wouldRemoveLastCataloguedEpisodes(
+          mediaId: show.id,
+          episodeIds: const [999],
+        ),
+        isFalse,
+      );
+    });
+
+    test('is true when removing the only catalogued episode', () async {
+      const show = TvShow(id: 61, title: 'Single Episode Show');
+      final episode = EpisodeModel.fromJson({
+        'id': 601,
+        'season_number': 1,
+        'episode_number': 1,
+        'name': 'Pilot',
+        'air_date': '2020-01-01',
+        'runtime': 45,
+      });
+      await appServices.addEpisodeToCatalogue(show: show, episode: episode);
+
+      expect(
+        appServices.wouldRemoveLastCataloguedEpisodes(
+          mediaId: show.id,
+          episodeIds: [episode.id],
+        ),
+        isTrue,
+      );
+    });
+
+    test('is false when other catalogued episodes would remain', () async {
+      const show = TvShow(id: 62, title: 'Two Episode Show');
+      final episode1 = EpisodeModel.fromJson({
+        'id': 701,
+        'season_number': 1,
+        'episode_number': 1,
+        'name': 'One',
+        'air_date': '2020-01-01',
+        'runtime': 45,
+      });
+      final episode2 = EpisodeModel.fromJson({
+        'id': 702,
+        'season_number': 1,
+        'episode_number': 2,
+        'name': 'Two',
+        'air_date': '2020-01-08',
+        'runtime': 45,
+      });
+      await appServices.addEpisodeToCatalogue(show: show, episode: episode1);
+      await appServices.addEpisodeToCatalogue(show: show, episode: episode2);
+
+      expect(
+        appServices.wouldRemoveLastCataloguedEpisodes(
+          mediaId: show.id,
+          episodeIds: [episode1.id],
+        ),
+        isFalse,
+      );
+      expect(
+        appServices.wouldRemoveLastCataloguedEpisodes(
+          mediaId: show.id,
+          episodeIds: [episode1.id, episode2.id],
+        ),
+        isTrue,
+      );
     });
   });
 }
