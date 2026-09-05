@@ -88,9 +88,7 @@ class EpisodeModel {
   }
 
   static int compareEpisodes(EpisodeModel a, EpisodeModel b) {
-    final seasonCompare = a.seasonNumber.compareTo(b.seasonNumber);
-    if (seasonCompare != 0) return seasonCompare;
-    return a.episodeNumber.compareTo(b.episodeNumber);
+    return compareBySeasonAndNumber(a, b.seasonNumber, b.episodeNumber);
   }
 
   static bool _isAfterDate(

@@ -22,12 +22,6 @@ class EpisodeCheckService {
     );
   }
 
-  /// Foreground refresh: updates in-memory alerts only, never notifies.
-  static Future<void> refreshWhileAppOpen(AppServices appServices) async {
-    final result = await checkCatalogue(appServices: appServices);
-    appServices.updateNewEpisodeAlerts(result.allAlerts);
-  }
-
   /// Native background task: persists alerts and notifies for episodes that
   /// aired today (local calendar day), at most once per episode.
   static Future<void> runNativeBackgroundCheck(AppServices appServices) async {

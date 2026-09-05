@@ -379,7 +379,7 @@ class _SearchScreenState extends State<SearchScreen> {
       if (!confirmed || !mounted) return;
     }
 
-    await _appServices.toggleCatalogueItemAsync(item);
+    await _appServices.toggleCatalogueItem(item);
     if (!mounted) return;
     setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(

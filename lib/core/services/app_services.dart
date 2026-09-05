@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 
 import '../cache/cache_manager.dart';
-import '../cache/api_cache_service.dart';
 import '../background/background_task_runner.dart';
 import '../notifications/new_episode_checker.dart';
 import '../../data/repositories/hive_user_data_store.dart';
@@ -27,7 +26,6 @@ class AppServices {
   set userDataStore(UserDataStore store) => _userDataStore = store;
 
   final CacheManager cacheManager = CacheManager();
-  final ApiCacheService apiCacheService = ApiCacheService();
   TmdbService? _tmdbService;
   TmdbService get tmdbService =>
       _tmdbService ??= TmdbService(cacheManager: cacheManager);
@@ -139,14 +137,6 @@ class AppServices {
     }
   }
 
-  Future<void> toggleCatalogueItem(CatalogueItem item) async {
-    if (isInCatalogue(item.id)) {
-      await removeFromCatalogue(item.id);
-    } else {
-      await addToCatalogue(item);
-    }
-  }
-
   /// Adds a catalogue item and records watch time for films using TMDB runtime.
   Future<WatchRecord?> addToCatalogueWithWatchTime(CatalogueItem item) async {
     if (isInCatalogue(item.id)) return null;
@@ -164,7 +154,8 @@ class AppServices {
     });
   }
 
-  Future<void> toggleCatalogueItemAsync(CatalogueItem item) async {
+  /// Adds or removes a catalogue item. Films record watch time on add.
+  Future<void> toggleCatalogueItem(CatalogueItem item) async {
     if (isInCatalogue(item.id)) {
       await removeFromCatalogue(item.id);
       return;
@@ -479,7 +470,10 @@ class AppServices {
   /// Only followed shows are considered. When [forShowId] is set, only that
   /// show is rechecked and merged into existing alerts (avoids scanning the
   /// whole catalogue on every toggle).
-  Future<void> _refreshNewEpisodeAlerts({int? forShowId}) async {
+  Future<void> _refreshNewEpisodeAlerts({
+    int? forShowId,
+    bool forceRefresh = false,
+  }) async {
     try {
       final shows = forShowId == null
           ? followedTvShows
@@ -503,7 +497,7 @@ class AppServices {
       final result = await checker.checkShows(
         shows: shows,
         watchHistory: watchHistory,
-        forceRefresh: false,
+        forceRefresh: forceRefresh,
         mergeWithExisting: forShowId != null,
       );
       updateNewEpisodeAlerts(result.allAlerts);
@@ -512,6 +506,11 @@ class AppServices {
         'Failed to refresh new episode alerts: $error\n$stackTrace',
       );
     }
+  }
+
+  /// Foreground network refresh of followed-show alerts (no system notify).
+  Future<void> refreshNewEpisodeAlertsFromNetwork() async {
+    await _refreshNewEpisodeAlerts(forceRefresh: true);
   }
 
   /// Drops persisted alerts for shows that are no longer followed.
@@ -550,13 +549,15 @@ class AppServices {
   }
 
   Future<void> startBackgroundTasks() async {
-    await backgroundTaskRunner.start();
+    await backgroundTaskRunner.start(
+      tmdbService: tmdbService,
+      onForegroundRefresh: refreshNewEpisodeAlertsFromNetwork,
+    );
   }
 
   void dispose() {
     backgroundTaskRunner.dispose();
     cacheManager.dispose();
-    apiCacheService.dispose();
   }
 
   void _rebuildCatalogueIndex() {
@@ -688,30 +689,13 @@ class AppServices {
     }
   }
 
-  Map<String, dynamic> getFullStatistics() {
-    return {
-      'cache': backgroundTaskRunner.getStatistics(),
-      'movies_cache_size': cacheManager.getStatistics()['movies_box_size'] ?? 0,
-      'episodes_cache_size':
-          cacheManager.getStatistics()['episodes_box_size'] ?? 0,
-      'memory_cache_entries':
-          cacheManager.getStatistics()['memory_cache_entries'] ?? 0,
-      'catalogue_items': _catalogue.length,
-      'watch_time_minutes': totalWatchTimeMinutes,
-      'films_watched': filmsWatchedCount,
-      'episodes_watched': episodesWatchedCount,
-    };
-  }
-
   /// Clears in-memory API/call cache only. Catalogue and watch history are kept.
   void clearCacheData() {
     cacheManager.clearAll();
-    apiCacheService.clearPending();
   }
 
   Future<void> clearAllData() async {
     cacheManager.clearAll();
-    apiCacheService.clearPending();
     _catalogue.clear();
     _catalogueById.clear();
     _watchHistory.clear();

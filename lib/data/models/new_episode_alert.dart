@@ -1,4 +1,5 @@
 import '../../l10n/l10n.dart';
+import 'episode_model.dart';
 
 /// A newly detected episode for a catalogue TV show.
 class NewEpisodeAlert {
@@ -33,7 +34,7 @@ class NewEpisodeAlert {
       seasonNumber: json['season_number'] as int? ?? 1,
       episodeNumber: json['episode_number'] as int? ?? 0,
       episodeName: json['episode_name'] as String? ?? '',
-      airDate: _parseDate(json['air_date'] as String?),
+      airDate: EpisodeModel.parseAirDate(json['air_date'] as String?),
       detectedAt: DateTime.parse(json['detected_at'] as String),
     );
   }
@@ -66,9 +67,4 @@ class NewEpisodeAlert {
 
   @override
   int get hashCode => episodeId.hashCode;
-}
-
-DateTime? _parseDate(String? raw) {
-  if (raw == null || raw.isEmpty) return null;
-  return DateTime.tryParse(raw);
 }

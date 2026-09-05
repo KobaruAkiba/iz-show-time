@@ -2,12 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/app_scroll_behavior.dart';
-import 'core/network/dio_client.dart';
-import 'core/constants/api_constants.dart';
-import 'core/config/api_key_config.dart';
+import 'core/bootstrap/app_bootstrap.dart';
 import 'core/services/app_services.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/notifications/app_lifecycle_coordinator.dart';
@@ -17,17 +14,7 @@ import 'l10n/l10n.dart';
 import 'presentation/navigation/main_navigator.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  await Hive.initFlutter();
-
-  final apiKey = resolveTmdbApiKey();
-  AppApiKey.configure(apiKey);
-
-  await DioClient.init(apiKey: apiKey);
-
-  final appServices = AppServices();
-  await appServices.initialize();
+  final appServices = await AppBootstrap.initializeServices();
   await appServices.userDataStore.saveAppInForeground(true);
 
   // Native plugins can hang before an Activity exists — bootstrap after first frame.

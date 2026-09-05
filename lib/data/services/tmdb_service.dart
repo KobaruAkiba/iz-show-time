@@ -28,54 +28,6 @@ class TmdbService {
         .toList();
   }
 
-  Future<List<Film>> getTrendingMovies() async {
-    final results = await _fetchResults(
-      'trending/movie/day',
-      ttlMinutes: AppConstants.tvCacheTTL,
-    );
-    return results.map(Film.fromJson).toList();
-  }
-
-  Future<List<TvShow>> getTrendingTv() async {
-    final results = await _fetchResults(
-      'trending/tv/day',
-      ttlMinutes: AppConstants.tvCacheTTL,
-    );
-    return results.map(TvShow.fromJson).toList();
-  }
-
-  Future<List<Film>> getPopularMovies() async {
-    final results = await _fetchResults(
-      'movie/popular',
-      ttlMinutes: AppConstants.movieCacheTTL,
-    );
-    return results.map(Film.fromJson).toList();
-  }
-
-  Future<List<TvShow>> getPopularTvShows() async {
-    final results = await _fetchResults(
-      'tv/popular',
-      ttlMinutes: AppConstants.tvCacheTTL,
-    );
-    return results.map(TvShow.fromJson).toList();
-  }
-
-  Future<Film?> getMovieDetails({required int id}) async {
-    final data = await _fetchSingle(
-      'movie/$id',
-      ttlMinutes: AppConstants.movieDetailsCacheTTL,
-    );
-    return data == null ? null : Film.fromJson(data);
-  }
-
-  Future<TvShow?> getTvDetails({required int id}) async {
-    final data = await _fetchSingle(
-      'tv/$id',
-      ttlMinutes: AppConstants.tvDetailsCacheTTL,
-    );
-    return data == null ? null : TvShow.fromJson(data);
-  }
-
   Future<MediaDetails?> getMediaDetails(CatalogueItem item) async {
     final isFilm = item is Film;
     final path = isFilm ? 'movie/${item.id}' : 'tv/${item.id}';
@@ -231,11 +183,7 @@ class TmdbService {
   bool _isCachedListKey(String key) {
     // Pagination metadata keys store a Map, not a result list.
     if (key.contains('#meta')) return false;
-    return key.startsWith('search/multi') ||
-        key.contains('trending/') ||
-        key.endsWith('/popular?language=en-US') ||
-        key.startsWith('movie/popular') ||
-        key.startsWith('tv/popular');
+    return key.startsWith('search/multi') || key.contains('trending/');
   }
 
   bool _isCachedMovieDetailKey(String key) {

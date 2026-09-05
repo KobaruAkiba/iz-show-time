@@ -1,7 +1,7 @@
 import 'package:workmanager/workmanager.dart';
 
-import '../background/background_bootstrap.dart';
-import '../background/background_task_constants.dart';
+import 'background_bootstrap.dart';
+import 'background_task_constants.dart';
 import '../notifications/episode_check_service.dart';
 
 /// Top-level entry point for Workmanager background isolates.
