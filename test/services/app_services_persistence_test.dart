@@ -193,6 +193,55 @@ void main() {
       expect(appServices.isFavorite(404), isFalse);
     });
 
+    test('addToCatalogue marks new TV shows as followed by default', () async {
+      const show = TvShow(id: 55, title: 'New Show');
+
+      await appServices.addToCatalogue(show);
+
+      expect(appServices.isFollowed(show.id), isTrue);
+      expect(store.savedCatalogueItems.single.isFollowed, isTrue);
+      expect(store.savedCatalogueItems.single.tags, contains(kFollowedTag));
+    });
+
+    test('toggleFollowed persists tag and clears alerts on unfollow', () async {
+      const show = TvShow(id: 77, title: 'Followed Show');
+      await appServices.addToCatalogue(show);
+      store.savedCatalogueItems.clear();
+
+      expect(appServices.isFollowed(show.id), isTrue);
+
+      final alert = NewEpisodeAlert(
+        showId: show.id,
+        showTitle: show.title,
+        episodeId: 1,
+        seasonNumber: 1,
+        episodeNumber: 2,
+        episodeName: 'E2',
+        detectedAt: DateTime(2026, 1, 1),
+      );
+      appServices.updateNewEpisodeAlerts([alert]);
+
+      await appServices.toggleFollowed(show.id);
+
+      expect(appServices.isFollowed(show.id), isFalse);
+      expect(store.savedCatalogueItems.single.isFollowed, isFalse);
+      expect(appServices.newEpisodeAlerts, isEmpty);
+      expect(store.alerts, isEmpty);
+    });
+
+    test('toggleFollowed is no-op for films and missing ids', () async {
+      const film = Film(id: 88, title: 'Not a Show');
+      await appServices.addToCatalogue(film);
+      store.savedCatalogueItems.clear();
+
+      await appServices.toggleFollowed(film.id);
+      await appServices.toggleFollowed(404);
+
+      expect(store.savedCatalogueItems, isEmpty);
+      expect(appServices.isFollowed(film.id), isFalse);
+      expect(appServices.isFollowed(404), isFalse);
+    });
+
     test('clearAllData clears store', () async {
       await appServices.clearAllData();
 
@@ -270,6 +319,7 @@ void main() {
           episode: episode2,
         );
 
+        expect(appServices.isFollowed(show.id), isTrue);
         expect(appServices.newEpisodeAlerts, hasLength(1));
         expect(appServices.newEpisodeAlerts.first.episodeId, 101);
         expect(appServices.newEpisodeAlerts.first.episodeNumber, 3);
@@ -282,6 +332,30 @@ void main() {
         expect(appServices.newEpisodeAlerts, hasLength(1));
         expect(appServices.newEpisodeAlerts.first.episodeId, 102);
         expect(appServices.newEpisodeAlerts.first.episodeNumber, 4);
+      },
+    );
+
+    test(
+      'does not surface new episodes for catalogue shows that are not followed',
+      () async {
+        const show = TvShow(id: 43, title: 'Unfollowed Show');
+        final episode2 = EpisodeModel.fromJson({
+          'id': 100,
+          'season_number': 1,
+          'episode_number': 2,
+          'name': 'Registered',
+          'air_date': '2026-01-01',
+          'runtime': 45,
+        });
+
+        await appServices.addEpisodeToCatalogue(
+          show: show,
+          episode: episode2,
+        );
+        await appServices.toggleFollowed(show.id);
+
+        expect(appServices.isFollowed(show.id), isFalse);
+        expect(appServices.newEpisodeAlerts, isEmpty);
       },
     );
   });

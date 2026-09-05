@@ -147,6 +147,12 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     _notifyWatchTimeChanged();
   }
 
+  Future<void> _toggleFollowed() async {
+    await _appServices.toggleFollowed(widget.item.id);
+    if (!mounted) return;
+    _notifyWatchTimeChanged();
+  }
+
   Future<void> _addEpisodeToCatalogue(EpisodeModel episode) async {
     final show = widget.item as TvShow;
     final l10n = context.l10n;
@@ -281,6 +287,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     final isFilm = widget.item is Film;
     final inCatalogue = _appServices.isInCatalogue(widget.item.id);
     final isFavorite = _appServices.isFavorite(widget.item.id);
+    final isFollowed = !isFilm && _appServices.isFollowed(widget.item.id);
     final filmWatched =
         isFilm && _appServices.isWatched(mediaId: widget.item.id);
 
@@ -422,6 +429,8 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                 if (!isFilm) ...[
                   if (inCatalogue) ...[
                     const SizedBox(height: 20),
+                    _buildFollowedButton(isFollowed: isFollowed),
+                    const SizedBox(height: 12),
                     _buildFavoriteButton(isFavorite: isFavorite),
                   ],
                   const SizedBox(height: 24),
@@ -477,6 +486,24 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
         ),
         label: Text(
           isFavorite ? l10n.favorite : l10n.markAsFavorite,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFollowedButton({required bool isFollowed}) {
+    final l10n = context.l10n;
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: _toggleFollowed,
+        icon: Icon(
+          isFollowed
+              ? Icons.notifications_active
+              : Icons.notifications_outlined,
+        ),
+        label: Text(
+          isFollowed ? l10n.followed : l10n.markAsFollowed,
         ),
       ),
     );

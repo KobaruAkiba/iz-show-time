@@ -182,6 +182,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get markAsFavorite => 'Mark as Favorite';
 
   @override
+  String get followed => 'Followed';
+
+  @override
+  String get markAsFollowed => 'Follow show';
+
+  @override
+  String get addToFollowed => 'Follow show';
+
+  @override
+  String get removeFromFollowed => 'Unfollow show';
+
+  @override
   String get director => 'Director';
 
   @override
@@ -338,7 +350,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeNewEpisodesEmptyBody =>
-      'Register an episode in your catalogue and the next one in order will appear here.';
+      'Follow a show in your catalogue and register an episode — the next one in order will appear here.';
 
   @override
   String homeAiredOn(String date) {

@@ -216,4 +216,26 @@ void main() {
       expect(again.tags, [kFavoriteTag]);
     });
   });
+
+  group('followed tag helpers', () {
+    test('withFollowed adds and removes reserved tag', () {
+      const show = TvShow(id: 1, title: 'Test', tags: ['drama']);
+
+      final followed = show.withFollowed(true);
+      expect(followed.isFollowed, isTrue);
+      expect(followed.tags, ['drama', kFollowedTag]);
+
+      final cleared = followed.withFollowed(false);
+      expect(cleared.isFollowed, isFalse);
+      expect(cleared.tags, ['drama']);
+    });
+
+    test('withFollowed is idempotent', () {
+      const show = TvShow(id: 1, title: 'Test', tags: [kFollowedTag]);
+
+      final again = show.withFollowed(true);
+      expect(identical(again, show), isTrue);
+      expect(again.tags, [kFollowedTag]);
+    });
+  });
 }

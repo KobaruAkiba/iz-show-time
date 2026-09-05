@@ -3,6 +3,9 @@ import '../../core/constants/api_constants.dart';
 /// Reserved catalogue tag for user favorites.
 const String kFavoriteTag = 'favorite';
 
+/// Reserved catalogue tag for followed TV shows (new-episode alerts).
+const String kFollowedTag = 'followed';
+
 /// Base class for all catalogue items (Films and Shows)
 abstract class CatalogueItem {
   final int id;
@@ -34,6 +37,14 @@ extension CatalogueItemExtension on CatalogueItem {
     if (favorite == isFavorite) return this;
     if (favorite) return copyWithTags([...tags, kFavoriteTag]);
     return copyWithTags(withoutTag(kFavoriteTag));
+  }
+
+  bool get isFollowed => containsTag(kFollowedTag);
+
+  CatalogueItem withFollowed(bool followed) {
+    if (followed == isFollowed) return this;
+    if (followed) return copyWithTags([...tags, kFollowedTag]);
+    return copyWithTags(withoutTag(kFollowedTag));
   }
 
   bool get isFilm => this is Film;

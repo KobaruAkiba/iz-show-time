@@ -69,14 +69,28 @@ class AppServices {
   List<TvShow> get tvShows =>
       _catalogue.whereType<TvShow>().toList(growable: false);
 
+  /// TV shows marked as followed; only these feed New Episodes / notifications.
+  List<TvShow> get followedTvShows => tvShows
+      .where((show) => show.isFollowed)
+      .toList(growable: false);
+
   bool isInCatalogue(int id) => _catalogueById.containsKey(id);
 
   bool isFavorite(int id) => _catalogueById[id]?.isFavorite ?? false;
 
+  bool isFollowed(int id) {
+    final item = _catalogueById[id];
+    return item is TvShow && item.isFollowed;
+  }
+
   Future<void> addToCatalogue(CatalogueItem item) async {
     if (isInCatalogue(item.id)) return;
-    final localItem =
+    var localItem =
         item.overview == null ? item : catalogueItemForLocalStore(item);
+    // New TV shows are followed by default so they appear in New Episodes.
+    if (localItem is TvShow && !localItem.isFollowed) {
+      localItem = localItem.withFollowed(true);
+    }
     _catalogue.add(localItem);
     _catalogueById[localItem.id] = localItem;
     await _persistCatalogueItem(localItem);
@@ -101,6 +115,28 @@ class AppServices {
     _catalogue[index] = updated;
     _catalogueById[id] = updated;
     await _persistCatalogueItem(updated);
+  }
+
+  /// Toggles followed on a catalogue TV show. No-op for films or missing items.
+  ///
+  /// Unfollowing clears that show's New Episode alerts; following rechecks it.
+  Future<void> toggleFollowed(int id) async {
+    final index = _catalogue.indexWhere((item) => item.id == id);
+    if (index < 0) return;
+
+    final item = _catalogue[index];
+    if (item is! TvShow) return;
+
+    final updated = item.withFollowed(!item.isFollowed) as TvShow;
+    _catalogue[index] = updated;
+    _catalogueById[id] = updated;
+    await _persistCatalogueItem(updated);
+
+    if (updated.isFollowed) {
+      await _refreshNewEpisodeAlerts(forShowId: id);
+    } else {
+      await _removeEpisodeDataForShow(id);
+    }
   }
 
   Future<void> toggleCatalogueItem(CatalogueItem item) async {
@@ -401,9 +437,20 @@ class AppServices {
     _newEpisodeAlerts
       ..clear()
       ..addAll(await store.loadNewEpisodeAlerts());
+    final alertCountBeforePrune = _newEpisodeAlerts.length;
+    _pruneAlertsToFollowedShows();
     newEpisodeAlertsListenable.value = List<NewEpisodeAlert>.from(
       _newEpisodeAlerts,
     );
+    if (_newEpisodeAlerts.length != alertCountBeforePrune) {
+      try {
+        await store.saveNewEpisodeAlerts(_newEpisodeAlerts);
+      } catch (error, stackTrace) {
+        debugPrint(
+          'Failed to prune new episode alerts on init: $error\n$stackTrace',
+        );
+      }
+    }
 
     tmdbService;
   }
@@ -429,13 +476,16 @@ class AppServices {
   /// Rebuilds New Episodes from current catalogue progress so the home
   /// section immediately shows the next aired episode after a watch change.
   ///
-  /// When [forShowId] is set, only that show is rechecked and merged into
-  /// existing alerts (avoids scanning the whole catalogue on every toggle).
+  /// Only followed shows are considered. When [forShowId] is set, only that
+  /// show is rechecked and merged into existing alerts (avoids scanning the
+  /// whole catalogue on every toggle).
   Future<void> _refreshNewEpisodeAlerts({int? forShowId}) async {
     try {
       final shows = forShowId == null
-          ? tvShows
-          : tvShows.where((show) => show.id == forShowId).toList(growable: false);
+          ? followedTvShows
+          : followedTvShows
+              .where((show) => show.id == forShowId)
+              .toList(growable: false);
 
       if (forShowId != null && shows.isEmpty) {
         _newEpisodeAlerts.removeWhere((alert) => alert.showId == forShowId);
@@ -462,6 +512,14 @@ class AppServices {
         'Failed to refresh new episode alerts: $error\n$stackTrace',
       );
     }
+  }
+
+  /// Drops persisted alerts for shows that are no longer followed.
+  void _pruneAlertsToFollowedShows() {
+    final followedIds = {for (final show in followedTvShows) show.id};
+    _newEpisodeAlerts.removeWhere(
+      (alert) => !followedIds.contains(alert.showId),
+    );
   }
 
   Future<void> _removeWatchHistoryForMedia(int mediaId) async {

@@ -424,6 +424,30 @@ abstract class AppLocalizations {
   /// **'Mark as Favorite'**
   String get markAsFavorite;
 
+  /// No description provided for @followed.
+  ///
+  /// In en, this message translates to:
+  /// **'Followed'**
+  String get followed;
+
+  /// No description provided for @markAsFollowed.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow show'**
+  String get markAsFollowed;
+
+  /// No description provided for @addToFollowed.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow show'**
+  String get addToFollowed;
+
+  /// No description provided for @removeFromFollowed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unfollow show'**
+  String get removeFromFollowed;
+
   /// No description provided for @director.
   ///
   /// In en, this message translates to:
@@ -661,7 +685,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeNewEpisodesEmptyBody.
   ///
   /// In en, this message translates to:
-  /// **'Register an episode in your catalogue and the next one in order will appear here.'**
+  /// **'Follow a show in your catalogue and register an episode — the next one in order will appear here.'**
   String get homeNewEpisodesEmptyBody;
 
   /// No description provided for @homeAiredOn.

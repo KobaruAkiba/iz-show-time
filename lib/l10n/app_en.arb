@@ -80,6 +80,10 @@
   "markAsWatched": "Mark as Watched",
   "favorite": "Favorite",
   "markAsFavorite": "Mark as Favorite",
+  "followed": "Followed",
+  "markAsFollowed": "Follow show",
+  "addToFollowed": "Follow show",
+  "removeFromFollowed": "Unfollow show",
   "director": "Director",
   "createdBy": "Created by",
   "cast": "Cast",
@@ -213,7 +217,7 @@
   "homeNewEpisodes": "New Episodes",
   "homeNewEpisodesSubtitle": "The next episode to watch after your last registered one",
   "homeNewEpisodesEmptyTitle": "Nothing here yet",
-  "homeNewEpisodesEmptyBody": "Register an episode in your catalogue and the next one in order will appear here.",
+  "homeNewEpisodesEmptyBody": "Follow a show in your catalogue and register an episode — the next one in order will appear here.",
   "homeAiredOn": "Aired {date}",
   "@homeAiredOn": {
     "placeholders": {
