@@ -33,11 +33,14 @@ flutter_launcher_icons:
   ios: true
   remove_alpha_ios: true
   image_path: assets/icons/IzShowTimeIcon.png
+  adaptive_icon_background: "#FDD408"
+  adaptive_icon_foreground: assets/icons/IzShowTimeIcon.png
+  adaptive_icon_foreground_inset: 16
   web:
     generate: true
     image_path: assets/icons/IzShowTimeIcon.png
-    background_color: "#FFD700"
-    theme_color: "#FFD700"
+    background_color: "#FDD408"
+    theme_color: "#FDD408"
 
 flutter:
   generate: true
