@@ -298,6 +298,20 @@ class HiveUserDataStore implements UserDataStore {
   }
 
   @override
+  Future<String?> loadThemeMode() async {
+    await open();
+    final raw = metaBox.get(StorageConstants.themeModeKey);
+    if (raw is! String || raw.isEmpty) return null;
+    return raw;
+  }
+
+  @override
+  Future<void> saveThemeMode(String themeMode) async {
+    await open();
+    await metaBox.put(StorageConstants.themeModeKey, themeMode);
+  }
+
+  @override
   Future<void> flush() async {
     await open();
     await Future.wait([

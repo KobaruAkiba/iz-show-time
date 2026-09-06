@@ -23,6 +23,9 @@ class SettingsScreen extends StatelessWidget {
             Expanded(
               child: ListView(
                 children: [
+                  _buildSectionTitle(context, l10n.settingsAppearance),
+                  _buildThemeSelector(context),
+                  const Divider(),
                   _buildSectionTitle(context, l10n.settingsAbout),
                   ListTile(
                     leading: const Icon(Icons.info_outline),
@@ -69,6 +72,42 @@ class SettingsScreen extends StatelessWidget {
               color: Colors.grey[600],
             ),
       ),
+    );
+  }
+
+  Widget _buildThemeSelector(BuildContext context) {
+    final l10n = context.l10n;
+
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: AppServices().themeModeListenable,
+      builder: (context, themeMode, _) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+          child: SegmentedButton<ThemeMode>(
+            segments: [
+              ButtonSegment<ThemeMode>(
+                value: ThemeMode.system,
+                label: Text(l10n.settingsThemeSystem),
+                icon: const Icon(Icons.brightness_auto),
+              ),
+              ButtonSegment<ThemeMode>(
+                value: ThemeMode.light,
+                label: Text(l10n.settingsThemeLight),
+                icon: const Icon(Icons.light_mode_outlined),
+              ),
+              ButtonSegment<ThemeMode>(
+                value: ThemeMode.dark,
+                label: Text(l10n.settingsThemeDark),
+                icon: const Icon(Icons.dark_mode_outlined),
+              ),
+            ],
+            selected: {themeMode},
+            onSelectionChanged: (selected) {
+              AppServices().setThemeMode(selected.first);
+            },
+          ),
+        );
+      },
     );
   }
 

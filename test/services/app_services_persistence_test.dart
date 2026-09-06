@@ -115,6 +115,16 @@ class FakeUserDataStore implements UserDataStore {
     notificationPermissionPrePromptShown = shown;
   }
 
+  String? themeMode;
+
+  @override
+  Future<String?> loadThemeMode() async => themeMode;
+
+  @override
+  Future<void> saveThemeMode(String themeMode) async {
+    this.themeMode = themeMode;
+  }
+
   @override
   Future<void> clearAll() async {
     cleared = true;

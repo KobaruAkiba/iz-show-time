@@ -46,6 +46,11 @@ abstract class UserDataStore {
 
   Future<void> saveNotificationPermissionPrePromptShown(bool shown);
 
+  /// App theme preference: `system`, `light`, or `dark`. Null means system.
+  Future<String?> loadThemeMode();
+
+  Future<void> saveThemeMode(String themeMode);
+
   /// Forces durable write of pending box changes to disk.
   Future<void> flush();
 

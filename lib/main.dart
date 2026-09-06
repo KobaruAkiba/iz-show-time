@@ -68,27 +68,32 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      onGenerateTitle: (context) => context.l10n.appTitle,
-      debugShowCheckedModeBanner: false,
-      scrollBehavior: AppScrollBehavior(),
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
-      navigatorKey: appNavigatorKey,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      builder: (context, child) {
-        AppL10n.updateLocale(Localizations.localeOf(context));
-        return child ?? const SizedBox.shrink();
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: widget.appServices.themeModeListenable,
+      builder: (context, themeMode, _) {
+        return MaterialApp(
+          onGenerateTitle: (context) => context.l10n.appTitle,
+          debugShowCheckedModeBanner: false,
+          scrollBehavior: AppScrollBehavior(),
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: themeMode,
+          navigatorKey: appNavigatorKey,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) {
+            AppL10n.updateLocale(Localizations.localeOf(context));
+            return child ?? const SizedBox.shrink();
+          },
+          home: const MainNavigator(),
+          onGenerateRoute: AppRouter.onGenerateRoute,
+        );
       },
-      home: const MainNavigator(),
-      onGenerateRoute: AppRouter.onGenerateRoute,
     );
   }
 }

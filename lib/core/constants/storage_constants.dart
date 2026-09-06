@@ -14,4 +14,5 @@ class StorageConstants {
   static const String notifiedEpisodeIdsKey = 'notified_episode_ids';
   static const String notificationPermissionPrePromptShownKey =
       'notification_permission_pre_prompt_shown';
+  static const String themeModeKey = 'theme_mode';
 }

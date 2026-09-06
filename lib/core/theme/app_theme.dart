@@ -35,4 +35,19 @@ class AppTheme {
   static const String accentColor = '#D0BCFF';
   static const String warningColor = '#FB7185';
   static const String successColor = '#34D399';
+
+  /// Parses a persisted theme preference. Unknown / missing → [ThemeMode.system].
+  static ThemeMode themeModeFromStorage(String? raw) {
+    switch (raw) {
+      case 'light':
+        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
+      case 'system':
+      default:
+        return ThemeMode.system;
+    }
+  }
+
+  static String themeModeToStorage(ThemeMode mode) => mode.name;
 }

@@ -410,6 +410,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'No shows currently in progress.\nRegister an episode, then when the next one airs it will show up here.';
 
   @override
+  String get settingsAppearance => 'Appearance';
+
+  @override
+  String get settingsThemeSystem => 'System';
+
+  @override
+  String get settingsThemeLight => 'Light';
+
+  @override
+  String get settingsThemeDark => 'Dark';
+
+  @override
   String get settingsAbout => 'About';
 
   @override

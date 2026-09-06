@@ -778,6 +778,30 @@ abstract class AppLocalizations {
   /// **'No shows currently in progress.\nRegister an episode, then when the next one airs it will show up here.'**
   String get catalogueNoInProgress;
 
+  /// No description provided for @settingsAppearance.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance'**
+  String get settingsAppearance;
+
+  /// No description provided for @settingsThemeSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get settingsThemeSystem;
+
+  /// No description provided for @settingsThemeLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get settingsThemeLight;
+
+  /// No description provided for @settingsThemeDark.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get settingsThemeDark;
+
   /// No description provided for @settingsAbout.
   ///
   /// In en, this message translates to:

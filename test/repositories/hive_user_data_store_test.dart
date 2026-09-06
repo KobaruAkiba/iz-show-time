@@ -165,6 +165,16 @@ void main() {
       expect(await store.loadNotificationPermissionPrePromptShown(), isFalse);
     });
 
+    test('persists theme mode and keeps it across clearAll', () async {
+      expect(await store.loadThemeMode(), isNull);
+
+      await store.saveThemeMode('dark');
+      expect(await store.loadThemeMode(), 'dark');
+
+      await store.clearAll();
+      expect(await store.loadThemeMode(), 'dark');
+    });
+
     test('removeCatalogueItem and removeWatchRecord delete entries', () async {
       const film = Film(id: 42, title: 'Removed Film');
       final record = WatchRecord(

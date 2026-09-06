@@ -1,8 +1,9 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 import '../cache/cache_manager.dart';
 import '../background/background_task_runner.dart';
 import '../notifications/new_episode_checker.dart';
+import '../theme/app_theme.dart';
 import '../../data/repositories/hive_user_data_store.dart';
 import '../../data/repositories/user_data_store.dart';
 import '../../data/services/tmdb_service.dart';
@@ -44,10 +45,14 @@ class AppServices {
   final List<NewEpisodeAlert> _newEpisodeAlerts = [];
   final ValueNotifier<List<NewEpisodeAlert>> newEpisodeAlertsListenable =
       ValueNotifier<List<NewEpisodeAlert>>([]);
+  final ValueNotifier<ThemeMode> themeModeListenable =
+      ValueNotifier<ThemeMode>(ThemeMode.system);
 
   /// When true, disk [UserDataStore.flush] is deferred until the outer
   /// mutating operation completes (enables one fsync per user action).
   bool _deferFlush = false;
+
+  ThemeMode get themeMode => themeModeListenable.value;
 
   List<CatalogueItem> get catalogue => List.unmodifiable(_catalogue);
   List<WatchRecord> get watchHistory => List.unmodifiable(_watchHistory);
@@ -443,7 +448,28 @@ class AppServices {
       }
     }
 
+    try {
+      themeModeListenable.value = AppTheme.themeModeFromStorage(
+        await store.loadThemeMode(),
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Failed to load theme mode: $error\n$stackTrace');
+      themeModeListenable.value = ThemeMode.system;
+    }
+
     tmdbService;
+  }
+
+  /// Updates the app theme preference and persists it.
+  Future<void> setThemeMode(ThemeMode mode) async {
+    if (themeModeListenable.value == mode) return;
+    themeModeListenable.value = mode;
+    try {
+      await userDataStore.saveThemeMode(AppTheme.themeModeToStorage(mode));
+      await _maybeFlush();
+    } catch (error, stackTrace) {
+      debugPrint('Failed to persist theme mode: $error\n$stackTrace');
+    }
   }
 
   void updateNewEpisodeAlerts(List<NewEpisodeAlert> alerts) {
