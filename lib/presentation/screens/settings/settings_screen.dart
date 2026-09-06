@@ -8,7 +8,7 @@ class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   static const _appVersion = '1.0.0';
-  static const _tmdbLogoAsset = 'assets/images/TmdbLogo.jpg';
+  static const _tmdbLogoAsset = 'assets/images/TmdbLogo.png';
 
   @override
   Widget build(BuildContext context) {
