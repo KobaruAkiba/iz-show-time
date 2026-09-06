@@ -27,6 +27,7 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^3.0.1
   flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.4
 
 flutter_launcher_icons:
   android: true
@@ -41,6 +42,19 @@ flutter_launcher_icons:
     image_path: assets/icons/IzShowTimeIcon.png
     background_color: "#FDD408"
     theme_color: "#FDD408"
+  windows:
+    generate: true
+    image_path: assets/icons/IzShowTimeIcon.png
+    icon_size: 256
+
+flutter_native_splash:
+  color: "#000000"
+  image: assets/images/splash/IzShowTimeLogoSplash.png
+  android: true
+  ios: true
+  android_12:
+    color: "#000000"
+    image: assets/images/splash/IzShowTimeLogoSplashAndroid12.png
 
 flutter:
   generate: true
