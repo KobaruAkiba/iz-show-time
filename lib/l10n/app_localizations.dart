@@ -745,7 +745,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchEmptySubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Type a title and press Enter or the search button'**
+  /// **'Start typing a title to search'**
   String get searchEmptySubtitle;
 
   /// No description provided for @catalogueSearchHint.

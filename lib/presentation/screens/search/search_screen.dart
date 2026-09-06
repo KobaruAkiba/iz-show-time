@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../../widgets/media_card.dart';
 import '../../widgets/media_detail_sheet.dart';
@@ -6,6 +8,7 @@ import '../../widgets/app_page_header.dart';
 import '../../widgets/confirm_remove_from_catalogue.dart';
 import '../../widgets/lazy_paged_list_view.dart';
 import '../../../data/models/catalogue_item.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/services/app_services.dart';
 import '../../../l10n/l10n.dart';
 
@@ -26,6 +29,7 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   late TextEditingController _controller;
+  Timer? _debounceTimer;
   bool _hasSearched = false;
   bool _isLoading = false;
   bool _isLoadingMore = false;
@@ -62,6 +66,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -75,15 +80,36 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _onQueryChanged(String value) {
+    _debounceTimer?.cancel();
     setState(() {});
+
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      _resetToIdle(clearController: false);
+      return;
+    }
+
+    _debounceTimer = Timer(
+      const Duration(milliseconds: AppConstants.searchDebounceDelayMs),
+      () {
+        if (!mounted) return;
+        _performSearch(trimmed);
+      },
+    );
+  }
+
+  void _searchNow(String query) {
+    _debounceTimer?.cancel();
+    _performSearch(query);
   }
 
   void _clearQuery() {
+    _debounceTimer?.cancel();
     _controller.clear();
-    setState(() {});
+    _resetToIdle(clearController: false);
   }
 
-  void _clearResults() {
+  void _resetToIdle({required bool clearController}) {
     setState(() {
       _hasSearched = false;
       _isLoading = false;
@@ -97,8 +123,15 @@ class _SearchScreenState extends State<SearchScreen> {
       _remoteTotalPages = 0;
       _mediaFilter = MediaFilter.all;
       _sortOption = MediaSortOption.none;
-      _controller.clear();
+      if (clearController) {
+        _controller.clear();
+      }
     });
+  }
+
+  void _clearResults() {
+    _debounceTimer?.cancel();
+    _resetToIdle(clearController: true);
   }
 
   void _resetResultBuffers() {
@@ -225,7 +258,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       IconButton(
                         icon: const Icon(Icons.arrow_forward),
                         tooltip: l10n.searchAction,
-                        onPressed: () => _performSearch(_controller.text),
+                        onPressed: () => _searchNow(_controller.text),
                       ),
                     ],
                   ),
@@ -234,7 +267,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   ),
                 ),
                 onChanged: _onQueryChanged,
-                onSubmitted: _performSearch,
+                onSubmitted: _searchNow,
               ),
             ),
             const SizedBox(height: 12),

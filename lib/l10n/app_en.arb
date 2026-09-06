@@ -249,7 +249,7 @@
     }
   },
   "searchEmptyTitle": "Search for films and shows",
-  "searchEmptySubtitle": "Type a title and press Enter or the search button",
+  "searchEmptySubtitle": "Start typing a title to search",
 
   "catalogueSearchHint": "Search catalogue...",
   "catalogueEmpty": "Your catalogue is empty",

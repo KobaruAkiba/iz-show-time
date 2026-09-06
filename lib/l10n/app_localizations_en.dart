@@ -389,8 +389,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchEmptyTitle => 'Search for films and shows';
 
   @override
-  String get searchEmptySubtitle =>
-      'Type a title and press Enter or the search button';
+  String get searchEmptySubtitle => 'Start typing a title to search';
 
   @override
   String get catalogueSearchHint => 'Search catalogue...';

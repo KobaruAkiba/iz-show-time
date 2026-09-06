@@ -22,6 +22,9 @@ class AppConstants {
   /// Initial / incremental page size for lazy-loaded lists.
   static const int listPageSize = 15;
 
+  /// Delay after typing stops before calling the search API.
+  static const int searchDebounceDelayMs = 1000;
+
   /// Public PayPal.Me donation link (not a secret — safe to ship in the app).
   static const String paypalDonateUrl = 'https://paypal.me/MirkoCorba';
 
