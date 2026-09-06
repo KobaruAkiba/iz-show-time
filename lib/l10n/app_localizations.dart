@@ -886,6 +886,30 @@ abstract class AppLocalizations {
   /// **'{count} new episodes are available. Open Home and check New Episodes.'**
   String notificationBodyOther(int count);
 
+  /// No description provided for @notificationPermissionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Episode alerts'**
+  String get notificationPermissionTitle;
+
+  /// No description provided for @notificationPermissionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are optional and not required to use the app. When enabled, IzShowTime alerts you whenever a new episode is available for a show you\'re following.'**
+  String get notificationPermissionBody;
+
+  /// No description provided for @notificationPermissionNotNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get notificationPermissionNotNow;
+
+  /// No description provided for @notificationPermissionContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get notificationPermissionContinue;
+
   /// No description provided for @errorTooManyRequests.
   ///
   /// In en, this message translates to:

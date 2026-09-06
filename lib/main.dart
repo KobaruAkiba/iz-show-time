@@ -47,7 +47,10 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _bootstrapAfterFirstFrame() async {
     try {
-      await NotificationService().initialize();
+      await NotificationService().initialize(
+        userDataStore: widget.appServices.userDataStore,
+        navigatorKey: appNavigatorKey,
+      );
       await NativeBackgroundScheduler.instance.initialize();
       await NativeBackgroundScheduler.instance.registerEpisodeChecks();
       await widget.appServices.startBackgroundTasks();

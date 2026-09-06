@@ -155,6 +155,16 @@ void main() {
       expect(lastCheck, checkedAt);
     });
 
+    test('persists notification permission pre-prompt flag', () async {
+      expect(await store.loadNotificationPermissionPrePromptShown(), isFalse);
+
+      await store.saveNotificationPermissionPrePromptShown(true);
+      expect(await store.loadNotificationPermissionPrePromptShown(), isTrue);
+
+      await store.clearAll();
+      expect(await store.loadNotificationPermissionPrePromptShown(), isFalse);
+    });
+
     test('removeCatalogueItem and removeWatchRecord delete entries', () async {
       const film = Film(id: 42, title: 'Removed Film');
       final record = WatchRecord(

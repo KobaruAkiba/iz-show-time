@@ -281,6 +281,10 @@
       "count": {"type": "int"}
     }
   },
+  "notificationPermissionTitle": "Episode alerts",
+  "notificationPermissionBody": "Notifications are optional and not required to use the app. When enabled, IzShowTime alerts you whenever a new episode is available for a show you're following.",
+  "notificationPermissionNotNow": "Not now",
+  "notificationPermissionContinue": "Continue",
 
   "errorTooManyRequests": "Too many requests. Please wait a moment.",
   "errorResourceNotFound": "Resource not found.",

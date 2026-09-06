@@ -474,6 +474,19 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get notificationPermissionTitle => 'Episode alerts';
+
+  @override
+  String get notificationPermissionBody =>
+      'Notifications are optional and not required to use the app. When enabled, IzShowTime alerts you whenever a new episode is available for a show you\'re following.';
+
+  @override
+  String get notificationPermissionNotNow => 'Not now';
+
+  @override
+  String get notificationPermissionContinue => 'Continue';
+
+  @override
   String get errorTooManyRequests => 'Too many requests. Please wait a moment.';
 
   @override

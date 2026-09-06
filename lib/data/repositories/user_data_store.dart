@@ -41,6 +41,11 @@ abstract class UserDataStore {
 
   Future<void> saveNotifiedEpisodeIds(Set<int> episodeIds);
 
+  /// Whether the in-app notification permission rationale was already shown.
+  Future<bool> loadNotificationPermissionPrePromptShown();
+
+  Future<void> saveNotificationPermissionPrePromptShown(bool shown);
+
   /// Forces durable write of pending box changes to disk.
   Future<void> flush();
 

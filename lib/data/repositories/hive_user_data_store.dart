@@ -280,6 +280,24 @@ class HiveUserDataStore implements UserDataStore {
   }
 
   @override
+  Future<bool> loadNotificationPermissionPrePromptShown() async {
+    await open();
+    final raw = metaBox.get(
+      StorageConstants.notificationPermissionPrePromptShownKey,
+    );
+    return raw == true;
+  }
+
+  @override
+  Future<void> saveNotificationPermissionPrePromptShown(bool shown) async {
+    await open();
+    await metaBox.put(
+      StorageConstants.notificationPermissionPrePromptShownKey,
+      shown,
+    );
+  }
+
+  @override
   Future<void> flush() async {
     await open();
     await Future.wait([
@@ -298,6 +316,9 @@ class HiveUserDataStore implements UserDataStore {
     await metaBox.delete(StorageConstants.lastEpisodeCheckKey);
     await metaBox.delete(StorageConstants.appInForegroundKey);
     await metaBox.delete(StorageConstants.notifiedEpisodeIdsKey);
+    await metaBox.delete(
+      StorageConstants.notificationPermissionPrePromptShownKey,
+    );
     await metaBox.put(
       StorageConstants.schemaVersionKey,
       StorageConstants.storageSchemaVersion,

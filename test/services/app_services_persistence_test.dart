@@ -104,12 +104,24 @@ class FakeUserDataStore implements UserDataStore {
     notifiedEpisodeIds = Set<int>.from(episodeIds);
   }
 
+  bool notificationPermissionPrePromptShown = false;
+
+  @override
+  Future<bool> loadNotificationPermissionPrePromptShown() async =>
+      notificationPermissionPrePromptShown;
+
+  @override
+  Future<void> saveNotificationPermissionPrePromptShown(bool shown) async {
+    notificationPermissionPrePromptShown = shown;
+  }
+
   @override
   Future<void> clearAll() async {
     cleared = true;
     alerts = [];
     lastEpisodeCheckAt = null;
     notifiedEpisodeIds = {};
+    notificationPermissionPrePromptShown = false;
   }
 
   @override
