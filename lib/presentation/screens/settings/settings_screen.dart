@@ -141,10 +141,17 @@ class SettingsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Center(
-            child: Image.asset(
-              _tmdbLogoAsset,
-              height: 40,
-              fit: BoxFit.contain,
+            child: InkWell(
+              onTap: () => _openTmdbHome(context),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Image.asset(
+                  _tmdbLogoAsset,
+                  height: 40,
+                  fit: BoxFit.contain,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -155,6 +162,29 @@ class SettingsScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _openTmdbHome(BuildContext context) async {
+    final l10n = context.l10n;
+    final uri = Uri.parse(AppConstants.tmdbHomeUrl);
+
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.settingsTmdbLinkError)),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.settingsTmdbLinkError)),
+        );
+      }
+    }
   }
 
   Widget _buildSupportMeSection(BuildContext context) {
@@ -239,8 +269,8 @@ class SettingsScreen extends StatelessWidget {
             child: Text(l10n.actionCancel),
           ),
           FilledButton(
-            onPressed: () {
-              AppServices().clearCacheData();
+            onPressed: () async {
+              await AppServices().clearCacheData();
               if (dialogContext.mounted) Navigator.pop(dialogContext);
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(

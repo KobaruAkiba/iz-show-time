@@ -51,6 +51,11 @@ abstract class UserDataStore {
 
   Future<void> saveThemeMode(String themeMode);
 
+  /// Last purge of non-catalogue TMDB caches (API Terms of Use).
+  Future<DateTime?> loadLastTmdbCachePurgeAt();
+
+  Future<void> saveLastTmdbCachePurgeAt(DateTime purgedAt);
+
   /// Forces durable write of pending box changes to disk.
   Future<void> flush();
 

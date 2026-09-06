@@ -125,6 +125,16 @@ class FakeUserDataStore implements UserDataStore {
     this.themeMode = themeMode;
   }
 
+  DateTime? lastTmdbCachePurgeAt;
+
+  @override
+  Future<DateTime?> loadLastTmdbCachePurgeAt() async => lastTmdbCachePurgeAt;
+
+  @override
+  Future<void> saveLastTmdbCachePurgeAt(DateTime purgedAt) async {
+    lastTmdbCachePurgeAt = purgedAt;
+  }
+
   @override
   Future<void> clearAll() async {
     cleared = true;
@@ -132,6 +142,7 @@ class FakeUserDataStore implements UserDataStore {
     lastEpisodeCheckAt = null;
     notifiedEpisodeIds = {};
     notificationPermissionPrePromptShown = false;
+    lastTmdbCachePurgeAt = null;
   }
 
   @override
@@ -167,6 +178,8 @@ class StubTmdbService extends TmdbService {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('AppServices persistence hooks', () {
     late AppServices appServices;
     late FakeUserDataStore store;
@@ -293,6 +306,7 @@ void main() {
       appServices.userDataStore = store;
       await appServices.clearAllData();
       store.cleared = false;
+      store.flushCount = 0;
 
       appServices.tmdbService = StubTmdbService(
         seasonCount: 1,
@@ -404,6 +418,7 @@ void main() {
       appServices.userDataStore = store;
       await appServices.clearAllData();
       store.cleared = false;
+      store.flushCount = 0;
     });
 
     test('skips upcoming episodes and still adds undated ones', () async {
@@ -524,6 +539,7 @@ void main() {
       appServices.userDataStore = store;
       await appServices.clearAllData();
       store.cleared = false;
+      store.flushCount = 0;
     });
 
     test('adds the show to catalogue when an episode is added', () async {
@@ -585,6 +601,7 @@ void main() {
       appServices.userDataStore = store;
       await appServices.clearAllData();
       store.cleared = false;
+      store.flushCount = 0;
     });
 
     test('is false for bookmark-only shows with no episodes', () async {
@@ -656,6 +673,77 @@ void main() {
         ),
         isTrue,
       );
+    });
+  });
+
+  group('AppServices TMDB cache compliance purge', () {
+    late AppServices appServices;
+    late FakeUserDataStore store;
+
+    setUp(() {
+      appServices = AppServices();
+      store = FakeUserDataStore();
+      appServices.userDataStore = store;
+      appServices.cacheManager.clearAll();
+    });
+
+    tearDown(() {
+      appServices.cacheManager.clearAll();
+    });
+
+    test('initialize stamps purge time when missing', () async {
+      expect(store.lastTmdbCachePurgeAt, isNull);
+
+      await appServices.initialize(userDataStore: store);
+
+      expect(store.lastTmdbCachePurgeAt, isNotNull);
+    });
+
+    test('initialize purges when last purge is older than max age', () async {
+      final stale = DateTime.now().toUtc().subtract(
+            const Duration(days: 200),
+          );
+      store.lastTmdbCachePurgeAt = stale;
+      appServices.cacheManager.put('tmdb:stale', {'ok': true}, ttlMinutes: 60);
+      expect(appServices.cacheManager.get<Map>('tmdb:stale'), isNotNull);
+
+      await appServices.initialize(userDataStore: store);
+
+      expect(appServices.cacheManager.get<Map>('tmdb:stale'), isNull);
+      expect(store.lastTmdbCachePurgeAt!.isAfter(stale), isTrue);
+      expect(appServices.catalogue, isEmpty);
+    });
+
+    test('initialize skips purge when last purge is recent', () async {
+      final recent = DateTime.now().toUtc().subtract(const Duration(days: 30));
+      store.lastTmdbCachePurgeAt = recent;
+      appServices.cacheManager.put('tmdb:fresh', {'ok': true}, ttlMinutes: 60);
+
+      await appServices.initialize(userDataStore: store);
+
+      expect(appServices.cacheManager.get<Map>('tmdb:fresh'), isNotNull);
+      expect(store.lastTmdbCachePurgeAt, recent);
+    });
+
+    test('clearCacheData keeps catalogue and updates purge stamp', () async {
+      await appServices.initialize(userDataStore: store);
+      await appServices.addToCatalogue(
+        Film(
+          id: 1,
+          title: 'Kept',
+          posterPath: '/p.jpg',
+          voteAverage: 8,
+        ),
+      );
+      appServices.cacheManager.put('tmdb:x', 1, ttlMinutes: 60);
+      final before = store.lastTmdbCachePurgeAt!;
+
+      await Future<void>.delayed(const Duration(milliseconds: 2));
+      await appServices.clearCacheData();
+
+      expect(appServices.cacheManager.get<dynamic>('tmdb:x'), isNull);
+      expect(appServices.isInCatalogue(1), isTrue);
+      expect(store.lastTmdbCachePurgeAt!.isAfter(before), isTrue);
     });
   });
 }

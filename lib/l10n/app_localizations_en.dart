@@ -481,7 +481,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsTmdbDisclaimer =>
-      'This product uses the TMDB API but is not endorsed or certified by TMDB.';
+      'This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.';
+
+  @override
+  String get settingsTmdbLinkError =>
+      'Could not open The Movie Database website. Please try again later.';
 
   @override
   String get notificationChannelName => 'New Episodes';

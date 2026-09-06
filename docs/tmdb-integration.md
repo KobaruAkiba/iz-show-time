@@ -78,9 +78,13 @@ ApiConstants.posterUrl(item.posterPath)
 
 Free tier: **40 requests/minute**. The app uses:
 
-1. In-memory cache (avoid repeat calls)
-2. `ApiCacheService` request counting
-3. Dio retry on HTTP 429
+1. In-memory TTL cache (avoid repeat calls; max TTL 30 days)
+2. Dio retry on HTTP 429
+
+## TMDB API Terms compliance
+
+- **Attribution**: Settings shows the official disclaimer and logo (links to [themoviedb.org](https://www.themoviedb.org/)); header shows “powered by TMDb”.
+- **Cached data**: API responses are in-memory only with TTLs well under 6 months. On every app start, if the last non-catalogue cache purge is missing or older than ~6 months (`StorageConstants.tmdbCacheMaxAge`), the app runs the same path as Settings → Clear Cache Data (memory API cache + Flutter image cache). Catalogue and watch history are never purged by this check.
 
 ## Error handling
 

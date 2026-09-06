@@ -278,7 +278,8 @@
   "settingsClearAllBody": "This will permanently delete your catalogue, watch history, and cached data.\n\nYour data cannot be recovered after this action.",
   "settingsClearAllConfirm": "Delete All Data",
   "settingsTmdbAttribution": "Data and images provided from The Movie Database",
-  "settingsTmdbDisclaimer": "This product uses the TMDB API but is not endorsed or certified by TMDB.",
+  "settingsTmdbDisclaimer": "This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.",
+  "settingsTmdbLinkError": "Could not open The Movie Database website. Please try again later.",
 
   "notificationChannelName": "New Episodes",
   "notificationChannelDescription": "Alerts when new TV episodes are detected",

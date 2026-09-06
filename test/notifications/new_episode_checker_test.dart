@@ -100,12 +100,23 @@ class FakeEpisodeCheckStore implements UserDataStore {
     this.themeMode = themeMode;
   }
 
+  DateTime? lastTmdbCachePurgeAt;
+
+  @override
+  Future<DateTime?> loadLastTmdbCachePurgeAt() async => lastTmdbCachePurgeAt;
+
+  @override
+  Future<void> saveLastTmdbCachePurgeAt(DateTime purgedAt) async {
+    lastTmdbCachePurgeAt = purgedAt;
+  }
+
   @override
   Future<void> clearAll() async {
     alerts = [];
     lastCheck = null;
     notifiedEpisodeIds = {};
     notificationPermissionPrePromptShown = false;
+    lastTmdbCachePurgeAt = null;
   }
 
   @override

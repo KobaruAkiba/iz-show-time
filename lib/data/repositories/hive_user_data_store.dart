@@ -312,6 +312,23 @@ class HiveUserDataStore implements UserDataStore {
   }
 
   @override
+  Future<DateTime?> loadLastTmdbCachePurgeAt() async {
+    await open();
+    final raw = metaBox.get(StorageConstants.lastTmdbCachePurgeKey);
+    if (raw is! String) return null;
+    return DateTime.tryParse(raw);
+  }
+
+  @override
+  Future<void> saveLastTmdbCachePurgeAt(DateTime purgedAt) async {
+    await open();
+    await metaBox.put(
+      StorageConstants.lastTmdbCachePurgeKey,
+      purgedAt.toUtc().toIso8601String(),
+    );
+  }
+
+  @override
   Future<void> flush() async {
     await open();
     await Future.wait([
@@ -333,6 +350,7 @@ class HiveUserDataStore implements UserDataStore {
     await metaBox.delete(
       StorageConstants.notificationPermissionPrePromptShownKey,
     );
+    await metaBox.delete(StorageConstants.lastTmdbCachePurgeKey);
     await metaBox.put(
       StorageConstants.schemaVersionKey,
       StorageConstants.storageSchemaVersion,

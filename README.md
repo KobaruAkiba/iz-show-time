@@ -33,7 +33,7 @@ See [docs/architecture.md](docs/architecture.md) and [docs/tmdb-integration.md](
 
 ## Sources & attribution
 
-This product uses the TMDB API but is not endorsed or certified by TMDB.
+This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.
 
 Film and TV metadata and images are provided by **[The Movie Database (TMDB)](https://www.themoviedb.org/)**. IzShowTime is an independent project and has no official affiliation with TMDB.
 
@@ -116,7 +116,7 @@ flutter test
 
 ## Known limitations
 
-- TMDB API cache is in-memory only (not persisted across restarts)
+- TMDB API cache is in-memory only (not persisted across restarts); non-catalogue caches are also purged at least every ~6 months for [API Terms](https://www.themoviedb.org/api-terms-of-use) compliance
 - On Flutter Web debug, catalogue persistence requires a fixed port (`--web-port=5555`, already set in `.vscode/launch.json`)
 - Production Flutter Web needs a backend proxy (TMDB does not allow direct browser CORS)
 

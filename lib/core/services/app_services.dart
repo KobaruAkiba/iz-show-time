@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../cache/cache_manager.dart';
 import '../background/background_task_runner.dart';
+import '../constants/storage_constants.dart';
 import '../notifications/new_episode_checker.dart';
 import '../theme/app_theme.dart';
 import '../../data/repositories/hive_user_data_store.dart';
@@ -457,7 +458,24 @@ class AppServices {
       themeModeListenable.value = ThemeMode.system;
     }
 
+    await _purgeTmdbCachesIfStale();
+
     tmdbService;
+  }
+
+  /// TMDB API Terms of Use: do not cache TMDB information longer than 6 months.
+  /// Clears non-catalogue caches only (in-memory API cache + Flutter image cache).
+  Future<void> _purgeTmdbCachesIfStale() async {
+    try {
+      final last = await userDataStore.loadLastTmdbCachePurgeAt();
+      final now = DateTime.now().toUtc();
+      if (last == null ||
+          now.difference(last.toUtc()) >= StorageConstants.tmdbCacheMaxAge) {
+        await clearCacheData();
+      }
+    } catch (error, stackTrace) {
+      debugPrint('Failed TMDB cache compliance purge: $error\n$stackTrace');
+    }
   }
 
   /// Updates the app theme preference and persists it.
@@ -715,13 +733,31 @@ class AppServices {
     }
   }
 
-  /// Clears in-memory API/call cache only. Catalogue and watch history are kept.
-  void clearCacheData() {
+  /// Clears in-memory API/call cache and Flutter image cache only.
+  /// Catalogue and watch history are kept. Records the purge time for TMDB ToU.
+  Future<void> clearCacheData() async {
     cacheManager.clearAll();
+    _clearFlutterImageCache();
+    try {
+      await userDataStore.saveLastTmdbCachePurgeAt(DateTime.now().toUtc());
+      await _maybeFlush();
+    } catch (error, stackTrace) {
+      debugPrint('Failed to persist TMDB cache purge time: $error\n$stackTrace');
+    }
+  }
+
+  void _clearFlutterImageCache() {
+    try {
+      PaintingBinding.instance.imageCache
+        ..clear()
+        ..clearLiveImages();
+    } catch (_) {
+      // Binding may be unavailable in headless unit tests.
+    }
   }
 
   Future<void> clearAllData() async {
-    cacheManager.clearAll();
+    await clearCacheData();
     _catalogue.clear();
     _catalogueById.clear();
     _watchHistory.clear();
@@ -731,5 +767,12 @@ class AppServices {
     _newEpisodeAlerts.clear();
     newEpisodeAlertsListenable.value = const [];
     await userDataStore.clearAll();
+    // clearAll removes the purge stamp; re-record so the next launch is not forced.
+    try {
+      await userDataStore.saveLastTmdbCachePurgeAt(DateTime.now().toUtc());
+      await _maybeFlush();
+    } catch (error, stackTrace) {
+      debugPrint('Failed to persist TMDB cache purge time: $error\n$stackTrace');
+    }
   }
 }

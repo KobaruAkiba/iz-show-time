@@ -24,4 +24,7 @@ class AppConstants {
 
   /// Public PayPal.Me donation link (not a secret — safe to ship in the app).
   static const String paypalDonateUrl = 'https://paypal.me/MirkoCorba';
+
+  /// Official TMDB site (attribution / logos & branding).
+  static const String tmdbHomeUrl = 'https://www.themoviedb.org';
 }

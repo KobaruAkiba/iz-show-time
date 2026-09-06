@@ -15,4 +15,10 @@ class StorageConstants {
   static const String notificationPermissionPrePromptShownKey =
       'notification_permission_pre_prompt_shown';
   static const String themeModeKey = 'theme_mode';
+
+  /// Last time non-catalogue TMDB caches were purged (API Terms ≤6 months).
+  static const String lastTmdbCachePurgeKey = 'last_tmdb_cache_purge_at';
+
+  /// Max age for cached TMDB information before a compliance purge.
+  static const Duration tmdbCacheMaxAge = Duration(days: 183);
 }

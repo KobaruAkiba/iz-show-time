@@ -907,8 +907,14 @@ abstract class AppLocalizations {
   /// No description provided for @settingsTmdbDisclaimer.
   ///
   /// In en, this message translates to:
-  /// **'This product uses the TMDB API but is not endorsed or certified by TMDB.'**
+  /// **'This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.'**
   String get settingsTmdbDisclaimer;
+
+  /// No description provided for @settingsTmdbLinkError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open The Movie Database website. Please try again later.'**
+  String get settingsTmdbLinkError;
 
   /// No description provided for @notificationChannelName.
   ///
