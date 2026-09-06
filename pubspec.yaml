@@ -21,6 +21,7 @@ dependencies:
   hive_flutter: ^1.1.0
   flutter_local_notifications: ^22.3.0
   workmanager: ^0.10.9
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

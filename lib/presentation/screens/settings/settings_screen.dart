@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../widgets/app_page_header.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/services/app_services.dart';
 import '../../../l10n/l10n.dart';
 
@@ -8,7 +11,9 @@ class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   static const _appVersion = '1.0.0';
+  static const _authorName = 'Mirko Corba';
   static const _tmdbLogoAsset = 'assets/images/TmdbLogo.png';
+  static const _paypalLogoAsset = 'assets/images/PaypalLogo.png';
 
   @override
   Widget build(BuildContext context) {
@@ -28,11 +33,19 @@ class SettingsScreen extends StatelessWidget {
                   const Divider(),
                   _buildSectionTitle(context, l10n.settingsAbout),
                   ListTile(
+                    leading: const Icon(Icons.person_outline),
+                    title: Text(l10n.settingsAuthor),
+                    subtitle: const Text(_authorName),
+                  ),
+                  ListTile(
                     leading: const Icon(Icons.info_outline),
                     title: Text(l10n.settingsVersion),
                     subtitle: const Text(_appVersion),
                   ),
                   _buildTmdbAttribution(context),
+                  const Divider(),
+                  _buildSectionTitle(context, l10n.settingsSupportMe),
+                  _buildSupportMeSection(context),
                   const Divider(),
                   _buildSectionTitle(context, l10n.settingsDataManagement),
                   ListTile(
@@ -142,6 +155,73 @@ class SettingsScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildSupportMeSection(BuildContext context) {
+    final l10n = context.l10n;
+    final bodyStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: Colors.grey[700],
+        );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: Text(
+            l10n.settingsSupportMeDescription,
+            style: bodyStyle,
+          ),
+        ),
+        ListTile(
+          leading: const Icon(Icons.volunteer_activism_outlined),
+          title: Text.rich(
+            TextSpan(
+              style: Theme.of(context).textTheme.bodyLarge,
+              children: [
+                TextSpan(text: l10n.settingsDonatePaypal),
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 2),
+                    child: Image.asset(
+                      _paypalLogoAsset,
+                      height: 18,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          trailing: const Icon(Icons.open_in_new),
+          onTap: () => _openPaypalDonate(context),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _openPaypalDonate(BuildContext context) async {
+    final l10n = context.l10n;
+    final uri = Uri.parse(AppConstants.paypalDonateUrl);
+
+    try {
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.settingsDonatePaypalError)),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.settingsDonatePaypalError)),
+        );
+      }
+    }
   }
 
   void _showClearCacheDialog(BuildContext context) {

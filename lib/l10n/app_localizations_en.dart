@@ -425,7 +425,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsAbout => 'About';
 
   @override
+  String get settingsAuthor => 'Author';
+
+  @override
   String get settingsVersion => 'Version';
+
+  @override
+  String get settingsSupportMe => 'Support me!';
+
+  @override
+  String get settingsSupportMeDescription =>
+      'Donations are completely voluntary and help cover the costs of keeping IzShowTime running — including hosting, tools, and its presence on the app stores. Thank you for considering a contribution.';
+
+  @override
+  String get settingsDonatePaypal => 'Donate with ';
+
+  @override
+  String get settingsDonatePaypalError =>
+      'Could not open PayPal. Please try again later.';
 
   @override
   String get settingsDataManagement => 'Data Management';

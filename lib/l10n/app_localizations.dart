@@ -808,11 +808,41 @@ abstract class AppLocalizations {
   /// **'About'**
   String get settingsAbout;
 
+  /// No description provided for @settingsAuthor.
+  ///
+  /// In en, this message translates to:
+  /// **'Author'**
+  String get settingsAuthor;
+
   /// No description provided for @settingsVersion.
   ///
   /// In en, this message translates to:
   /// **'Version'**
   String get settingsVersion;
+
+  /// No description provided for @settingsSupportMe.
+  ///
+  /// In en, this message translates to:
+  /// **'Support me!'**
+  String get settingsSupportMe;
+
+  /// No description provided for @settingsSupportMeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Donations are completely voluntary and help cover the costs of keeping IzShowTime running — including hosting, tools, and its presence on the app stores. Thank you for considering a contribution.'**
+  String get settingsSupportMeDescription;
+
+  /// No description provided for @settingsDonatePaypal.
+  ///
+  /// In en, this message translates to:
+  /// **'Donate with '**
+  String get settingsDonatePaypal;
+
+  /// No description provided for @settingsDonatePaypalError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open PayPal. Please try again later.'**
+  String get settingsDonatePaypalError;
 
   /// No description provided for @settingsDataManagement.
   ///
