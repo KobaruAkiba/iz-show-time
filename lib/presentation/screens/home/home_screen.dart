@@ -191,6 +191,7 @@ class _HomeScreenState extends State<HomeScreen> {
             l10n.homeTrendingNow,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
           ),
         ),
@@ -283,6 +284,7 @@ class _HomeScreenState extends State<HomeScreen> {
             l10n.homeNewEpisodes,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
+                  color: colorScheme.primary,
                 ),
           ),
           const SizedBox(height: 4),

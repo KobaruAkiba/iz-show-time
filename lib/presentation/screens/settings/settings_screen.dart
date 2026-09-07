@@ -76,13 +76,14 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Widget _buildSectionTitle(BuildContext context, String title) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Colors.grey[600],
+              color: colorScheme.primary,
             ),
       ),
     );

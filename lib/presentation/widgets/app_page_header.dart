@@ -32,7 +32,7 @@ class AppPageHeader extends StatelessWidget {
             Text(
               context.l10n.poweredByTmdb,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[600],
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
             ),
             const SizedBox(width: 6),

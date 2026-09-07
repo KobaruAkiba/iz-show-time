@@ -169,6 +169,7 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                   l10n.filtersAndSort,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                 ),
                 const SizedBox(height: 16),
@@ -176,6 +177,7 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                   l10n.filtersShowSection,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                 ),
                 const SizedBox(height: 8),
@@ -212,6 +214,7 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                     l10n.filtersStatusSection,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                   ),
                   const SizedBox(height: 8),
@@ -271,6 +274,7 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                   l10n.filtersSortBy,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                 ),
                 const SizedBox(height: 4),

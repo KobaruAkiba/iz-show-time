@@ -350,7 +350,13 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                             style: Theme.of(context)
                                 .textTheme
                                 .titleLarge
-                                ?.copyWith(fontWeight: FontWeight.bold),
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  // Content title — keep onSurface (section titles use primary).
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface,
+                                ),
                           ),
                           const SizedBox(height: 8),
                           Wrap(
