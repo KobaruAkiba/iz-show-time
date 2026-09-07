@@ -1,6 +1,5 @@
 import Flutter
 import UIKit
-import workmanager_apple
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -8,12 +7,10 @@ import workmanager_apple
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    WorkmanagerPlugin.registerLaunchHandlers()
-
-    WorkmanagerPlugin.setPluginRegistrantCallback { registry in
-      GeneratedPluginRegistrant.register(with: registry)
-    }
-
+    // Workmanager/BGTask registration temporarily removed to bisect iOS
+    // cold-start crashes on device (TestFlight). Re-enable with
+    // WorkmanagerPlugin.registerPeriodicTask + registerLaunchHandlers once
+    // startup is stable.
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 

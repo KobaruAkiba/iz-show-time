@@ -14,8 +14,9 @@ class NativeBackgroundScheduler {
   static final NativeBackgroundScheduler instance =
       NativeBackgroundScheduler._();
 
-  static bool get isSupported =>
-      !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+  /// iOS Workmanager/BGTask is temporarily disabled while bisecting device
+  /// cold-start crashes. Keep Android scheduling active.
+  static bool get isSupported => !kIsWeb && Platform.isAndroid;
 
   Future<void> initialize() async {
     if (!isSupported) return;

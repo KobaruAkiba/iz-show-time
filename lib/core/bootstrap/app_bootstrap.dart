@@ -12,7 +12,13 @@ class AppBootstrap {
 
   static Future<AppServices> initializeServices() async {
     WidgetsFlutterBinding.ensureInitialized();
-    await Hive.initFlutter();
+
+    try {
+      await Hive.initFlutter();
+    } catch (error, stackTrace) {
+      debugPrint('Hive.initFlutter failed: $error\n$stackTrace');
+      rethrow;
+    }
 
     final apiKey = resolveTmdbApiKey();
     AppApiKey.configure(apiKey);

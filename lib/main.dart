@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/theme/app_theme.dart';
@@ -13,7 +14,17 @@ import 'core/routing/app_router.dart';
 import 'l10n/l10n.dart';
 import 'presentation/navigation/main_navigator.dart';
 
-void main() async {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint('FlutterError: ${details.exceptionAsString()}');
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('PlatformDispatcher error: $error\n$stack');
+    return true;
+  };
+
   final appServices = await AppBootstrap.initializeServices();
   await appServices.userDataStore.saveAppInForeground(true);
 
