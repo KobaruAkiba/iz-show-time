@@ -244,7 +244,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String episodesInCatalogue(int count) {
-    return '$count episodes in catalogue';
+    return '$count episode(s) in catalogue';
   }
 
   @override

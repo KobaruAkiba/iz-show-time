@@ -547,7 +547,7 @@ abstract class AppLocalizations {
   /// No description provided for @episodesInCatalogue.
   ///
   /// In en, this message translates to:
-  /// **'{count} episodes in catalogue'**
+  /// **'{count} episode(s) in catalogue'**
   String episodesInCatalogue(int count);
 
   /// No description provided for @seasonProgressInCatalogue.

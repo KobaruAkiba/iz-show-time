@@ -27,14 +27,22 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
   MediaSortOption _sortOption = MediaSortOption.none;
   bool _inProgressOnly = false;
   bool _favoritesOnly = false;
+  bool _statsExpanded = false;
   final _appServices = AppServices();
 
+  /// Chips row: type + sheet filters (status / sort).
   bool get _hasActiveFilters => hasActiveMediaFilters(
         mediaFilter: _mediaFilter,
         sortOption: _sortOption,
         inProgressOnly: _inProgressOnly,
         favoritesOnly: _favoritesOnly,
       );
+
+  /// Tune button badge: only filters controlled by the sheet (not media type).
+  bool get _hasActiveSheetFilters =>
+      _sortOption != MediaSortOption.none ||
+      _inProgressOnly ||
+      _favoritesOnly;
 
   @override
   void initState() {
@@ -101,13 +109,29 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
       favoritesOnly: _favoritesOnly,
       showInProgressFilter: true,
       showFavoritesFilter: true,
+      showMediaTypeFilter: false,
     );
     if (result == null || !mounted) return;
     setState(() {
-      _mediaFilter = result.mediaFilter;
       _sortOption = result.sortOption;
       _inProgressOnly = result.inProgressOnly;
       _favoritesOnly = result.favoritesOnly;
+      // Sheet no longer owns media type; keep counters in sync with In Progress.
+      if (result.inProgressOnly && _mediaFilter == MediaFilter.filmsOnly) {
+        _mediaFilter = MediaFilter.tvOnly;
+      } else {
+        _mediaFilter = result.mediaFilter;
+      }
+    });
+  }
+
+  void _onMediaFilterSelected(MediaFilter filter) {
+    setState(() {
+      _mediaFilter = filter;
+      // Films + In Progress is incompatible; intentional Films tap clears it.
+      if (filter == MediaFilter.filmsOnly && _inProgressOnly) {
+        _inProgressOnly = false;
+      }
     });
   }
 
@@ -160,6 +184,11 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
               filmCount: films.length,
               totalCount: catalogue.length,
               watchTimeMinutes: watchTime,
+              expanded: _statsExpanded,
+              onToggleExpanded: () =>
+                  setState(() => _statsExpanded = !_statsExpanded),
+              selectedFilter: _mediaFilter,
+              onFilterSelected: _onMediaFilterSelected,
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -183,7 +212,7 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
                   ),
                   const SizedBox(width: 8),
                   MediaFiltersButton(
-                    isActive: _hasActiveFilters,
+                    isActive: _hasActiveSheetFilters,
                     onPressed: _showFiltersSheet,
                     compact: true,
                   ),

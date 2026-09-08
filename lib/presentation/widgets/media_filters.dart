@@ -131,6 +131,7 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
   bool favoritesOnly = false,
   bool showInProgressFilter = false,
   bool showFavoritesFilter = false,
+  bool showMediaTypeFilter = true,
 }) {
   var draftMediaFilter = mediaFilter;
   var draftSortOption = sortOption;
@@ -139,7 +140,7 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
   final showStatusSection = showInProgressFilter || showFavoritesFilter;
 
   void applyInProgressConstraints() {
-    if (!draftInProgressOnly) return;
+    if (!showMediaTypeFilter || !draftInProgressOnly) return;
     // In Progress is TV-only: films-only is incompatible.
     if (draftMediaFilter == MediaFilter.filmsOnly) {
       draftMediaFilter = MediaFilter.tvOnly;
@@ -172,42 +173,44 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                         color: Theme.of(context).colorScheme.primary,
                       ),
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  l10n.filtersShowSection,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.primary,
+                if (showMediaTypeFilter) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    l10n.filtersShowSection,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  SegmentedButton<MediaFilter>(
+                    segments: [
+                      ButtonSegment(
+                        value: MediaFilter.all,
+                        label: Text(l10n.filterAll),
+                        icon: const Icon(Icons.grid_view, size: 18),
                       ),
-                ),
-                const SizedBox(height: 8),
-                SegmentedButton<MediaFilter>(
-                  segments: [
-                    ButtonSegment(
-                      value: MediaFilter.all,
-                      label: Text(l10n.filterAll),
-                      icon: const Icon(Icons.grid_view, size: 18),
-                    ),
-                    ButtonSegment(
-                      value: MediaFilter.filmsOnly,
-                      label: Text(l10n.filterFilms),
-                      icon: const Icon(Icons.movie_filter, size: 18),
-                      enabled: !draftInProgressOnly,
-                    ),
-                    ButtonSegment(
-                      value: MediaFilter.tvOnly,
-                      label: Text(l10n.filterTv),
-                      icon: const Icon(Icons.tv_outlined, size: 18),
-                    ),
-                  ],
-                  selected: {draftMediaFilter},
-                  onSelectionChanged: (selection) {
-                    setSheetState(() {
-                      draftMediaFilter = selection.first;
-                      applyInProgressConstraints();
-                    });
-                  },
-                ),
+                      ButtonSegment(
+                        value: MediaFilter.filmsOnly,
+                        label: Text(l10n.filterFilms),
+                        icon: const Icon(Icons.movie_filter, size: 18),
+                        enabled: !draftInProgressOnly,
+                      ),
+                      ButtonSegment(
+                        value: MediaFilter.tvOnly,
+                        label: Text(l10n.filterTv),
+                        icon: const Icon(Icons.tv_outlined, size: 18),
+                      ),
+                    ],
+                    selected: {draftMediaFilter},
+                    onSelectionChanged: (selection) {
+                      setSheetState(() {
+                        draftMediaFilter = selection.first;
+                        applyInProgressConstraints();
+                      });
+                    },
+                  ),
+                ],
                 if (showStatusSection) ...[
                   const SizedBox(height: 16),
                   Text(
@@ -301,7 +304,9 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                     TextButton(
                       onPressed: () {
                         setSheetState(() {
-                          draftMediaFilter = MediaFilter.all;
+                          if (showMediaTypeFilter) {
+                            draftMediaFilter = MediaFilter.all;
+                          }
                           draftSortOption = MediaSortOption.none;
                           draftInProgressOnly = false;
                           draftFavoritesOnly = false;
@@ -316,7 +321,9 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                         Navigator.pop(
                           context,
                           (
-                            mediaFilter: draftMediaFilter,
+                            mediaFilter: showMediaTypeFilter
+                                ? draftMediaFilter
+                                : mediaFilter,
                             sortOption: draftSortOption,
                             inProgressOnly: showInProgressFilter
                                 ? draftInProgressOnly
