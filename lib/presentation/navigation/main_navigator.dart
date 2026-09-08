@@ -24,7 +24,7 @@ class _MainNavigatorState extends State<MainNavigator> {
   Widget _screenFor(MainTab tab) {
     switch (tab) {
       case MainTab.home:
-        return const HomeScreen();
+        return HomeScreen(isActive: _currentTab == MainTab.home);
       case MainTab.search:
         return SearchScreen(
           initialQuery: '',

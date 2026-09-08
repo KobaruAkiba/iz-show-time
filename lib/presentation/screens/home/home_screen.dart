@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../widgets/auto_scrolling_page_carousel.dart';
 import '../../widgets/media_card.dart';
 import '../../widgets/media_detail_sheet.dart';
 import '../../widgets/app_page_header.dart';
@@ -13,7 +14,9 @@ import '../../../l10n/l10n.dart';
 
 /// Main home screen showing trending content carousel
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final bool isActive;
+
+  const HomeScreen({super.key, this.isActive = true});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -25,8 +28,8 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   String? _errorMessage;
   final List<CatalogueItem> _trendingItems = [];
-  int _currentPageIndex = 0;
-  PageController? _pageController;
+  bool _detailSheetOpen = false;
+  bool _parentScrolling = false;
   int _visibleNewEpisodes = AppConstants.listPageSize;
 
   final _appServices = AppServices();
@@ -83,17 +86,20 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _appServices.newEpisodeAlertsListenable.removeListener(_onNewEpisodesChanged);
-    _pageController?.dispose();
     super.dispose();
   }
 
-  void _openDetails(CatalogueItem item) {
-    showMediaDetailSheet(context, item);
+  Future<void> _openDetails(CatalogueItem item) async {
+    setState(() => _detailSheetOpen = true);
+    try {
+      await showMediaDetailSheet(context, item);
+    } finally {
+      if (mounted) setState(() => _detailSheetOpen = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    _pageController ??= PageController(viewportFraction: 0.82);
     final l10n = context.l10n;
 
     return Scaffold(
@@ -135,6 +141,17 @@ class _HomeScreenState extends State<HomeScreen> {
               Expanded(
                 child: NotificationListener<ScrollNotification>(
                   onNotification: (notification) {
+                    if (notification.metrics.axis == Axis.vertical) {
+                      if (notification is ScrollStartNotification &&
+                          notification.dragDetails != null &&
+                          !_parentScrolling) {
+                        setState(() => _parentScrolling = true);
+                      } else if (notification is ScrollEndNotification &&
+                          _parentScrolling) {
+                        setState(() => _parentScrolling = false);
+                      }
+                    }
+
                     final alerts = _appServices.newEpisodeAlerts;
                     return handleLazyParentScroll(
                       notification: notification,
@@ -208,60 +225,19 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        SizedBox(
+        AutoScrollingPageCarousel(
           height: _carouselHeight,
-          child: PageView.builder(
-            controller: _pageController,
-            itemCount: _trendingItems.length,
-            onPageChanged: (index) => setState(() => _currentPageIndex = index),
-            itemBuilder: (context, index) {
-              final item = _trendingItems[index];
-              return AnimatedBuilder(
-                animation: _pageController!,
-                builder: (context, child) {
-                  double scale = 1.0;
-                  if (_pageController!.position.haveDimensions) {
-                    final page = _pageController!.page ?? index.toDouble();
-                    scale = (1 - (page - index).abs() * 0.12).clamp(0.88, 1.0);
-                  }
-                  return Transform.scale(
-                    scale: scale,
-                    child: child,
-                  );
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: MediaPosterCard(
-                    item: item,
-                    isActive: index == _currentPageIndex,
-                    onTap: () => _openDetails(item),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(_trendingItems.length, (index) {
-            final isActive = index == _currentPageIndex;
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              margin: const EdgeInsets.symmetric(horizontal: 3),
-              width: isActive ? 24 : 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: isActive
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(4),
-              ),
+          itemCount: _trendingItems.length,
+          isScreenActive: widget.isActive,
+          isPaused: _detailSheetOpen || _parentScrolling,
+          itemBuilder: (context, index, isActive) {
+            final item = _trendingItems[index];
+            return MediaPosterCard(
+              item: item,
+              isActive: isActive,
+              onTap: () => _openDetails(item),
             );
-          }),
+          },
         ),
         const SizedBox(height: 16),
       ],
