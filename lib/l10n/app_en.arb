@@ -43,7 +43,7 @@
   "filtersStatusSection": "Status",
   "filtersFavorites": "Favorites",
   "filtersInProgress": "In Progress",
-  "filtersInProgressHint": "Shows with the next episode already aired and not yet registered.",
+  "filtersInProgressHint": "Shows still airing or with an upcoming episode scheduled.",
   "filtersSortBy": "Sort by",
   "filtersReset": "Reset",
   "filtersApply": "Apply",
@@ -265,7 +265,7 @@
   "catalogueEmpty": "Your catalogue is empty",
   "catalogueNoFilterMatches": "No results match your filters",
   "catalogueNoFavorites": "No favorites yet.\nTap the heart on a catalogue item to mark it as favorite.",
-  "catalogueNoInProgress": "No shows currently in progress.\nRegister an episode, then when the next one airs it will show up here.",
+  "catalogueNoInProgress": "No shows currently in progress.\nSeries that are still airing or have an upcoming episode will show up here.",
 
   "settingsAppearance": "Appearance",
   "settingsThemeSystem": "System",

@@ -73,6 +73,12 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
         _isLoading = false;
       });
 
+      if (fetched != null &&
+          widget.item is TvShow &&
+          _appServices.isInCatalogue(widget.item.id)) {
+        await _appServices.applyTvShowAiringDetails(widget.item.id, fetched);
+      }
+
       if (widget.item is TvShow && (_details?.numberOfSeasons ?? 0) > 0) {
         await _loadSeasons();
       }

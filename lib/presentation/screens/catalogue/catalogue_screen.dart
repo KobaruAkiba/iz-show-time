@@ -39,9 +39,8 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
   @override
   void initState() {
     super.initState();
-    _appServices.newEpisodeAlertsListenable.addListener(_onAlertsChanged);
     if (widget.isActive) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
+      WidgetsBinding.instance.addPostFrameCallback((_) => _onBecameActive());
     }
   }
 
@@ -49,20 +48,14 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
   void didUpdateWidget(covariant CatalogueScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isActive && !oldWidget.isActive) {
-      _refresh();
+      _onBecameActive();
     }
   }
 
-  @override
-  void dispose() {
-    _appServices.newEpisodeAlertsListenable.removeListener(_onAlertsChanged);
-    super.dispose();
-  }
-
-  void _onAlertsChanged() {
-    if (_inProgressOnly && mounted) {
-      setState(() {});
-    }
+  Future<void> _onBecameActive() async {
+    _refresh();
+    await _appServices.syncTvShowAiringStates();
+    if (mounted) _refresh();
   }
 
   List<CatalogueItem> _filterItems(List<CatalogueItem> items) {
@@ -73,11 +66,8 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
     }
 
     if (_inProgressOnly) {
-      final inProgressIds = inProgressShowIds(
-        alerts: _appServices.newEpisodeAlerts,
-      );
       filtered = filtered.where(
-        (item) => item.isTvShow && inProgressIds.contains(item.id),
+        (item) => item is TvShow && isShowInProgress(item),
       );
     }
 
@@ -275,7 +265,10 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
         _inProgressOnly,
         _favoritesOnly,
         items.length,
-        _appServices.newEpisodeAlerts.length,
+        items
+            .whereType<TvShow>()
+            .map((show) => '${show.id}:${show.status}:${show.nextEpisodeAirDate}')
+            .join('|'),
       ),
       totalItemCount: items.length,
       onRefresh: () async => _refresh(),

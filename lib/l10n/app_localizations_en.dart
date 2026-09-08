@@ -108,7 +108,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get filtersInProgressHint =>
-      'Shows with the next episode already aired and not yet registered.';
+      'Shows still airing or with an upcoming episode scheduled.';
 
   @override
   String get filtersSortBy => 'Sort by';
@@ -438,7 +438,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get catalogueNoInProgress =>
-      'No shows currently in progress.\nRegister an episode, then when the next one airs it will show up here.';
+      'No shows currently in progress.\nSeries that are still airing or have an upcoming episode will show up here.';
 
   @override
   String get settingsAppearance => 'Appearance';

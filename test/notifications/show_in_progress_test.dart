@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iz_show_time_tracker/core/notifications/show_in_progress.dart';
+import 'package:iz_show_time_tracker/data/models/catalogue_item.dart';
 import 'package:iz_show_time_tracker/data/models/episode_model.dart';
-import 'package:iz_show_time_tracker/data/models/new_episode_alert.dart';
 import 'package:iz_show_time_tracker/data/models/watch_record.dart';
 
 void main() {
@@ -42,32 +42,55 @@ void main() {
     });
   });
 
-  group('isShowInProgress / inProgressShowIds', () {
-    final alerts = [
-      NewEpisodeAlert(
-        showId: 10,
-        showTitle: 'A',
-        episodeId: 1,
-        seasonNumber: 1,
-        episodeNumber: 2,
-        episodeName: 'E2',
-        detectedAt: DateTime(2026, 1, 1),
-      ),
-      NewEpisodeAlert(
-        showId: 20,
-        showTitle: 'B',
-        episodeId: 2,
-        seasonNumber: 2,
-        episodeNumber: 1,
-        episodeName: 'E1',
-        detectedAt: DateTime(2026, 1, 1),
-      ),
-    ];
+  group('isSeriesInProgress / isShowInProgress', () {
+    test('true for ongoing TMDB statuses', () {
+      expect(
+        isSeriesInProgress(status: 'Returning Series'),
+        isTrue,
+      );
+      expect(isSeriesInProgress(status: 'Planned'), isTrue);
+      expect(isSeriesInProgress(status: 'In Production'), isTrue);
+      expect(isSeriesInProgress(status: 'Pilot'), isTrue);
+    });
 
-    test('matches alert show ids', () {
-      expect(isShowInProgress(10, alerts: alerts), isTrue);
-      expect(isShowInProgress(99, alerts: alerts), isFalse);
-      expect(inProgressShowIds(alerts: alerts), {10, 20});
+    test('false for concluded statuses without a next episode', () {
+      expect(isSeriesInProgress(status: 'Ended'), isFalse);
+      expect(isSeriesInProgress(status: 'Canceled'), isFalse);
+      expect(isSeriesInProgress(status: 'Cancelled'), isFalse);
+      expect(isSeriesInProgress(), isFalse);
+    });
+
+    test('true when a next episode is scheduled even if ended', () {
+      expect(
+        isSeriesInProgress(
+          status: 'Ended',
+          nextEpisodeAirDate: '2026-10-01',
+        ),
+        isTrue,
+      );
+    });
+
+    test('reads fields from TvShow', () {
+      const ongoing = TvShow(
+        id: 1,
+        title: 'Ongoing',
+        status: 'Returning Series',
+      );
+      const ended = TvShow(
+        id: 2,
+        title: 'Ended',
+        status: 'Ended',
+      );
+      const upcoming = TvShow(
+        id: 3,
+        title: 'Upcoming',
+        status: 'Ended',
+        nextEpisodeAirDate: '2026-12-01',
+      );
+
+      expect(isShowInProgress(ongoing), isTrue);
+      expect(isShowInProgress(ended), isFalse);
+      expect(isShowInProgress(upcoming), isTrue);
     });
   });
 }

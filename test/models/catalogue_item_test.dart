@@ -32,10 +32,14 @@ void main() {
         'overview': 'Nine noble families...',
         'poster_path': '/got.jpg',
         'vote_average': 8.5,
+        'status': 'Ended',
+        'next_episode_air_date': '2026-11-01',
       });
 
       expect(show.id, 1399);
       expect(show.title, 'Game of Thrones');
+      expect(show.status, 'Ended');
+      expect(show.nextEpisodeAirDate, '2026-11-01');
     });
   });
 
@@ -219,15 +223,24 @@ void main() {
 
   group('followed tag helpers', () {
     test('withFollowed adds and removes reserved tag', () {
-      const show = TvShow(id: 1, title: 'Test', tags: ['drama']);
+      const show = TvShow(
+        id: 1,
+        title: 'Test',
+        status: 'Returning Series',
+        nextEpisodeAirDate: '2026-10-01',
+        tags: ['drama'],
+      );
 
-      final followed = show.withFollowed(true);
+      final followed = show.withFollowed(true) as TvShow;
       expect(followed.isFollowed, isTrue);
       expect(followed.tags, ['drama', kFollowedTag]);
+      expect(followed.status, 'Returning Series');
+      expect(followed.nextEpisodeAirDate, '2026-10-01');
 
-      final cleared = followed.withFollowed(false);
+      final cleared = followed.withFollowed(false) as TvShow;
       expect(cleared.isFollowed, isFalse);
       expect(cleared.tags, ['drama']);
+      expect(cleared.status, 'Returning Series');
     });
 
     test('withFollowed is idempotent', () {
@@ -236,6 +249,28 @@ void main() {
       final again = show.withFollowed(true);
       expect(identical(again, show), isTrue);
       expect(again.tags, [kFollowedTag]);
+    });
+  });
+
+  group('TV airing metadata persistence', () {
+    test('storage round-trip keeps status and next episode date', () {
+      const show = TvShow(
+        id: 42,
+        title: 'Ongoing Show',
+        posterPath: '/p.jpg',
+        voteAverage: 8.1,
+        status: 'Returning Series',
+        nextEpisodeAirDate: '2026-09-15',
+        tags: [kFollowedTag],
+      );
+
+      final stored = catalogueItemToStorageJson(show);
+      final restored = catalogueItemFromStorageJson(stored) as TvShow;
+
+      expect(restored.status, 'Returning Series');
+      expect(restored.nextEpisodeAirDate, '2026-09-15');
+      expect(restored.isFollowed, isTrue);
+      expect(restored.overview, isNull);
     });
   });
 }
