@@ -527,6 +527,106 @@ void main() {
       expect(appServices.isInCatalogue(show.id), isFalse);
       expect(store.savedCatalogueItems, isEmpty);
     });
+
+    test(
+      'adding a full season surfaces the next season premiere in alerts',
+      () async {
+        const show = TvShow(id: 10, title: 'Multi Season Show');
+        final seasonOne = [
+          EpisodeModel.fromJson({
+            'id': 501,
+            'season_number': 1,
+            'episode_number': 1,
+            'name': 'Pilot',
+            'air_date': '2020-01-01',
+            'runtime': 42,
+          }),
+          EpisodeModel.fromJson({
+            'id': 502,
+            'season_number': 1,
+            'episode_number': 2,
+            'name': 'Finale',
+            'air_date': '2020-01-08',
+            'runtime': 42,
+          }),
+        ];
+
+        appServices.tmdbService = StubTmdbService(
+          seasonCount: 2,
+          episodesBySeason: {
+            1: seasonOne,
+            2: [
+              EpisodeModel.fromJson({
+                'id': 601,
+                'season_number': 2,
+                'episode_number': 1,
+                'name': 'Premiere',
+                'air_date': '2020-02-01',
+                'runtime': 42,
+              }),
+            ],
+          },
+        );
+
+        final addedCount = await appServices.addSeasonToCatalogue(
+          show: show,
+          episodes: seasonOne,
+        );
+
+        expect(addedCount, 2);
+        expect(appServices.isFollowed(show.id), isTrue);
+        expect(appServices.newEpisodeAlerts, hasLength(1));
+        expect(appServices.newEpisodeAlerts.first.seasonNumber, 2);
+        expect(appServices.newEpisodeAlerts.first.episodeNumber, 1);
+        expect(appServices.newEpisodeAlerts.first.episodeId, 601);
+      },
+    );
+
+    test(
+      'does not re-follow when adding a season to an unfollowed show',
+      () async {
+        const show = TvShow(id: 11, title: 'Unfollowed Multi');
+        await appServices.addToCatalogue(show);
+        await appServices.toggleFollowed(show.id);
+        expect(appServices.isFollowed(show.id), isFalse);
+
+        final seasonOne = [
+          EpisodeModel.fromJson({
+            'id': 701,
+            'season_number': 1,
+            'episode_number': 1,
+            'name': 'Pilot',
+            'air_date': '2020-01-01',
+            'runtime': 42,
+          }),
+        ];
+
+        appServices.tmdbService = StubTmdbService(
+          seasonCount: 2,
+          episodesBySeason: {
+            1: seasonOne,
+            2: [
+              EpisodeModel.fromJson({
+                'id': 801,
+                'season_number': 2,
+                'episode_number': 1,
+                'name': 'Premiere',
+                'air_date': '2020-02-01',
+                'runtime': 42,
+              }),
+            ],
+          },
+        );
+
+        await appServices.addSeasonToCatalogue(
+          show: show,
+          episodes: seasonOne,
+        );
+
+        expect(appServices.isFollowed(show.id), isFalse);
+        expect(appServices.newEpisodeAlerts, isEmpty);
+      },
+    );
   });
 
   group('AppServices addEpisodeToCatalogue', () {

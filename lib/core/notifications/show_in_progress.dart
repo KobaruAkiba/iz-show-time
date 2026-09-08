@@ -40,10 +40,11 @@ bool isShowInProgress(TvShow show) {
   );
 }
 
-/// Whether a series should be included in new-episode monitoring.
+/// Whether a series is still active for "in progress" catalogue filters.
 ///
-/// Unknown/missing TMDB status fails open so unsynced catalogue items are
-/// still checked; known concluded series without a next episode are skipped.
+/// Unknown/missing TMDB status fails open; known concluded series without a
+/// next episode are treated as not in progress. Continue Watching / next-
+/// episode alerts do **not** use this — they rely on available aired episodes.
 bool shouldMonitorSeriesForNewEpisodes({
   String? status,
   String? nextEpisodeAirDate,

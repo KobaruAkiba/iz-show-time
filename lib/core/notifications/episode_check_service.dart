@@ -3,7 +3,6 @@ import '../services/app_services.dart';
 import 'episode_notification_policy.dart';
 import 'new_episode_checker.dart';
 import 'notification_service.dart';
-import 'show_in_progress.dart';
 
 /// Runs catalogue episode checks and optionally raises system notifications.
 class EpisodeCheckService {
@@ -18,10 +17,10 @@ class EpisodeCheckService {
         userDataStore: appServices.userDataStore,
       );
 
+      // All followed shows: Continue Watching includes catch-up on Ended
+      // series when a later season's episodes have already aired.
       return checker.checkShows(
-        shows: appServices.followedTvShows
-            .where(shouldMonitorShowForNewEpisodes)
-            .toList(growable: false),
+        shows: appServices.followedTvShows,
         watchHistory: appServices.watchHistory,
         forceRefresh: true,
       );

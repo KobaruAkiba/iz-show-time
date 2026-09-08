@@ -330,6 +330,131 @@ void main() {
       expect(result.allAlerts.first.episodeNumber, 1);
     });
 
+    test(
+      'skips undated in-season stubs and surfaces next season premiere',
+      () async {
+        const show = TvShow(id: 42, title: 'Sample Show');
+        final watchHistory = [
+          WatchRecord(
+            mediaId: 42,
+            isFilm: false,
+            episodeId: 300,
+            seasonNumber: 1,
+            episodeNumber: 10,
+            durationMinutes: 45,
+            watchedAt: DateTime(2026, 1, 1),
+          ),
+        ];
+
+        final tmdb = StubTmdbService(
+          seasonCount: 2,
+          episodesBySeason: {
+            1: [
+              EpisodeModel.fromJson({
+                'id': 300,
+                'season_number': 1,
+                'episode_number': 10,
+                'name': 'Finale',
+                'air_date': '2026-01-01',
+              }),
+              EpisodeModel.fromJson({
+                'id': 399,
+                'season_number': 1,
+                'episode_number': 11,
+                'name': '',
+                // Undated TMDB stub — must not block S2E1.
+              }),
+            ],
+            2: [
+              EpisodeModel.fromJson({
+                'id': 301,
+                'season_number': 2,
+                'episode_number': 1,
+                'name': 'Season Premiere',
+                'air_date': '2026-02-01',
+              }),
+            ],
+          },
+        );
+
+        final checker = NewEpisodeChecker(
+          tmdbService: tmdb,
+          userDataStore: store,
+        );
+
+        final result = await checker.checkShows(
+          shows: [show],
+          watchHistory: watchHistory,
+        );
+
+        expect(result.allAlerts, hasLength(1));
+        expect(result.allAlerts.first.episodeId, 301);
+        expect(result.allAlerts.first.seasonNumber, 2);
+        expect(result.allAlerts.first.episodeNumber, 1);
+      },
+    );
+
+    test(
+      'keeps waiting when the next in-season episode is upcoming',
+      () async {
+        const show = TvShow(id: 42, title: 'Sample Show');
+        final watchHistory = [
+          WatchRecord(
+            mediaId: 42,
+            isFilm: false,
+            episodeId: 300,
+            seasonNumber: 1,
+            episodeNumber: 10,
+            durationMinutes: 45,
+            watchedAt: DateTime(2026, 1, 1),
+          ),
+        ];
+
+        final tmdb = StubTmdbService(
+          seasonCount: 2,
+          episodesBySeason: {
+            1: [
+              EpisodeModel.fromJson({
+                'id': 300,
+                'season_number': 1,
+                'episode_number': 10,
+                'name': 'Finale',
+                'air_date': '2026-01-01',
+              }),
+              EpisodeModel.fromJson({
+                'id': 311,
+                'season_number': 1,
+                'episode_number': 11,
+                'name': 'Next Week',
+                'air_date': '2099-06-01',
+              }),
+            ],
+            2: [
+              EpisodeModel.fromJson({
+                'id': 301,
+                'season_number': 2,
+                'episode_number': 1,
+                'name': 'Season Premiere',
+                'air_date': '2020-02-01',
+              }),
+            ],
+          },
+        );
+
+        final checker = NewEpisodeChecker(
+          tmdbService: tmdb,
+          userDataStore: store,
+        );
+
+        final result = await checker.checkShows(
+          shows: [show],
+          watchHistory: watchHistory,
+        );
+
+        expect(result.allAlerts, isEmpty);
+      },
+    );
+
     test('skips shows without a registered episode in catalogue', () async {
       const show = TvShow(id: 42, title: 'Sample Show');
       final tmdb = StubTmdbService(
@@ -361,8 +486,7 @@ void main() {
       expect(result.allAlerts, isEmpty);
     });
 
-    test('skips ended shows from fresh TMDB details without season fetch',
-        () async {
+    test('surfaces ended shows when next aired episode is available', () async {
       const show = TvShow(
         id: 42,
         title: 'Finished Show',
@@ -413,9 +537,119 @@ void main() {
         watchHistory: watchHistory,
       );
 
+      expect(result.allAlerts, hasLength(1));
+      expect(result.allAlerts.first.seasonNumber, 1);
+      expect(result.allAlerts.first.episodeNumber, 2);
+      expect(tmdb.seasonFetchCount, greaterThan(0));
+    });
+
+    test(
+        'surfaces ended shows across seasons when next season premiere aired',
+        () async {
+      const show = TvShow(
+        id: 42,
+        title: 'Finished Show',
+        status: 'Ended',
+      );
+      final watchHistory = [
+        WatchRecord(
+          mediaId: 42,
+          isFilm: false,
+          episodeId: 110,
+          seasonNumber: 1,
+          episodeNumber: 10,
+          durationMinutes: 45,
+          watchedAt: DateTime(2026, 1, 1),
+        ),
+      ];
+
+      final tmdb = StubTmdbService(
+        seasonCount: 2,
+        detailsStatus: 'Ended',
+        episodesBySeason: {
+          1: [
+            EpisodeModel.fromJson({
+              'id': 110,
+              'season_number': 1,
+              'episode_number': 10,
+              'name': 'Finale',
+              'air_date': '2020-01-01',
+            }),
+          ],
+          2: [
+            EpisodeModel.fromJson({
+              'id': 201,
+              'season_number': 2,
+              'episode_number': 1,
+              'name': 'Season Premiere',
+              'air_date': '2020-02-01',
+            }),
+          ],
+        },
+      );
+
+      final checker = NewEpisodeChecker(
+        tmdbService: tmdb,
+        userDataStore: store,
+      );
+
+      final result = await checker.checkShows(
+        shows: [show],
+        watchHistory: watchHistory,
+      );
+
+      expect(result.allAlerts, hasLength(1));
+      expect(result.allAlerts.first.seasonNumber, 2);
+      expect(result.allAlerts.first.episodeNumber, 1);
+    });
+
+    test('skips ended shows when last episode of last season is registered',
+        () async {
+      const show = TvShow(
+        id: 42,
+        title: 'Finished Show',
+        status: 'Ended',
+      );
+      final watchHistory = [
+        WatchRecord(
+          mediaId: 42,
+          isFilm: false,
+          episodeId: 210,
+          seasonNumber: 2,
+          episodeNumber: 1,
+          durationMinutes: 45,
+          watchedAt: DateTime(2026, 1, 1),
+        ),
+      ];
+
+      final tmdb = StubTmdbService(
+        seasonCount: 2,
+        detailsStatus: 'Ended',
+        episodesBySeason: {
+          2: [
+            EpisodeModel.fromJson({
+              'id': 210,
+              'season_number': 2,
+              'episode_number': 1,
+              'name': 'Finale',
+              'air_date': '2020-02-01',
+            }),
+          ],
+        },
+      );
+
+      final checker = NewEpisodeChecker(
+        tmdbService: tmdb,
+        userDataStore: store,
+      );
+
+      final result = await checker.checkShows(
+        shows: [show],
+        watchHistory: watchHistory,
+      );
+
       expect(result.newlyDetected, isEmpty);
       expect(result.allAlerts, isEmpty);
-      expect(tmdb.seasonFetchCount, 0);
     });
   });
 }

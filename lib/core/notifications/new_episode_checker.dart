@@ -108,15 +108,12 @@ class NewEpisodeChecker {
     final lastRegistered = lastRegisteredEpisodeForShow(show.id, watchHistory);
     if (lastRegistered == null) return null;
 
+    // Continue Watching is catch-up (next aired S/E), not "still airing" —
+    // Ended/Canceled shows must still surface when a later season is available.
     final details = await _tmdbService.getMediaDetails(show);
-    if (details != null &&
-        !shouldMonitorSeriesForNewEpisodes(
-          status: details.status,
-          nextEpisodeAirDate: details.nextEpisodeAirDate,
-        )) {
-      return null;
-    }
-    final seasonCount = details?.numberOfSeasons ?? 0;
+    // If details are missing, still probe at least the next season after progress.
+    final seasonCount = details?.numberOfSeasons ??
+        (lastRegistered.seasonNumber + 1);
     if (seasonCount <= 0) return null;
 
     final nextEpisode = await _findImmediateNextEpisode(
@@ -156,10 +153,12 @@ class NewEpisodeChecker {
         seasonNumber: lastRegistered.seasonNumber,
         forceRefresh: forceRefresh,
       );
-      final nextInSeason = _episodeWithNumber(
+      final nextInSeason = _nextDatedEpisodeAfter(
         seasonEpisodes,
-        lastRegistered.episodeNumber + 1,
+        afterEpisodeNumber: lastRegistered.episodeNumber,
       );
+      // Dated next ep (aired or upcoming): stay in-season.
+      // Undated TMDB stubs are skipped so we can cross to the next season.
       if (nextInSeason != null) return nextInSeason;
     }
 
@@ -171,7 +170,29 @@ class NewEpisodeChecker {
       seasonNumber: nextSeason,
       forceRefresh: forceRefresh,
     );
-    return _episodeWithNumber(nextSeasonEpisodes, 1);
+    // Prefer the first dated episode so undated E1 stubs don't block S2E2, etc.
+    return _nextDatedEpisodeAfter(
+          nextSeasonEpisodes,
+          afterEpisodeNumber: 0,
+        ) ??
+        _episodeWithNumber(nextSeasonEpisodes, 1);
+  }
+
+  /// First episode after [afterEpisodeNumber] that has an air date (aired or
+  /// upcoming). Undated stubs are ignored so season-crossing can proceed.
+  EpisodeModel? _nextDatedEpisodeAfter(
+    List<EpisodeModel> episodes, {
+    required int afterEpisodeNumber,
+  }) {
+    EpisodeModel? best;
+    for (final episode in episodes) {
+      if (episode.episodeNumber <= afterEpisodeNumber) continue;
+      if (episode.airDate == null) continue;
+      if (best == null || episode.episodeNumber < best.episodeNumber) {
+        best = episode;
+      }
+    }
+    return best;
   }
 
   EpisodeModel? _episodeWithNumber(
