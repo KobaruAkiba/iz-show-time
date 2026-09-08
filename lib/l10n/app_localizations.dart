@@ -478,6 +478,48 @@ abstract class AppLocalizations {
   /// **'Overview'**
   String get overview;
 
+  /// No description provided for @networks.
+  ///
+  /// In en, this message translates to:
+  /// **'Networks'**
+  String get networks;
+
+  /// No description provided for @statusReturningSeries.
+  ///
+  /// In en, this message translates to:
+  /// **'Returning Series'**
+  String get statusReturningSeries;
+
+  /// No description provided for @statusPlanned.
+  ///
+  /// In en, this message translates to:
+  /// **'Planned'**
+  String get statusPlanned;
+
+  /// No description provided for @statusInProduction.
+  ///
+  /// In en, this message translates to:
+  /// **'In Production'**
+  String get statusInProduction;
+
+  /// No description provided for @statusEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Ended'**
+  String get statusEnded;
+
+  /// No description provided for @statusCanceled.
+  ///
+  /// In en, this message translates to:
+  /// **'Canceled'**
+  String get statusCanceled;
+
+  /// No description provided for @statusPilot.
+  ///
+  /// In en, this message translates to:
+  /// **'Pilot'**
+  String get statusPilot;
+
   /// No description provided for @episodes.
   ///
   /// In en, this message translates to:

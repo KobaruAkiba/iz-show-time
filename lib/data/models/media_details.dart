@@ -212,6 +212,31 @@ class MediaDetails {
         ? l10n.seasonsCountOne
         : l10n.seasonsCountOther(numberOfSeasons!);
   }
+
+  /// Localized TV airing status for meta chips; null when missing or film.
+  String? get formattedStatus {
+    if (isFilm) return null;
+    final raw = status?.trim();
+    if (raw == null || raw.isEmpty) return null;
+    final l10n = AppL10n.current;
+    switch (raw.toLowerCase()) {
+      case 'returning series':
+        return l10n.statusReturningSeries;
+      case 'planned':
+        return l10n.statusPlanned;
+      case 'in production':
+        return l10n.statusInProduction;
+      case 'ended':
+        return l10n.statusEnded;
+      case 'canceled':
+      case 'cancelled':
+        return l10n.statusCanceled;
+      case 'pilot':
+        return l10n.statusPilot;
+      default:
+        return raw;
+    }
+  }
 }
 
 String? _nonEmptyString(dynamic value) {

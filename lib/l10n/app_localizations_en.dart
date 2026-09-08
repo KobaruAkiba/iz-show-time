@@ -209,6 +209,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get overview => 'Overview';
 
   @override
+  String get networks => 'Networks';
+
+  @override
+  String get statusReturningSeries => 'Returning Series';
+
+  @override
+  String get statusPlanned => 'Planned';
+
+  @override
+  String get statusInProduction => 'In Production';
+
+  @override
+  String get statusEnded => 'Ended';
+
+  @override
+  String get statusCanceled => 'Canceled';
+
+  @override
+  String get statusPilot => 'Pilot';
+
+  @override
   String get episodes => 'Episodes';
 
   @override

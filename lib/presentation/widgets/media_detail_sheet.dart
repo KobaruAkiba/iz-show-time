@@ -418,6 +418,11 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                                   icon: Icons.layers,
                                   label: details.formattedSeasons!,
                                 ),
+                              if (details.formattedStatus != null)
+                                _MetaChip(
+                                  icon: Icons.flag_outlined,
+                                  label: details.formattedStatus!,
+                                ),
                               _MetaChip(
                                 icon: details.isFilm
                                     ? Icons.movie_filter
@@ -428,6 +433,18 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                               ),
                             ],
                           ),
+                          if (details.genres.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              children: [
+                                for (final genre
+                                    in details.genres.take(3))
+                                  _GenreChip(label: genre),
+                              ],
+                            ),
+                          ],
                           if (!isFilm &&
                               _appServices
                                       .watchedEpisodesCountFor(widget.item.id) >
@@ -509,6 +526,15 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                           height: 1.5,
                           color: colorScheme.onSurface.withValues(alpha: 0.85),
                         ),
+                  ),
+                ],
+                if (details.networkNames.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  _buildSectionLabel(l10n.networks),
+                  const SizedBox(height: 4),
+                  Text(
+                    details.networkNames.join(', '),
+                    style: Theme.of(context).textTheme.bodyLarge,
                   ),
                 ],
               ],
@@ -857,6 +883,30 @@ class _MetaChip extends StatelessWidget {
                 ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _GenreChip extends StatelessWidget {
+  final String label;
+
+  const _GenreChip({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w500,
+            ),
       ),
     );
   }

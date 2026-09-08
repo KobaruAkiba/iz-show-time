@@ -238,6 +238,36 @@ void main() {
       expect(details.alternativeTitles, ['Il Trono di Spade']);
       expect(details.episodeGroups.single.name, 'Original air dates');
       expect(details.formattedSeasons, '8 seasons');
+      expect(details.formattedStatus, 'Ended');
+    });
+
+    test('formattedStatus maps known TV statuses and ignores films', () {
+      final returning = MediaDetails.fromTmdbJson(
+        {
+          'name': 'Show',
+          'status': 'Returning Series',
+        },
+        isFilm: false,
+      );
+      expect(returning.formattedStatus, 'Returning Series');
+
+      final canceled = MediaDetails.fromTmdbJson(
+        {
+          'name': 'Show',
+          'status': 'Canceled',
+        },
+        isFilm: false,
+      );
+      expect(canceled.formattedStatus, 'Canceled');
+
+      final film = MediaDetails.fromTmdbJson(
+        {
+          'title': 'Film',
+          'status': 'Released',
+        },
+        isFilm: true,
+      );
+      expect(film.formattedStatus, isNull);
     });
   });
 }
