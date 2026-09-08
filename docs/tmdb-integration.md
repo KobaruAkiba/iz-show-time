@@ -1,4 +1,4 @@
-# TMDB Integration
+# TMDb Integration
 
 ## Setup
 
@@ -27,7 +27,7 @@ The token is read via `AppApiKey.configure()` in `main.dart` and sent by `DioCli
 
 ### Flutter Web (CORS)
 
-TMDB does not allow direct browser calls. For local web development, launch with Chrome flags that disable web security (configured in `.vscode/launch.json`):
+TMDb does not allow direct browser calls. For local web development, launch with Chrome flags that disable web security (configured in `.vscode/launch.json`):
 
 - `--disable-web-security`
 - `--user-data-dir=.dart_tool/chrome-dev`
@@ -49,7 +49,7 @@ For production web builds you need your own backend proxy.
 
 ## Response parsing
 
-TMDB list endpoints return:
+TMDb list endpoints return:
 
 ```json
 {
@@ -81,7 +81,7 @@ Free tier: **40 requests/minute**. The app uses:
 1. In-memory TTL cache (avoid repeat calls; max TTL 30 days)
 2. Dio retry on HTTP 429
 
-## TMDB API Terms compliance
+## TMDb API Terms compliance
 
 - **Attribution**: Settings shows the official disclaimer and logo (links to [themoviedb.org](https://www.themoviedb.org/)); header shows “powered by TMDb”.
 - **Cached data**: API responses are in-memory only with TTLs well under 6 months. On every app start, if the last non-catalogue cache purge is missing or older than ~6 months (`StorageConstants.tmdbCacheMaxAge`), the app runs the same path as Settings → Clear Cache Data (memory API cache + Flutter image cache). Catalogue and watch history are never purged by this check.

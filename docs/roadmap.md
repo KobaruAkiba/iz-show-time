@@ -5,10 +5,10 @@
 ### Done
 
 - [x] Project structure (`core/`, `data/`, `presentation/`)
-- [x] Unified domain models with TMDB JSON parsing
+- [x] Unified domain models with TMDb JSON parsing
 - [x] `TmdbService` — trending, search, details, episodes
 - [x] In-memory cache with TTL
-- [x] UI wired to live TMDB data (Home, Search)
+- [x] UI wired to live TMDb data (Home, Search)
 - [x] Catalogue (add/remove from Search and Home)
 - [x] Persistent catalogue and watch history (Hive)
 - [x] Background trending prefetch
@@ -26,7 +26,7 @@
 
 ### Phase 1 — Foundation (complete)
 
-App shell, navigation, themes, TMDB integration, catalogue in memory.
+App shell, navigation, themes, TMDb integration, catalogue in memory.
 
 ### Phase 2 — Persistence & notifications (in progress)
 

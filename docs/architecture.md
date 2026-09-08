@@ -2,7 +2,7 @@
 
 ## Overview
 
-IzShowTime is a Flutter app for tracking films and shows using the TMDB API. Data flows through a layered structure:
+IzShowTime is a Flutter app for tracking films and shows using the TMDb API. Data flows through a layered structure:
 
 ```mermaid
 flowchart TB
@@ -12,7 +12,7 @@ flowchart TB
   UserDataStore --> HiveBoxes[Hive boxes on device]
   TmdbService --> CacheManager[core/cache/cache_manager.dart]
   TmdbService --> DioClient[core/network/dio_client.dart]
-  DioClient --> TMDB[TMDB API v3]
+  DioClient --> TMDb[TMDb API v3]
   BackgroundTaskRunner --> TmdbService
 ```
 
@@ -32,7 +32,7 @@ flowchart TB
 | `network/dio_client.dart` | HTTP client, retries on 429 |
 | `cache/` | In-memory cache with TTL |
 | `routing/app_router.dart` | Named routes and `onGenerateRoute` |
-| `services/app_services.dart` | Singleton: catalogue, watch history, TMDB, background tasks |
+| `services/app_services.dart` | Singleton: catalogue, watch history, TMDb, background tasks |
 | `background/` | Periodic trending refresh |
 | `theme/` | Light/dark Material 3 themes |
 
@@ -40,7 +40,7 @@ flowchart TB
 
 - **Models**: `CatalogueItem`, `Film`, `TvShow`, `EpisodeModel`, `Tag`, `WatchRecord`
 - **Repositories**: `UserDataStore`, `HiveUserDataStore` — local persistence for catalogue and watch history
-- **Services**: `TmdbService` — single entry point for TMDB with JSON parsing
+- **Services**: `TmdbService` — single entry point for TMDb with JSON parsing
 
 ## State management
 
@@ -64,4 +64,4 @@ flutter run --dart-define=TMDB_API_KEY=your_token_here
 - **Rate limiting**: `ApiCacheService` tracks requests per minute (40 cap)
 - **Background**: Refreshes trending data every 4 hours
 
-Persistent Hive/SQLite cache for TMDB responses is not implemented in the current revision. User catalogue and watch history are persisted via Hive.
+Persistent Hive/SQLite cache for TMDb responses is not implemented in the current revision. User catalogue and watch history are persisted via Hive.

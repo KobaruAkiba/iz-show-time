@@ -2,11 +2,11 @@
 
 Cross-platform Flutter app to discover films and TV shows, build a personal catalogue, track what you watch, and get alerts when new episodes air.
 
-Metadata, posters, cast, seasons, and watch-provider info come from [The Movie Database (TMDB)](https://www.themoviedb.org/).
+Metadata, posters, cast, seasons, and watch-provider info come from [The Movie Database (TMDb)](https://www.themoviedb.org/).
 
 ## Features
 
-- **Home** — Daily trending films and shows from TMDB, plus a **New Episodes** section for titles you follow
+- **Home** — Daily trending films and shows from TMDb, plus a **Continue Watching** section for titles in your catalogue
 - **Search** — Multi-search across movies and series, with filters, sorting, and pagination
 - **Media details** — Poster, overview, cast, seasons/episodes, similar titles, and watch providers in a detail sheet
 - **Personal catalogue** — Add titles from Home or Search; filter by favorites, in-progress, film/TV; sort and view watch-time stats
@@ -14,7 +14,7 @@ Metadata, posters, cast, seasons, and watch-provider info come from [The Movie D
 - **Favorites & followed shows** — Star titles in the catalogue; follow series to receive new-episode alerts
 - **Local notifications** — Background checks (WorkManager) notify you when followed shows get new episodes
 - **Theme** — Material 3 light/dark mode following the system setting
-- **Caching** — In-memory TTL cache for TMDB responses to reduce calls and respect rate limits
+- **Caching** — In-memory TTL cache for TMDb responses to reduce calls and respect rate limits
 
 ## Technologies
 
@@ -22,7 +22,7 @@ Metadata, posters, cast, seasons, and watch-provider info come from [The Movie D
 |------|--------|
 | Framework | Flutter 3 / Dart 3 |
 | UI | Material Design 3, Google Fonts |
-| Networking | [Dio](https://pub.dev/packages/dio) → [TMDB API v3](https://developer.themoviedb.org/docs) |
+| Networking | [Dio](https://pub.dev/packages/dio) → [TMDb API v3](https://developer.themoviedb.org/docs) |
 | Local persistence | [Hive](https://pub.dev/packages/hive) / hive_flutter (catalogue, watch history) |
 | Notifications | [flutter_local_notifications](https://pub.dev/packages/flutter_local_notifications) |
 | Background work | [WorkManager](https://pub.dev/packages/workmanager) (episode checks) |
@@ -33,21 +33,21 @@ See [docs/architecture.md](docs/architecture.md) and [docs/tmdb-integration.md](
 
 ## Sources & attribution
 
-This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.
+This product uses TMDb and the TMDb APIs but is not endorsed, certified, or otherwise approved by TMDb.
 
-Film and TV metadata and images are provided by **[The Movie Database (TMDB)](https://www.themoviedb.org/)**. IzShowTime is an independent project and has no official affiliation with TMDB.
+Film and TV metadata and images are provided by **[The Movie Database (TMDb)](https://www.themoviedb.org/)**. IzShowTime is an independent project and has no official affiliation with TMDb.
 
 - Website: [https://www.themoviedb.org](https://www.themoviedb.org/)
 - API docs: [https://developer.themoviedb.org](https://developer.themoviedb.org/)
 - Logos & attribution guidelines: [https://www.themoviedb.org/about/logos-attribution](https://www.themoviedb.org/about/logos-attribution)
 - API terms of use: [https://www.themoviedb.org/api-terms-of-use](https://www.themoviedb.org/api-terms-of-use)
 
-In the app, TMDB attribution appears in the page header (“powered by TMDb”) and in **Settings**, alongside the official disclaimer and logo assets under `assets/images/` and `assets/icons/`.
+In the app, TMDb attribution appears in the page header (“powered by TMDb”) and in **Settings**, alongside the official disclaimer and logo assets under `assets/images/` and `assets/icons/`.
 
 ## Prerequisites
 
 - Flutter SDK 3.0+
-- A TMDB API Read Access Token (free at [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api))
+- A TMDb API Read Access Token (free at [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api))
 
 ## Getting started
 
@@ -58,7 +58,7 @@ flutter pub get
 cp environment.local.example environment.local
 ```
 
-Edit `environment.local` and set `TMDB_API_KEY` to your TMDB API Read Access Token. The file is gitignored.
+Edit `environment.local` and set `TMDB_API_KEY` to your TMDb API Read Access Token. The file is gitignored.
 
 Then launch in debug from the IDE (F5), or:
 
@@ -105,7 +105,7 @@ docs/
 
 - [Architecture](docs/architecture.md)
 - [Roadmap](docs/roadmap.md)
-- [TMDB integration](docs/tmdb-integration.md)
+- [TMDb integration](docs/tmdb-integration.md)
 
 ## Testing
 
@@ -116,9 +116,9 @@ flutter test
 
 ## Known limitations
 
-- TMDB API cache is in-memory only (not persisted across restarts); non-catalogue caches are also purged at least every ~6 months for [API Terms](https://www.themoviedb.org/api-terms-of-use) compliance
+- TMDb API cache is in-memory only (not persisted across restarts); non-catalogue caches are also purged at least every ~6 months for [API Terms](https://www.themoviedb.org/api-terms-of-use) compliance
 - On Flutter Web debug, catalogue persistence requires a fixed port (`--web-port=5555`, already set in `.vscode/launch.json`)
-- Production Flutter Web needs a backend proxy (TMDB does not allow direct browser CORS)
+- Production Flutter Web needs a backend proxy (TMDb does not allow direct browser CORS)
 
 ## License
 

@@ -139,7 +139,7 @@ abstract class AppLocalizations {
   /// No description provided for @ratingUnavailable.
   ///
   /// In en, this message translates to:
-  /// **'N/D'**
+  /// **'N/A'**
   String get ratingUnavailable;
 
   /// No description provided for @mediaTypeFilm.
@@ -259,7 +259,7 @@ abstract class AppLocalizations {
   /// No description provided for @filtersAndSort.
   ///
   /// In en, this message translates to:
-  /// **'Filters & sort'**
+  /// **'Filters & Sort'**
   String get filtersAndSort;
 
   /// No description provided for @filtersShowSection.
@@ -289,7 +289,7 @@ abstract class AppLocalizations {
   /// No description provided for @filtersInProgressHint.
   ///
   /// In en, this message translates to:
-  /// **'Shows still airing or with an upcoming episode scheduled.'**
+  /// **'Shows still airing or with an upcoming episode.'**
   String get filtersInProgressHint;
 
   /// No description provided for @filtersSortBy.
@@ -349,13 +349,13 @@ abstract class AppLocalizations {
   /// No description provided for @confirmRemoveFilmBody.
   ///
   /// In en, this message translates to:
-  /// **'Remove the film \"{title}\" from your catalogue?\n\nWatch history for this title will be permanently deleted.'**
+  /// **'Remove \"{title}\" from your catalogue?\n\nWatch history for this title will be deleted.'**
   String confirmRemoveFilmBody(String title);
 
   /// No description provided for @confirmRemoveShowBody.
   ///
   /// In en, this message translates to:
-  /// **'Remove the show \"{title}\" from your catalogue?\n\nAll watched episodes will be permanently deleted from your watch history.'**
+  /// **'Remove \"{title}\" from your catalogue?\n\nAll watched episodes will be deleted.'**
   String confirmRemoveShowBody(String title);
 
   /// No description provided for @addedToCatalogue.
@@ -373,7 +373,7 @@ abstract class AppLocalizations {
   /// No description provided for @runtimeNotAvailableForFilm.
   ///
   /// In en, this message translates to:
-  /// **'Runtime not available for this film'**
+  /// **'Runtime unavailable for this film'**
   String get runtimeNotAvailableForFilm;
 
   /// No description provided for @alreadyMarkedAsWatched.
@@ -385,25 +385,25 @@ abstract class AppLocalizations {
   /// No description provided for @episodeHasNotAiredYet.
   ///
   /// In en, this message translates to:
-  /// **'Episode has not aired yet'**
+  /// **'This episode hasn\'t aired yet'**
   String get episodeHasNotAiredYet;
 
   /// No description provided for @episodeRuntimeNotAvailable.
   ///
   /// In en, this message translates to:
-  /// **'Episode runtime not available'**
+  /// **'Episode runtime unavailable'**
   String get episodeRuntimeNotAvailable;
 
   /// No description provided for @cacheClearedSuccessfully.
   ///
   /// In en, this message translates to:
-  /// **'Cache data cleared successfully'**
+  /// **'Cache cleared'**
   String get cacheClearedSuccessfully;
 
   /// No description provided for @allDataClearedSuccessfully.
   ///
   /// In en, this message translates to:
-  /// **'All data cleared successfully'**
+  /// **'All data cleared'**
   String get allDataClearedSuccessfully;
 
   /// No description provided for @watched.
@@ -529,7 +529,7 @@ abstract class AppLocalizations {
   /// No description provided for @noEpisodesFound.
   ///
   /// In en, this message translates to:
-  /// **'No episodes found.'**
+  /// **'No episodes found'**
   String get noEpisodesFound;
 
   /// No description provided for @upcoming.
@@ -547,7 +547,7 @@ abstract class AppLocalizations {
   /// No description provided for @episodesInCatalogue.
   ///
   /// In en, this message translates to:
-  /// **'{count} episode(s) in catalogue'**
+  /// **'{count} episodes in catalogue'**
   String episodesInCatalogue(int count);
 
   /// No description provided for @seasonProgressInCatalogue.
@@ -697,7 +697,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeNoTrending.
   ///
   /// In en, this message translates to:
-  /// **'No trending content available. Check your TMDB API key.'**
+  /// **'No trending titles right now. Check your TMDb API key.'**
   String get homeNoTrending;
 
   /// No description provided for @homeTrendingNow.
@@ -709,19 +709,19 @@ abstract class AppLocalizations {
   /// No description provided for @homeTrendingSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Swipe to explore · tap for details'**
+  /// **'Swipe to browse · tap for details'**
   String get homeTrendingSubtitle;
 
   /// No description provided for @homeNewEpisodes.
   ///
   /// In en, this message translates to:
-  /// **'New Episodes'**
+  /// **'Continue Watching'**
   String get homeNewEpisodes;
 
   /// No description provided for @homeNewEpisodesSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'The next episode to watch after your last registered one'**
+  /// **'Next up after your last watched episode'**
   String get homeNewEpisodesSubtitle;
 
   /// No description provided for @homeNewEpisodesEmptyTitle.
@@ -733,7 +733,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeNewEpisodesEmptyBody.
   ///
   /// In en, this message translates to:
-  /// **'Add a TV show to your catalogue and register an episode — the next one in order will appear here.'**
+  /// **'Add a show and mark an episode watched. The next one will show up here.'**
   String get homeNewEpisodesEmptyBody;
 
   /// No description provided for @homeNewEpisodesCaughtUpTitle.
@@ -745,7 +745,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeNewEpisodesCaughtUpBody.
   ///
   /// In en, this message translates to:
-  /// **'No next episode waiting — you\'re up to date on the shows in your catalogue.'**
+  /// **'You\'re up to date on shows in your catalogue.'**
   String get homeNewEpisodesCaughtUpBody;
 
   /// No description provided for @homeAiredOn.
@@ -805,7 +805,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchEmptySubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Start typing a title to search'**
+  /// **'Type a title to get started'**
   String get searchEmptySubtitle;
 
   /// No description provided for @catalogueSearchHint.
@@ -829,13 +829,13 @@ abstract class AppLocalizations {
   /// No description provided for @catalogueNoFavorites.
   ///
   /// In en, this message translates to:
-  /// **'No favorites yet.\nTap the heart on a catalogue item to mark it as favorite.'**
+  /// **'No favorites yet.\nTap the heart on any title to add one.'**
   String get catalogueNoFavorites;
 
   /// No description provided for @catalogueNoInProgress.
   ///
   /// In en, this message translates to:
-  /// **'No shows currently in progress.\nSeries that are still airing or have an upcoming episode will show up here.'**
+  /// **'No shows in progress.\nStill-airing series or those with an upcoming episode appear here.'**
   String get catalogueNoInProgress;
 
   /// No description provided for @settingsAppearance.
@@ -889,13 +889,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsSupportMe.
   ///
   /// In en, this message translates to:
-  /// **'Support me!'**
+  /// **'Support me'**
   String get settingsSupportMe;
 
   /// No description provided for @settingsSupportMeDescription.
   ///
   /// In en, this message translates to:
-  /// **'Donations are completely voluntary and help cover the costs of keeping IzShowTime running — including hosting, tools, and its presence on the app stores. Thank you for considering a contribution.'**
+  /// **'Donations are voluntary and help cover hosting, tools, and app store costs. Thank you.'**
   String get settingsSupportMeDescription;
 
   /// No description provided for @settingsDonatePaypal.
@@ -907,7 +907,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsDonatePaypalError.
   ///
   /// In en, this message translates to:
-  /// **'Could not open PayPal. Please try again later.'**
+  /// **'Couldn\'t open PayPal. Try again later.'**
   String get settingsDonatePaypalError;
 
   /// No description provided for @settingsDataManagement.
@@ -919,19 +919,19 @@ abstract class AppLocalizations {
   /// No description provided for @settingsClearCacheTitle.
   ///
   /// In en, this message translates to:
-  /// **'Clear Cache Data'**
+  /// **'Clear Cache'**
   String get settingsClearCacheTitle;
 
   /// No description provided for @settingsClearCacheSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Free space by removing cached API responses. Catalogue and watch history are kept'**
+  /// **'Free space. Catalogue and watch history stay.'**
   String get settingsClearCacheSubtitle;
 
   /// No description provided for @settingsClearCacheBody.
   ///
   /// In en, this message translates to:
-  /// **'This will remove cached API responses to free space on your device.\n\nYour catalogue and watch history will not be deleted.'**
+  /// **'This removes cached API data to free space.\n\nYour catalogue and watch history are kept.'**
   String get settingsClearCacheBody;
 
   /// No description provided for @settingsClearCacheConfirm.
@@ -955,7 +955,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsClearAllBody.
   ///
   /// In en, this message translates to:
-  /// **'This will permanently delete your catalogue, watch history, and cached data.\n\nYour data cannot be recovered after this action.'**
+  /// **'This permanently deletes your catalogue, watch history, and cached data.\n\nThis can\'t be undone.'**
   String get settingsClearAllBody;
 
   /// No description provided for @settingsClearAllConfirm.
@@ -967,19 +967,19 @@ abstract class AppLocalizations {
   /// No description provided for @settingsTmdbAttribution.
   ///
   /// In en, this message translates to:
-  /// **'Data and images provided from The Movie Database'**
+  /// **'Data and images from The Movie Database'**
   String get settingsTmdbAttribution;
 
   /// No description provided for @settingsTmdbDisclaimer.
   ///
   /// In en, this message translates to:
-  /// **'This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.'**
+  /// **'This product uses TMDb and the TMDb APIs but is not endorsed, certified, or otherwise approved by TMDb.'**
   String get settingsTmdbDisclaimer;
 
   /// No description provided for @settingsTmdbLinkError.
   ///
   /// In en, this message translates to:
-  /// **'Could not open The Movie Database website. Please try again later.'**
+  /// **'Couldn\'t open The Movie Database. Try again later.'**
   String get settingsTmdbLinkError;
 
   /// No description provided for @notificationChannelName.
@@ -991,7 +991,7 @@ abstract class AppLocalizations {
   /// No description provided for @notificationChannelDescription.
   ///
   /// In en, this message translates to:
-  /// **'Alerts when new TV episodes are detected'**
+  /// **'Alerts when new TV episodes air'**
   String get notificationChannelDescription;
 
   /// No description provided for @notificationTitle.
@@ -1003,13 +1003,13 @@ abstract class AppLocalizations {
   /// No description provided for @notificationBodyOne.
   ///
   /// In en, this message translates to:
-  /// **'A new episode is waiting in your catalogue. Open Home and check New Episodes.'**
+  /// **'A new episode is waiting. Check Continue Watching on Home.'**
   String get notificationBodyOne;
 
   /// No description provided for @notificationBodyOther.
   ///
   /// In en, this message translates to:
-  /// **'{count} new episodes are available. Open Home and check New Episodes.'**
+  /// **'{count} new episodes available. Check Continue Watching on Home.'**
   String notificationBodyOther(int count);
 
   /// No description provided for @notificationPermissionTitle.
@@ -1021,7 +1021,7 @@ abstract class AppLocalizations {
   /// No description provided for @notificationPermissionBody.
   ///
   /// In en, this message translates to:
-  /// **'Notifications are optional and not required to use the app. When enabled, IzShowTime alerts you whenever a new episode is available for a show you\'re following.'**
+  /// **'Optional — the app works without them. When on, IzShowTime alerts you when a new episode airs for a show you follow.'**
   String get notificationPermissionBody;
 
   /// No description provided for @notificationPermissionNotNow.
@@ -1039,31 +1039,31 @@ abstract class AppLocalizations {
   /// No description provided for @errorTooManyRequests.
   ///
   /// In en, this message translates to:
-  /// **'Too many requests. Please wait a moment.'**
+  /// **'Too many requests. Wait a moment and try again.'**
   String get errorTooManyRequests;
 
   /// No description provided for @errorResourceNotFound.
   ///
   /// In en, this message translates to:
-  /// **'Resource not found.'**
+  /// **'Couldn\'t find that title.'**
   String get errorResourceNotFound;
 
   /// No description provided for @errorAccessDenied.
   ///
   /// In en, this message translates to:
-  /// **'Access denied. API key may be invalid.'**
+  /// **'Access denied. Check your API key.'**
   String get errorAccessDenied;
 
   /// No description provided for @errorInvalidResponse.
   ///
   /// In en, this message translates to:
-  /// **'Invalid response from server.'**
+  /// **'Got an unexpected response. Try again.'**
   String get errorInvalidResponse;
 
   /// No description provided for @errorGeneric.
   ///
   /// In en, this message translates to:
-  /// **'An error occurred'**
+  /// **'Something went wrong'**
   String get errorGeneric;
 
   /// No description provided for @errorNoConnection.
@@ -1075,13 +1075,13 @@ abstract class AppLocalizations {
   /// No description provided for @errorTimeout.
   ///
   /// In en, this message translates to:
-  /// **'The connection took too long. Check your network and try again.'**
+  /// **'Request timed out. Check your network and try again.'**
   String get errorTimeout;
 
   /// No description provided for @errorUnreachable.
   ///
   /// In en, this message translates to:
-  /// **'We couldn\'t reach the server. Check your connection and try again.'**
+  /// **'Couldn\'t reach the server. Check your connection and try again.'**
   String get errorUnreachable;
 
   /// No description provided for @connectionNoNetworkTitle.

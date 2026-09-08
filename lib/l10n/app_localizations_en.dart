@@ -30,7 +30,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchEllipsis => 'Search...';
 
   @override
-  String get ratingUnavailable => 'N/D';
+  String get ratingUnavailable => 'N/A';
 
   @override
   String get mediaTypeFilm => 'Film';
@@ -92,7 +92,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sortRatingAsc => 'Rating (low → high)';
 
   @override
-  String get filtersAndSort => 'Filters & sort';
+  String get filtersAndSort => 'Filters & Sort';
 
   @override
   String get filtersShowSection => 'Show';
@@ -108,7 +108,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get filtersInProgressHint =>
-      'Shows still airing or with an upcoming episode scheduled.';
+      'Shows still airing or with an upcoming episode.';
 
   @override
   String get filtersSortBy => 'Sort by';
@@ -139,12 +139,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String confirmRemoveFilmBody(String title) {
-    return 'Remove the film \"$title\" from your catalogue?\n\nWatch history for this title will be permanently deleted.';
+    return 'Remove \"$title\" from your catalogue?\n\nWatch history for this title will be deleted.';
   }
 
   @override
   String confirmRemoveShowBody(String title) {
-    return 'Remove the show \"$title\" from your catalogue?\n\nAll watched episodes will be permanently deleted from your watch history.';
+    return 'Remove \"$title\" from your catalogue?\n\nAll watched episodes will be deleted.';
   }
 
   @override
@@ -154,23 +154,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get removedFromCatalogue => 'Removed from catalogue';
 
   @override
-  String get runtimeNotAvailableForFilm =>
-      'Runtime not available for this film';
+  String get runtimeNotAvailableForFilm => 'Runtime unavailable for this film';
 
   @override
   String get alreadyMarkedAsWatched => 'Already marked as watched';
 
   @override
-  String get episodeHasNotAiredYet => 'Episode has not aired yet';
+  String get episodeHasNotAiredYet => 'This episode hasn\'t aired yet';
 
   @override
-  String get episodeRuntimeNotAvailable => 'Episode runtime not available';
+  String get episodeRuntimeNotAvailable => 'Episode runtime unavailable';
 
   @override
-  String get cacheClearedSuccessfully => 'Cache data cleared successfully';
+  String get cacheClearedSuccessfully => 'Cache cleared';
 
   @override
-  String get allDataClearedSuccessfully => 'All data cleared successfully';
+  String get allDataClearedSuccessfully => 'All data cleared';
 
   @override
   String get watched => 'Watched';
@@ -233,7 +232,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get episodes => 'Episodes';
 
   @override
-  String get noEpisodesFound => 'No episodes found.';
+  String get noEpisodesFound => 'No episodes found';
 
   @override
   String get upcoming => 'Upcoming';
@@ -245,7 +244,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String episodesInCatalogue(int count) {
-    return '$count episode(s) in catalogue';
+    return '$count episodes in catalogue';
   }
 
   @override
@@ -355,34 +354,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeNoTrending =>
-      'No trending content available. Check your TMDB API key.';
+      'No trending titles right now. Check your TMDb API key.';
 
   @override
   String get homeTrendingNow => 'Trending Now';
 
   @override
-  String get homeTrendingSubtitle => 'Swipe to explore · tap for details';
+  String get homeTrendingSubtitle => 'Swipe to browse · tap for details';
 
   @override
-  String get homeNewEpisodes => 'New Episodes';
+  String get homeNewEpisodes => 'Continue Watching';
 
   @override
   String get homeNewEpisodesSubtitle =>
-      'The next episode to watch after your last registered one';
+      'Next up after your last watched episode';
 
   @override
   String get homeNewEpisodesEmptyTitle => 'Nothing here yet';
 
   @override
   String get homeNewEpisodesEmptyBody =>
-      'Add a TV show to your catalogue and register an episode — the next one in order will appear here.';
+      'Add a show and mark an episode watched. The next one will show up here.';
 
   @override
   String get homeNewEpisodesCaughtUpTitle => 'All caught up';
 
   @override
   String get homeNewEpisodesCaughtUpBody =>
-      'No next episode waiting — you\'re up to date on the shows in your catalogue.';
+      'You\'re up to date on shows in your catalogue.';
 
   @override
   String homeAiredOn(String date) {
@@ -421,7 +420,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchEmptyTitle => 'Search for films and shows';
 
   @override
-  String get searchEmptySubtitle => 'Start typing a title to search';
+  String get searchEmptySubtitle => 'Type a title to get started';
 
   @override
   String get catalogueSearchHint => 'Search catalogue...';
@@ -434,11 +433,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get catalogueNoFavorites =>
-      'No favorites yet.\nTap the heart on a catalogue item to mark it as favorite.';
+      'No favorites yet.\nTap the heart on any title to add one.';
 
   @override
   String get catalogueNoInProgress =>
-      'No shows currently in progress.\nSeries that are still airing or have an upcoming episode will show up here.';
+      'No shows in progress.\nStill-airing series or those with an upcoming episode appear here.';
 
   @override
   String get settingsAppearance => 'Appearance';
@@ -465,32 +464,32 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsVersion => 'Version';
 
   @override
-  String get settingsSupportMe => 'Support me!';
+  String get settingsSupportMe => 'Support me';
 
   @override
   String get settingsSupportMeDescription =>
-      'Donations are completely voluntary and help cover the costs of keeping IzShowTime running — including hosting, tools, and its presence on the app stores. Thank you for considering a contribution.';
+      'Donations are voluntary and help cover hosting, tools, and app store costs. Thank you.';
 
   @override
   String get settingsDonatePaypal => 'Donate with ';
 
   @override
   String get settingsDonatePaypalError =>
-      'Could not open PayPal. Please try again later.';
+      'Couldn\'t open PayPal. Try again later.';
 
   @override
   String get settingsDataManagement => 'Data Management';
 
   @override
-  String get settingsClearCacheTitle => 'Clear Cache Data';
+  String get settingsClearCacheTitle => 'Clear Cache';
 
   @override
   String get settingsClearCacheSubtitle =>
-      'Free space by removing cached API responses. Catalogue and watch history are kept';
+      'Free space. Catalogue and watch history stay.';
 
   @override
   String get settingsClearCacheBody =>
-      'This will remove cached API responses to free space on your device.\n\nYour catalogue and watch history will not be deleted.';
+      'This removes cached API data to free space.\n\nYour catalogue and watch history are kept.';
 
   @override
   String get settingsClearCacheConfirm => 'Clear Cache';
@@ -504,40 +503,40 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsClearAllBody =>
-      'This will permanently delete your catalogue, watch history, and cached data.\n\nYour data cannot be recovered after this action.';
+      'This permanently deletes your catalogue, watch history, and cached data.\n\nThis can\'t be undone.';
 
   @override
   String get settingsClearAllConfirm => 'Delete All Data';
 
   @override
   String get settingsTmdbAttribution =>
-      'Data and images provided from The Movie Database';
+      'Data and images from The Movie Database';
 
   @override
   String get settingsTmdbDisclaimer =>
-      'This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.';
+      'This product uses TMDb and the TMDb APIs but is not endorsed, certified, or otherwise approved by TMDb.';
 
   @override
   String get settingsTmdbLinkError =>
-      'Could not open The Movie Database website. Please try again later.';
+      'Couldn\'t open The Movie Database. Try again later.';
 
   @override
   String get notificationChannelName => 'New Episodes';
 
   @override
   String get notificationChannelDescription =>
-      'Alerts when new TV episodes are detected';
+      'Alerts when new TV episodes air';
 
   @override
   String get notificationTitle => 'New episodes available';
 
   @override
   String get notificationBodyOne =>
-      'A new episode is waiting in your catalogue. Open Home and check New Episodes.';
+      'A new episode is waiting. Check Continue Watching on Home.';
 
   @override
   String notificationBodyOther(int count) {
-    return '$count new episodes are available. Open Home and check New Episodes.';
+    return '$count new episodes available. Check Continue Watching on Home.';
   }
 
   @override
@@ -545,7 +544,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationPermissionBody =>
-      'Notifications are optional and not required to use the app. When enabled, IzShowTime alerts you whenever a new episode is available for a show you\'re following.';
+      'Optional — the app works without them. When on, IzShowTime alerts you when a new episode airs for a show you follow.';
 
   @override
   String get notificationPermissionNotNow => 'Not now';
@@ -554,19 +553,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationPermissionContinue => 'Continue';
 
   @override
-  String get errorTooManyRequests => 'Too many requests. Please wait a moment.';
+  String get errorTooManyRequests =>
+      'Too many requests. Wait a moment and try again.';
 
   @override
-  String get errorResourceNotFound => 'Resource not found.';
+  String get errorResourceNotFound => 'Couldn\'t find that title.';
 
   @override
-  String get errorAccessDenied => 'Access denied. API key may be invalid.';
+  String get errorAccessDenied => 'Access denied. Check your API key.';
 
   @override
-  String get errorInvalidResponse => 'Invalid response from server.';
+  String get errorInvalidResponse => 'Got an unexpected response. Try again.';
 
   @override
-  String get errorGeneric => 'An error occurred';
+  String get errorGeneric => 'Something went wrong';
 
   @override
   String get errorNoConnection =>
@@ -574,11 +574,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorTimeout =>
-      'The connection took too long. Check your network and try again.';
+      'Request timed out. Check your network and try again.';
 
   @override
   String get errorUnreachable =>
-      'We couldn\'t reach the server. Check your connection and try again.';
+      'Couldn\'t reach the server. Check your connection and try again.';
 
   @override
   String get connectionNoNetworkTitle => 'No connection';
