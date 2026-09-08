@@ -356,10 +356,9 @@ class TmdbService {
         );
 
         if (!result.isSuccess || result.data == null) {
-          return (
-            results: <Map<String, dynamic>>[],
-            page: 1,
-            totalPages: 0,
+          throw ApiException(
+            result.error,
+            apiErrorMessage(result.error),
           );
         }
 
@@ -378,11 +377,15 @@ class TmdbService {
         );
 
         return (results: list, page: page, totalPages: totalPages);
-      } catch (_) {
-        return (
-          results: <Map<String, dynamic>>[],
-          page: 1,
-          totalPages: 0,
+      } on ApiException {
+        rethrow;
+      } catch (e, stackTrace) {
+        Error.throwWithStackTrace(
+          ApiException(
+            ApiErrorType.networkError,
+            apiErrorMessage(ApiErrorType.networkError),
+          ),
+          stackTrace,
         );
       }
     });
@@ -416,7 +419,12 @@ class TmdbService {
           queryParameters: params,
         );
 
-        if (!result.isSuccess || result.data == null) return null;
+        if (!result.isSuccess || result.data == null) {
+          throw ApiException(
+            result.error,
+            apiErrorMessage(result.error),
+          );
+        }
 
         _cache.put(
           cacheKey,
@@ -425,8 +433,16 @@ class TmdbService {
         );
 
         return result.data;
-      } catch (_) {
-        return null;
+      } on ApiException {
+        rethrow;
+      } catch (e, stackTrace) {
+        Error.throwWithStackTrace(
+          ApiException(
+            ApiErrorType.networkError,
+            apiErrorMessage(ApiErrorType.networkError),
+          ),
+          stackTrace,
+        );
       }
     });
   }

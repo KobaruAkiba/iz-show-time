@@ -1,3 +1,4 @@
+import '../network/network_feedback.dart';
 import '../services/app_services.dart';
 import 'episode_notification_policy.dart';
 import 'new_episode_checker.dart';
@@ -10,16 +11,18 @@ class EpisodeCheckService {
   static Future<NewEpisodeCheckResult> checkCatalogue({
     required AppServices appServices,
   }) async {
-    final checker = NewEpisodeChecker(
-      tmdbService: appServices.tmdbService,
-      userDataStore: appServices.userDataStore,
-    );
+    return NetworkFeedback.runSilent(() async {
+      final checker = NewEpisodeChecker(
+        tmdbService: appServices.tmdbService,
+        userDataStore: appServices.userDataStore,
+      );
 
-    return checker.checkShows(
-      shows: appServices.followedTvShows,
-      watchHistory: appServices.watchHistory,
-      forceRefresh: true,
-    );
+      return checker.checkShows(
+        shows: appServices.followedTvShows,
+        watchHistory: appServices.watchHistory,
+        forceRefresh: true,
+      );
+    });
   }
 
   /// Native background task: persists alerts and notifies for episodes that

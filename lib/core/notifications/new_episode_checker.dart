@@ -4,6 +4,7 @@ import '../../data/models/new_episode_alert.dart';
 import '../../data/models/watch_record.dart';
 import '../../data/repositories/user_data_store.dart';
 import '../../data/services/tmdb_service.dart';
+import '../network/api_error.dart';
 import 'episode_signature.dart';
 import 'show_in_progress.dart';
 
@@ -52,17 +53,22 @@ class NewEpisodeChecker {
     final now = DateTime.now();
 
     for (final show in shows) {
-      final nextAlert = await _findImmediateNextAlert(
-        show: show,
-        watchHistory: watchHistory,
-        checkedAt: now,
-        forceRefresh: forceRefresh,
-      );
-      if (nextAlert == null) continue;
+      try {
+        final nextAlert = await _findImmediateNextAlert(
+          show: show,
+          watchHistory: watchHistory,
+          checkedAt: now,
+          forceRefresh: forceRefresh,
+        );
+        if (nextAlert == null) continue;
 
-      checkedAlerts.add(nextAlert);
-      if (!existingByEpisodeId.containsKey(nextAlert.episodeId)) {
-        newlyDetected.add(nextAlert);
+        checkedAlerts.add(nextAlert);
+        if (!existingByEpisodeId.containsKey(nextAlert.episodeId)) {
+          newlyDetected.add(nextAlert);
+        }
+      } on ApiException {
+        // Skip this show on network/API failure; other shows still process.
+        continue;
       }
     }
 

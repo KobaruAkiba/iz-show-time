@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import '../constants/app_constants.dart';
+import '../network/network_feedback.dart';
 import '../../data/services/tmdb_service.dart';
 
 /// In-app refreshes while the app is open. System notifications are handled
@@ -50,10 +51,12 @@ class BackgroundTaskRunner {
     _cycleInProgress = true;
 
     try {
-      if (_shouldRefreshTrending()) {
-        await _checkTrending();
-      }
-      await _refreshNewEpisodesInApp();
+      await NetworkFeedback.runSilent(() async {
+        if (_shouldRefreshTrending()) {
+          await _checkTrending();
+        }
+        await _refreshNewEpisodesInApp();
+      });
     } catch (_) {
     } finally {
       _cycleInProgress = false;

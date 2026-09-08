@@ -36,6 +36,8 @@ class AppTheme {
       onTertiaryContainer: _brandInk,
       error: Color(0xFFB3261E),
       onError: _brandOffWhite,
+      errorContainer: Color(0xFFF9DEDC),
+      onErrorContainer: Color(0xFF410E0B),
       surface: _brandOffWhite,
       onSurface: _brandInk,
       onSurfaceVariant: Color(0xFF4A463C),
@@ -80,6 +82,30 @@ class AppTheme {
       backgroundColor: _lightPrimary,
       foregroundColor: _brandOffWhite,
     ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      contentTextStyle: const TextStyle(
+        fontSize: 15,
+        height: 1.35,
+        fontWeight: FontWeight.w600,
+        color: _brandOffWhite,
+      ),
+      backgroundColor: _brandInk,
+      actionTextColor: _brandYellow,
+    ),
+    bannerTheme: const MaterialBannerThemeData(
+      backgroundColor: _lightSurfaceContainer,
+      contentTextStyle: TextStyle(
+        fontSize: 15,
+        height: 1.35,
+        fontWeight: FontWeight.w600,
+        color: _brandInk,
+      ),
+      elevation: 2,
+      padding: EdgeInsets.fromLTRB(16, 12, 8, 12),
+    ),
   );
 
   // Dark Theme — bright brand yellow reads well on dark surfaces.
@@ -100,6 +126,8 @@ class AppTheme {
       onTertiaryContainer: Color(0xFFFFE08A),
       error: Color(0xFFF2B8B5),
       onError: Color(0xFF601410),
+      errorContainer: Color(0xFF8C1D18),
+      onErrorContainer: Color(0xFFF9DEDC),
       surface: Color(0xFF1C1B1A),
       onSurface: _brandOffWhite,
       onSurfaceVariant: Color(0xFFCAC4B8),
@@ -117,6 +145,30 @@ class AppTheme {
       _brandYellow,
     ),
     scaffoldBackgroundColor: const Color(0xFF121110),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      contentTextStyle: const TextStyle(
+        fontSize: 15,
+        height: 1.35,
+        fontWeight: FontWeight.w600,
+        color: _brandInk,
+      ),
+      backgroundColor: _brandOffWhite,
+      actionTextColor: const Color(0xFF5C4A00),
+    ),
+    bannerTheme: const MaterialBannerThemeData(
+      backgroundColor: Color(0xFF2C2A27),
+      contentTextStyle: TextStyle(
+        fontSize: 15,
+        height: 1.35,
+        fontWeight: FontWeight.w600,
+        color: _brandOffWhite,
+      ),
+      elevation: 2,
+      padding: EdgeInsets.fromLTRB(16, 12, 8, 12),
+    ),
     navigationBarTheme: NavigationBarThemeData(
       indicatorColor: _brandYellow.withValues(alpha: 0.28),
       labelTextStyle: WidgetStateProperty.resolveWith((states) {

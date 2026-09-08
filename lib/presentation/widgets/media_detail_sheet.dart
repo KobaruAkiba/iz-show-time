@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../core/constants/api_constants.dart';
+import '../../core/network/api_error.dart';
+import '../../core/network/network_feedback.dart';
 import '../../core/services/app_services.dart';
 import '../../data/models/catalogue_item.dart';
 import '../../data/models/episode_model.dart';
@@ -56,38 +58,74 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
   }
 
   Future<void> _loadDetails() async {
-    final fetched = await _appServices.tmdbService.getMediaDetails(widget.item);
+    try {
+      final fetched = await _appServices.tmdbService.getMediaDetails(widget.item);
 
-    if (!mounted) return;
-    setState(() {
-      _details = fetched ??
-          MediaDetails(
-            title: widget.item.title,
-            overview: widget.item.overview,
-            posterPath: widget.item.posterPath,
-            isFilm: widget.item is Film,
-          );
-      _isLoading = false;
-    });
+      if (!mounted) return;
+      setState(() {
+        _details = fetched ??
+            MediaDetails(
+              title: widget.item.title,
+              overview: widget.item.overview,
+              posterPath: widget.item.posterPath,
+              isFilm: widget.item is Film,
+            );
+        _isLoading = false;
+      });
 
-    if (widget.item is TvShow && (_details?.numberOfSeasons ?? 0) > 0) {
-      await _loadSeasons();
+      if (widget.item is TvShow && (_details?.numberOfSeasons ?? 0) > 0) {
+        await _loadSeasons();
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _details = MediaDetails(
+          title: widget.item.title,
+          overview: widget.item.overview,
+          posterPath: widget.item.posterPath,
+          isFilm: widget.item is Film,
+        );
+        _isLoading = false;
+      });
+      NetworkFeedback.showError(e.type, message: e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _details = MediaDetails(
+          title: widget.item.title,
+          overview: widget.item.overview,
+          posterPath: widget.item.posterPath,
+          isFilm: widget.item is Film,
+        );
+        _isLoading = false;
+      });
+      NetworkFeedback.showError(ApiErrorType.networkError);
     }
   }
 
   Future<void> _loadSeasons() async {
     setState(() => _isLoadingSeasons = true);
 
-    final seasons = await _appServices.tmdbService.getTvSeasons(
-      tvId: widget.item.id,
-      numberOfSeasons: _details!.numberOfSeasons!,
-    );
+    try {
+      final seasons = await _appServices.tmdbService.getTvSeasons(
+        tvId: widget.item.id,
+        numberOfSeasons: _details!.numberOfSeasons!,
+      );
 
-    if (!mounted) return;
-    setState(() {
-      _seasons = seasons;
-      _isLoadingSeasons = false;
-    });
+      if (!mounted) return;
+      setState(() {
+        _seasons = seasons;
+        _isLoadingSeasons = false;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoadingSeasons = false);
+      NetworkFeedback.showError(e.type, message: e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoadingSeasons = false);
+      NetworkFeedback.showError(ApiErrorType.networkError);
+    }
   }
 
   void _notifyWatchTimeChanged() {

@@ -328,6 +328,12 @@ abstract class AppLocalizations {
   /// **'Retry'**
   String get actionRetry;
 
+  /// No description provided for @actionDismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get actionDismiss;
+
   /// No description provided for @actionOpen.
   ///
   /// In en, this message translates to:
@@ -643,7 +649,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeTrendingLoadFailed.
   ///
   /// In en, this message translates to:
-  /// **'Failed to load trending content'**
+  /// **'Couldn\'t load trending. Check your connection and try again.'**
   String get homeTrendingLoadFailed;
 
   /// No description provided for @homeNoTrending.
@@ -709,7 +715,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchFailed.
   ///
   /// In en, this message translates to:
-  /// **'Search failed. Check your API key and connection.'**
+  /// **'Search couldn\'t finish. Check your connection and try again.'**
   String get searchFailed;
 
   /// No description provided for @searchNoFilterMatches.
@@ -999,6 +1005,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'An error occurred'**
   String get errorGeneric;
+
+  /// No description provided for @errorNoConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re offline. Check Wi‑Fi or mobile data, then try again.'**
+  String get errorNoConnection;
+
+  /// No description provided for @errorTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'The connection took too long. Check your network and try again.'**
+  String get errorTimeout;
+
+  /// No description provided for @errorUnreachable.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t reach the server. Check your connection and try again.'**
+  String get errorUnreachable;
+
+  /// No description provided for @connectionNoNetworkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No connection'**
+  String get connectionNoNetworkTitle;
+
+  /// No description provided for @connectionTimeoutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Request timed out'**
+  String get connectionTimeoutTitle;
+
+  /// No description provided for @connectionUnreachableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t reach the server'**
+  String get connectionUnreachableTitle;
+
+  /// No description provided for @connectionSlowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Still connecting'**
+  String get connectionSlowTitle;
+
+  /// No description provided for @connectionSlow.
+  ///
+  /// In en, this message translates to:
+  /// **'Still connecting… this is taking longer than usual.'**
+  String get connectionSlow;
 }
 
 class _AppLocalizationsDelegate

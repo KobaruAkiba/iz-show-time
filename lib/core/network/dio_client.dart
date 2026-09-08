@@ -1,17 +1,14 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import '../constants/app_constants.dart';
 import '../constants/api_constants.dart';
 import '../../l10n/l10n.dart';
+import 'api_error.dart';
+import 'network_feedback.dart';
 
-/// Custom error types for API responses
-enum ApiErrorType {
-  rateLimit,
-  notFound,
-  unauthorized,
-  invalidResponse,
-  networkError,
-}
+export 'api_error.dart';
 
 /// API Result wrapper for consistent error handling
 class ApiResult<T> {
@@ -38,23 +35,13 @@ class ApiResult<T> {
         isSuccess: false,
         data: null,
         error: type,
-        message: message ?? _getErrorMessage(type),
+        message: message ?? apiErrorMessage(type),
       );
 
-  static String _getErrorMessage(ApiErrorType type) {
-    final l10n = AppL10n.current;
-    switch (type) {
-      case ApiErrorType.rateLimit:
-        return l10n.errorTooManyRequests;
-      case ApiErrorType.notFound:
-        return l10n.errorResourceNotFound;
-      case ApiErrorType.unauthorized:
-        return l10n.errorAccessDenied;
-      case ApiErrorType.invalidResponse:
-        return l10n.errorInvalidResponse;
-      default:
-        return l10n.errorGeneric;
-    }
+  /// Throws [ApiException] when this result is not a success.
+  T getOrThrow() {
+    if (isSuccess && data != null) return data as T;
+    throw ApiException(error, message);
   }
 }
 
@@ -111,6 +98,24 @@ class DioClient {
     }
   }
 
+  ApiErrorType _errorTypeForDio(DioException e) {
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+      case DioExceptionType.transformTimeout:
+        return ApiErrorType.timeout;
+      case DioExceptionType.connectionError:
+      case DioExceptionType.unknown:
+        return ApiErrorType.networkError;
+      case DioExceptionType.badResponse:
+        return _errorTypeForStatus(e.response?.statusCode);
+      case DioExceptionType.cancel:
+      case DioExceptionType.badCertificate:
+        return ApiErrorType.networkError;
+    }
+  }
+
   void _setupInterceptors() {
     _dio.interceptors.clear();
     _dio.interceptors.add(InterceptorsWrapper(
@@ -145,6 +150,12 @@ class DioClient {
     String path, {
     Map<String, dynamic>? queryParameters,
   }) async {
+    var reportedSlow = false;
+    final slowTimer = Timer(AppConstants.slowConnectionThreshold, () {
+      reportedSlow = true;
+      NetworkFeedback.showSlowConnection();
+    });
+
     try {
       final response = await _dio.get(
         path,
@@ -161,6 +172,8 @@ class DioClient {
         }
         return ApiResult.success(response.data as T);
       } else if (response.statusCode == 429) {
+        slowTimer.cancel();
+        if (reportedSlow) NetworkFeedback.dismissSlowConnection();
         await Future.delayed(const Duration(seconds: 5));
         return get<T>(path, queryParameters: queryParameters);
       }
@@ -169,14 +182,19 @@ class DioClient {
         _errorTypeForStatus(response.statusCode),
         message: 'HTTP ${response.statusCode}: ${response.data ?? 'no body'}',
       );
-    } catch (e) {
-      if (e is DioException && e.type == DioExceptionType.connectionTimeout) {
-        return ApiResult.error(
-          ApiErrorType.networkError,
-          message: 'Connection timeout',
-        );
+    } on DioException catch (e) {
+      final type = _errorTypeForDio(e);
+      return ApiResult.error(type);
+    } catch (_) {
+      return ApiResult.error(
+        ApiErrorType.networkError,
+        message: AppL10n.current.errorNoConnection,
+      );
+    } finally {
+      slowTimer.cancel();
+      if (reportedSlow) {
+        NetworkFeedback.dismissSlowConnection();
       }
-      return ApiResult.error(ApiErrorType.networkError, message: e.toString());
     }
   }
 

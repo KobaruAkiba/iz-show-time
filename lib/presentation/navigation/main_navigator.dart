@@ -132,8 +132,20 @@ class _MainNavigatorState extends State<MainNavigator> {
   }
 
   void showOnScreen(String message, {int? index}) {
+    final scheme = Theme.of(context).colorScheme;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        content: Text(
+          message,
+          style: TextStyle(
+            color: scheme.onInverseSurface,
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+          ),
+        ),
+        backgroundColor: scheme.inverseSurface,
+      ),
     );
   }
 }
@@ -144,8 +156,20 @@ extension NavigatorExtension on BuildContext {
   }
 
   void showSnackBar(String message) {
+    final scheme = Theme.of(this).colorScheme;
     ScaffoldMessenger.of(this).showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        content: Text(
+          message,
+          style: TextStyle(
+            color: scheme.onInverseSurface,
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+          ),
+        ),
+        backgroundColor: scheme.inverseSurface,
+      ),
     );
   }
 }

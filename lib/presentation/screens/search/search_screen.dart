@@ -6,9 +6,13 @@ import '../../widgets/media_detail_sheet.dart';
 import '../../widgets/media_filters.dart';
 import '../../widgets/app_page_header.dart';
 import '../../widgets/confirm_remove_from_catalogue.dart';
+import '../../widgets/connection_error_view.dart';
+import '../../widgets/connection_feedback.dart';
 import '../../widgets/lazy_paged_list_view.dart';
 import '../../../data/models/catalogue_item.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/network/api_error.dart';
+import '../../../core/network/network_feedback.dart';
 import '../../../core/services/app_services.dart';
 import '../../../l10n/l10n.dart';
 
@@ -33,6 +37,7 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _hasSearched = false;
   bool _isLoading = false;
   bool _isLoadingMore = false;
+  ApiErrorType? _errorType;
   String? _errorMessage;
   String _lastQuery = '';
 
@@ -117,6 +122,7 @@ class _SearchScreenState extends State<SearchScreen> {
       _filmResults = [];
       _tvShowResults = [];
       _seenIds.clear();
+      _errorType = null;
       _errorMessage = null;
       _lastQuery = '';
       _remotePage = 0;
@@ -162,6 +168,7 @@ class _SearchScreenState extends State<SearchScreen> {
       _hasSearched = true;
       _isLoading = true;
       _isLoadingMore = false;
+      _errorType = null;
       _errorMessage = null;
       _lastQuery = trimmedQuery;
       _resetResultBuffers();
@@ -188,10 +195,18 @@ class _SearchScreenState extends State<SearchScreen> {
         _remoteTotalPages = remoteResults.totalPages;
         _isLoading = false;
       });
-    } catch (e) {
+    } on ApiException catch (e) {
       if (!mounted || _lastQuery != trimmedQuery) return;
       setState(() {
         _isLoading = false;
+        _errorType = e.type;
+        _errorMessage = e.message;
+      });
+    } catch (_) {
+      if (!mounted || _lastQuery != trimmedQuery) return;
+      setState(() {
+        _isLoading = false;
+        _errorType = ApiErrorType.networkError;
         _errorMessage = context.l10n.searchFailed;
       });
     }
@@ -223,9 +238,14 @@ class _SearchScreenState extends State<SearchScreen> {
         _remoteTotalPages = remoteResults.totalPages;
         _isLoadingMore = false;
       });
+    } on ApiException catch (e) {
+      if (!mounted || _lastQuery != query) return;
+      setState(() => _isLoadingMore = false);
+      NetworkFeedback.showError(e.type, message: e.message);
     } catch (_) {
       if (!mounted || _lastQuery != query) return;
       setState(() => _isLoadingMore = false);
+      NetworkFeedback.showError(ApiErrorType.networkError);
     }
   }
 
@@ -286,11 +306,15 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const ConnectionAwareLoading();
     }
 
     if (_errorMessage != null) {
-      return Center(child: Text(_errorMessage!));
+      return ConnectionErrorView(
+        errorType: _errorType,
+        message: _errorMessage,
+        onRetry: () => _performSearch(_lastQuery),
+      );
     }
 
     final results = _buildFilteredResults();

@@ -11,6 +11,7 @@ import 'core/notifications/notification_service.dart';
 import 'core/notifications/app_lifecycle_coordinator.dart';
 import 'core/background/native_background_scheduler.dart';
 import 'core/routing/app_router.dart';
+import 'core/network/network_feedback.dart';
 import 'l10n/l10n.dart';
 import 'presentation/navigation/main_navigator.dart';
 
@@ -90,6 +91,7 @@ class _MyAppState extends State<MyApp> {
           darkTheme: AppTheme.darkTheme,
           themeMode: themeMode,
           navigatorKey: appNavigatorKey,
+          scaffoldMessengerKey: NetworkFeedback.messengerKey,
           localizationsDelegates: const [
             AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,

@@ -51,6 +51,7 @@
   "actionCancel": "Cancel",
   "actionRemove": "Remove",
   "actionRetry": "Retry",
+  "actionDismiss": "Dismiss",
   "actionOpen": "Open",
 
   "confirmRemoveFromCatalogueTitle": "Remove from Catalogue",
@@ -210,7 +211,7 @@
     }
   },
 
-  "homeTrendingLoadFailed": "Failed to load trending content",
+  "homeTrendingLoadFailed": "Couldn't load trending. Check your connection and try again.",
   "homeNoTrending": "No trending content available. Check your TMDB API key.",
   "homeTrendingNow": "Trending Now",
   "homeTrendingSubtitle": "Swipe to explore · tap for details",
@@ -227,7 +228,7 @@
 
   "searchHint": "Search films and shows...",
   "searchAction": "Search",
-  "searchFailed": "Search failed. Check your API key and connection.",
+  "searchFailed": "Search couldn't finish. Check your connection and try again.",
   "searchNoFilterMatches": "No results match your filters",
   "searchNoResultsForQuery": "No results for \"{query}\"",
   "@searchNoResultsForQuery": {
@@ -300,5 +301,13 @@
   "errorResourceNotFound": "Resource not found.",
   "errorAccessDenied": "Access denied. API key may be invalid.",
   "errorInvalidResponse": "Invalid response from server.",
-  "errorGeneric": "An error occurred"
+  "errorGeneric": "An error occurred",
+  "errorNoConnection": "You're offline. Check Wi‑Fi or mobile data, then try again.",
+  "errorTimeout": "The connection took too long. Check your network and try again.",
+  "errorUnreachable": "We couldn't reach the server. Check your connection and try again.",
+  "connectionNoNetworkTitle": "No connection",
+  "connectionTimeoutTitle": "Request timed out",
+  "connectionUnreachableTitle": "Can't reach the server",
+  "connectionSlowTitle": "Still connecting",
+  "connectionSlow": "Still connecting… this is taking longer than usual."
 }

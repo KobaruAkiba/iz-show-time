@@ -129,6 +129,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionRetry => 'Retry';
 
   @override
+  String get actionDismiss => 'Dismiss';
+
+  @override
   String get actionOpen => 'Open';
 
   @override
@@ -326,7 +329,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get homeTrendingLoadFailed => 'Failed to load trending content';
+  String get homeTrendingLoadFailed =>
+      'Couldn\'t load trending. Check your connection and try again.';
 
   @override
   String get homeNoTrending =>
@@ -365,7 +369,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchFailed =>
-      'Search failed. Check your API key and connection.';
+      'Search couldn\'t finish. Check your connection and try again.';
 
   @override
   String get searchNoFilterMatches => 'No results match your filters';
@@ -532,4 +536,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorGeneric => 'An error occurred';
+
+  @override
+  String get errorNoConnection =>
+      'You\'re offline. Check Wi‑Fi or mobile data, then try again.';
+
+  @override
+  String get errorTimeout =>
+      'The connection took too long. Check your network and try again.';
+
+  @override
+  String get errorUnreachable =>
+      'We couldn\'t reach the server. Check your connection and try again.';
+
+  @override
+  String get connectionNoNetworkTitle => 'No connection';
+
+  @override
+  String get connectionTimeoutTitle => 'Request timed out';
+
+  @override
+  String get connectionUnreachableTitle => 'Can\'t reach the server';
+
+  @override
+  String get connectionSlowTitle => 'Still connecting';
+
+  @override
+  String get connectionSlow =>
+      'Still connecting… this is taking longer than usual.';
 }

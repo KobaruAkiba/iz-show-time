@@ -4,6 +4,10 @@ class AppConstants {
   static const Duration connectionTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);
 
+  /// After this delay while a request is still in flight, show slow-connection UI
+  /// (banner / inline hint) so slow networks feel intentional rather than frozen.
+  static const Duration slowConnectionThreshold = Duration(seconds: 4);
+
   static const int defaultCacheTTLMinutes = 60;
 
   // Cache TTL settings for different data types (in minutes)

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../cache/cache_manager.dart';
 import '../background/background_task_runner.dart';
 import '../constants/storage_constants.dart';
+import '../network/api_error.dart';
+import '../network/network_feedback.dart';
 import '../notifications/new_episode_checker.dart';
 import '../theme/app_theme.dart';
 import '../../data/repositories/hive_user_data_store.dart';
@@ -152,11 +154,15 @@ class AppServices {
 
       if (item is! Film) return null;
 
-      final details = await tmdbService.getMediaDetails(item);
-      final runtime = details?.runtimeMinutes ?? 0;
-      if (runtime <= 0) return null;
+      try {
+        final details = await tmdbService.getMediaDetails(item);
+        final runtime = details?.runtimeMinutes ?? 0;
+        if (runtime <= 0) return null;
 
-      return await markFilmWatched(film: item, durationMinutes: runtime);
+        return await markFilmWatched(film: item, durationMinutes: runtime);
+      } on ApiException {
+        return null;
+      }
     });
   }
 
@@ -518,38 +524,40 @@ class AppServices {
     int? forShowId,
     bool forceRefresh = false,
   }) async {
-    try {
-      final shows = forShowId == null
-          ? followedTvShows
-          : followedTvShows
-              .where((show) => show.id == forShowId)
-              .toList(growable: false);
+    await NetworkFeedback.runSilent(() async {
+      try {
+        final shows = forShowId == null
+            ? followedTvShows
+            : followedTvShows
+                .where((show) => show.id == forShowId)
+                .toList(growable: false);
 
-      if (forShowId != null && shows.isEmpty) {
-        _newEpisodeAlerts.removeWhere((alert) => alert.showId == forShowId);
-        newEpisodeAlertsListenable.value = List<NewEpisodeAlert>.from(
-          _newEpisodeAlerts,
+        if (forShowId != null && shows.isEmpty) {
+          _newEpisodeAlerts.removeWhere((alert) => alert.showId == forShowId);
+          newEpisodeAlertsListenable.value = List<NewEpisodeAlert>.from(
+            _newEpisodeAlerts,
+          );
+          await userDataStore.saveNewEpisodeAlerts(_newEpisodeAlerts);
+          return;
+        }
+
+        final checker = NewEpisodeChecker(
+          tmdbService: tmdbService,
+          userDataStore: userDataStore,
         );
-        await userDataStore.saveNewEpisodeAlerts(_newEpisodeAlerts);
-        return;
+        final result = await checker.checkShows(
+          shows: shows,
+          watchHistory: watchHistory,
+          forceRefresh: forceRefresh,
+          mergeWithExisting: forShowId != null,
+        );
+        updateNewEpisodeAlerts(result.allAlerts);
+      } catch (error, stackTrace) {
+        debugPrint(
+          'Failed to refresh new episode alerts: $error\n$stackTrace',
+        );
       }
-
-      final checker = NewEpisodeChecker(
-        tmdbService: tmdbService,
-        userDataStore: userDataStore,
-      );
-      final result = await checker.checkShows(
-        shows: shows,
-        watchHistory: watchHistory,
-        forceRefresh: forceRefresh,
-        mergeWithExisting: forShowId != null,
-      );
-      updateNewEpisodeAlerts(result.allAlerts);
-    } catch (error, stackTrace) {
-      debugPrint(
-        'Failed to refresh new episode alerts: $error\n$stackTrace',
-      );
-    }
+    });
   }
 
   /// Foreground network refresh of followed-show alerts (no system notify).

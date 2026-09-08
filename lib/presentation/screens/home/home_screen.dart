@@ -4,9 +4,12 @@ import '../../widgets/auto_scrolling_page_carousel.dart';
 import '../../widgets/media_card.dart';
 import '../../widgets/media_detail_sheet.dart';
 import '../../widgets/app_page_header.dart';
+import '../../widgets/connection_error_view.dart';
+import '../../widgets/connection_feedback.dart';
 import '../../widgets/lazy_paged_list_view.dart';
 import '../../../data/models/catalogue_item.dart';
 import '../../../data/models/new_episode_alert.dart';
+import '../../../core/network/api_error.dart';
 import '../../../core/services/app_services.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/constants/app_constants.dart';
@@ -26,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
   static const _carouselHeight = 400.0;
 
   bool _isLoading = true;
+  ApiErrorType? _errorType;
   String? _errorMessage;
   final List<CatalogueItem> _trendingItems = [];
   bool _detailSheetOpen = false;
@@ -58,6 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadTrending() async {
     setState(() {
       _isLoading = true;
+      _errorType = null;
       _errorMessage = null;
     });
 
@@ -71,9 +76,16 @@ class _HomeScreenState extends State<HomeScreen> {
           ..clear()
           ..addAll(combined.take(12));
       });
-    } catch (e) {
+    } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
+        _errorType = e.type;
+        _errorMessage = e.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _errorType = ApiErrorType.networkError;
         _errorMessage = context.l10n.homeTrendingLoadFailed;
       });
     } finally {
@@ -100,8 +112,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -110,31 +120,14 @@ class _HomeScreenState extends State<HomeScreen> {
             const AppPageHeader(),
             if (_isLoading)
               const Expanded(
-                child: Center(child: CircularProgressIndicator()),
+                child: ConnectionAwareLoading(),
               )
             else if (_errorMessage != null)
               Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.cloud_off,
-                        size: 48,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.4),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(_errorMessage!),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                        onPressed: _loadTrending,
-                        child: Text(l10n.actionRetry),
-                      ),
-                    ],
-                  ),
+                child: ConnectionErrorView(
+                  errorType: _errorType,
+                  message: _errorMessage,
+                  onRetry: _loadTrending,
                 ),
               )
             else
