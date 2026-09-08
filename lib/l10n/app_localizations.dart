@@ -733,8 +733,20 @@ abstract class AppLocalizations {
   /// No description provided for @homeNewEpisodesEmptyBody.
   ///
   /// In en, this message translates to:
-  /// **'Follow a show in your catalogue and register an episode — the next one in order will appear here.'**
+  /// **'Add a TV show to your catalogue and register an episode — the next one in order will appear here.'**
   String get homeNewEpisodesEmptyBody;
+
+  /// No description provided for @homeNewEpisodesCaughtUpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'All caught up'**
+  String get homeNewEpisodesCaughtUpTitle;
+
+  /// No description provided for @homeNewEpisodesCaughtUpBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No next episode waiting — you\'re up to date on the shows in your catalogue.'**
+  String get homeNewEpisodesCaughtUpBody;
 
   /// No description provided for @homeAiredOn.
   ///

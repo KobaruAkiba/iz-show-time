@@ -115,12 +115,20 @@ class TvShow extends CatalogueItem {
   @override
   final double voteAverage;
 
+  /// TMDB series lifecycle status (e.g. Returning Series, Ended).
+  final String? status;
+
+  /// ISO date of TMDB `next_episode_to_air`, when known.
+  final String? nextEpisodeAirDate;
+
   const TvShow({
     required super.id,
     required super.title,
     this.overview,
     this.posterPath,
     this.voteAverage = 0.0,
+    this.status,
+    this.nextEpisodeAirDate,
     super.tags = const [],
   });
 
@@ -134,6 +142,8 @@ class TvShow extends CatalogueItem {
       overview: json['overview'] as String?,
       posterPath: json['poster_path'] as String?,
       voteAverage: (json['vote_average'] as num?)?.toDouble() ?? 0.0,
+      status: _nonEmptyString(json['status']),
+      nextEpisodeAirDate: _nonEmptyString(json['next_episode_air_date']),
       tags: _parseTags(json['tags']),
     );
   }
@@ -144,18 +154,37 @@ class TvShow extends CatalogueItem {
         'overview': overview,
         'poster_path': posterPath,
         'vote_average': voteAverage,
+        if (status != null) 'status': status,
+        if (nextEpisodeAirDate != null)
+          'next_episode_air_date': nextEpisodeAirDate,
         'tags': tags,
       };
 
-  @override
-  TvShow copyWithTags(List<String> newTags) => TvShow(
+  TvShow copyWith({
+    String? overview,
+    String? posterPath,
+    double? voteAverage,
+    String? status,
+    String? nextEpisodeAirDate,
+    List<String>? tags,
+    bool clearStatus = false,
+    bool clearNextEpisodeAirDate = false,
+  }) =>
+      TvShow(
         id: id,
         title: title,
-        overview: overview,
-        posterPath: posterPath,
-        voteAverage: voteAverage,
-        tags: newTags,
+        overview: overview ?? this.overview,
+        posterPath: posterPath ?? this.posterPath,
+        voteAverage: voteAverage ?? this.voteAverage,
+        status: clearStatus ? null : (status ?? this.status),
+        nextEpisodeAirDate: clearNextEpisodeAirDate
+            ? null
+            : (nextEpisodeAirDate ?? this.nextEpisodeAirDate),
+        tags: tags ?? this.tags,
       );
+
+  @override
+  TvShow copyWithTags(List<String> newTags) => copyWith(tags: newTags);
 
   @override
   String toString() => 'TvShow(id: $id, name: $title)';
@@ -164,6 +193,12 @@ class TvShow extends CatalogueItem {
 List<String> _parseTags(Object? raw) {
   if (raw is! List) return const [];
   return raw.map((entry) => entry.toString()).toList(growable: false);
+}
+
+String? _nonEmptyString(Object? value) {
+  if (value is! String) return null;
+  final trimmed = value.trim();
+  return trimmed.isEmpty ? null : trimmed;
 }
 
 /// Drops bulky fields (overview) kept only for API/search display.
@@ -182,6 +217,8 @@ CatalogueItem catalogueItemForLocalStore(CatalogueItem item) {
         title: show.title,
         posterPath: show.posterPath,
         voteAverage: show.voteAverage,
+        status: show.status,
+        nextEpisodeAirDate: show.nextEpisodeAirDate,
         tags: show.tags,
       ),
     _ => throw ArgumentError(
@@ -206,6 +243,9 @@ Map<String, dynamic> catalogueItemToStorageJson(CatalogueItem item) {
         'name': show.title,
         'poster_path': show.posterPath,
         'vote_average': show.voteAverage,
+        if (show.status != null) 'status': show.status,
+        if (show.nextEpisodeAirDate != null)
+          'next_episode_air_date': show.nextEpisodeAirDate,
         'tags': show.tags,
       },
     _ => throw ArgumentError(

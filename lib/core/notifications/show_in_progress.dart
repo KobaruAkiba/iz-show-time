@@ -1,5 +1,5 @@
+import '../../data/models/catalogue_item.dart';
 import '../../data/models/episode_model.dart';
-import '../../data/models/new_episode_alert.dart';
 import '../../data/models/watch_record.dart';
 import 'episode_signature.dart';
 
@@ -14,21 +14,40 @@ bool isAvailableImmediateNextEpisode(
       !isEpisodeRegisteredInCatalogue(episode, watchHistory);
 }
 
-/// Whether [showId] has an immediate next aired episode available, based on
-/// the latest [NewEpisodeAlert] snapshot (same source as Home New Episodes).
-bool isShowInProgress(
-  int showId, {
-  required Iterable<NewEpisodeAlert> alerts,
+/// TMDB statuses that mean the series is still active (not concluded).
+const Set<String> kOngoingSeriesStatuses = {
+  'returning series',
+  'planned',
+  'in production',
+  'pilot',
+};
+
+/// Whether a series is still in progress: ongoing TMDB status and/or a
+/// scheduled next episode. Independent of the user's watch registration.
+bool isSeriesInProgress({
+  String? status,
+  String? nextEpisodeAirDate,
 }) {
-  for (final alert in alerts) {
-    if (alert.showId == showId) return true;
-  }
-  return false;
+  if (_hasScheduledNextEpisode(nextEpisodeAirDate)) return true;
+  return isOngoingSeriesStatus(status);
 }
 
-/// Show IDs currently considered in progress (immediate next episode available).
-Set<int> inProgressShowIds({
-  required Iterable<NewEpisodeAlert> alerts,
-}) {
-  return {for (final alert in alerts) alert.showId};
+/// Whether [show] is still airing or has an upcoming episode scheduled.
+bool isShowInProgress(TvShow show) {
+  return isSeriesInProgress(
+    status: show.status,
+    nextEpisodeAirDate: show.nextEpisodeAirDate,
+  );
+}
+
+/// True for TMDB lifecycle statuses that are not Ended/Canceled.
+bool isOngoingSeriesStatus(String? status) {
+  final normalized = status?.trim().toLowerCase();
+  if (normalized == null || normalized.isEmpty) return false;
+  return kOngoingSeriesStatuses.contains(normalized);
+}
+
+bool _hasScheduledNextEpisode(String? nextEpisodeAirDate) {
+  final raw = nextEpisodeAirDate?.trim();
+  return raw != null && raw.isNotEmpty;
 }

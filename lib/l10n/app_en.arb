@@ -225,7 +225,9 @@
   "homeNewEpisodes": "New Episodes",
   "homeNewEpisodesSubtitle": "The next episode to watch after your last registered one",
   "homeNewEpisodesEmptyTitle": "Nothing here yet",
-  "homeNewEpisodesEmptyBody": "Follow a show in your catalogue and register an episode — the next one in order will appear here.",
+  "homeNewEpisodesEmptyBody": "Add a TV show to your catalogue and register an episode — the next one in order will appear here.",
+  "homeNewEpisodesCaughtUpTitle": "All caught up",
+  "homeNewEpisodesCaughtUpBody": "No next episode waiting — you're up to date on the shows in your catalogue.",
   "homeAiredOn": "Aired {date}",
   "@homeAiredOn": {
     "placeholders": {
@@ -269,6 +271,7 @@
   "settingsThemeSystem": "System",
   "settingsThemeLight": "Light",
   "settingsThemeDark": "Dark",
+  "settingsCredits": "Credits",
   "settingsAbout": "About",
   "settingsAuthor": "Author",
   "settingsVersion": "Version",

@@ -96,6 +96,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
+  void didUpdateWidget(covariant HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Refresh empty-state copy when returning to Home after catalogue changes.
+    if (widget.isActive && !oldWidget.isActive) {
+      setState(() {});
+    }
+  }
+
+  @override
   void dispose() {
     _appServices.newEpisodeAlertsListenable.removeListener(_onNewEpisodesChanged);
     super.dispose();
@@ -275,6 +284,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildNewEpisodesEmptyState(ColorScheme colorScheme) {
     final l10n = context.l10n;
+    final hasSeries = _appServices.tvShows.isNotEmpty;
+    final title = hasSeries
+        ? l10n.homeNewEpisodesCaughtUpTitle
+        : l10n.homeNewEpisodesEmptyTitle;
+    final body = hasSeries
+        ? l10n.homeNewEpisodesCaughtUpBody
+        : l10n.homeNewEpisodesEmptyBody;
 
     return Container(
       width: double.infinity,
@@ -289,20 +305,20 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         children: [
           Icon(
-            Icons.playlist_play,
+            hasSeries ? Icons.check_circle_outline : Icons.playlist_play,
             size: 40,
             color: colorScheme.primary.withValues(alpha: 0.7),
           ),
           const SizedBox(height: 12),
           Text(
-            l10n.homeNewEpisodesEmptyTitle,
+            title,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
           ),
           const SizedBox(height: 6),
           Text(
-            l10n.homeNewEpisodesEmptyBody,
+            body,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: colorScheme.onSurface.withValues(alpha: 0.6),

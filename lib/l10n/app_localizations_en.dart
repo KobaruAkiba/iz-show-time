@@ -375,7 +375,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homeNewEpisodesEmptyBody =>
-      'Follow a show in your catalogue and register an episode — the next one in order will appear here.';
+      'Add a TV show to your catalogue and register an episode — the next one in order will appear here.';
+
+  @override
+  String get homeNewEpisodesCaughtUpTitle => 'All caught up';
+
+  @override
+  String get homeNewEpisodesCaughtUpBody =>
+      'No next episode waiting — you\'re up to date on the shows in your catalogue.';
 
   @override
   String homeAiredOn(String date) {
