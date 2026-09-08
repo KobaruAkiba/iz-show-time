@@ -712,6 +712,8 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
         .length;
     final allInCatalogue = catalogueEpisodes.isNotEmpty &&
         watchedInSeason == catalogueEpisodes.length;
+    final partialInCatalogue =
+        watchedInSeason > 0 && watchedInSeason < catalogueEpisodes.length;
     final canAddSeason = season.episodes.isNotEmpty && !season.isUpcoming;
 
     final String subtitle;
@@ -761,8 +763,12 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                   icon: Icon(
                     allInCatalogue
                         ? Icons.bookmark
-                        : Icons.bookmark_add_outlined,
-                    color: allInCatalogue ? colorScheme.primary : null,
+                        : partialInCatalogue
+                            ? Icons.bookmark_add
+                            : Icons.bookmark_add_outlined,
+                    color: allInCatalogue || partialInCatalogue
+                        ? colorScheme.primary
+                        : null,
                   ),
                   onPressed: canAddSeason
                       ? () => _toggleSeasonInCatalogue(season)
