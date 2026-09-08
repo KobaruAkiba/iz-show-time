@@ -289,7 +289,7 @@ abstract class AppLocalizations {
   /// No description provided for @filtersInProgressHint.
   ///
   /// In en, this message translates to:
-  /// **'Shows with the next episode already aired and not yet registered.'**
+  /// **'Shows still airing or with an upcoming episode scheduled.'**
   String get filtersInProgressHint;
 
   /// No description provided for @filtersSortBy.
@@ -835,7 +835,7 @@ abstract class AppLocalizations {
   /// No description provided for @catalogueNoInProgress.
   ///
   /// In en, this message translates to:
-  /// **'No shows currently in progress.\nRegister an episode, then when the next one airs it will show up here.'**
+  /// **'No shows currently in progress.\nSeries that are still airing or have an upcoming episode will show up here.'**
   String get catalogueNoInProgress;
 
   /// No description provided for @settingsAppearance.
