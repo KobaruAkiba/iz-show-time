@@ -226,6 +226,7 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                         FilterChip(
                           label: Text(l10n.filtersFavorites),
                           selected: draftFavoritesOnly,
+                          showCheckmark: false,
                           avatar: Icon(
                             draftFavoritesOnly
                                 ? Icons.favorite
@@ -240,6 +241,7 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                         FilterChip(
                           label: Text(l10n.filtersInProgress),
                           selected: draftInProgressOnly,
+                          showCheckmark: false,
                           avatar: Icon(
                             draftInProgressOnly
                                 ? Icons.play_circle_filled
