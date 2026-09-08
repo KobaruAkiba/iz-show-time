@@ -453,6 +453,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsThemeDark => 'Dark';
 
   @override
+  String get settingsCredits => 'Credits';
+
+  @override
   String get settingsAbout => 'About';
 
   @override

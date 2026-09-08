@@ -862,6 +862,12 @@ abstract class AppLocalizations {
   /// **'Dark'**
   String get settingsThemeDark;
 
+  /// No description provided for @settingsCredits.
+  ///
+  /// In en, this message translates to:
+  /// **'Credits'**
+  String get settingsCredits;
+
   /// No description provided for @settingsAbout.
   ///
   /// In en, this message translates to:

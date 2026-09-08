@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../cache/cache_manager.dart';
@@ -12,6 +14,7 @@ import '../../data/repositories/user_data_store.dart';
 import '../../data/services/tmdb_service.dart';
 import '../../data/models/catalogue_item.dart';
 import '../../data/models/episode_model.dart';
+import '../../data/models/media_details.dart';
 import '../../data/models/new_episode_alert.dart';
 import '../../data/models/watch_record.dart';
 
@@ -100,6 +103,79 @@ class AppServices {
     _catalogue.add(localItem);
     _catalogueById[localItem.id] = localItem;
     await _persistCatalogueItem(localItem);
+    if (localItem is TvShow) {
+      unawaited(syncTvShowAiringState(localItem.id));
+    }
+  }
+
+  /// Persists TMDB airing metadata used by the catalogue In Progress filter.
+  Future<void> updateTvShowAiringState(
+    int id, {
+    String? status,
+    String? nextEpisodeAirDate,
+  }) async {
+    final index = _catalogue.indexWhere((item) => item.id == id);
+    if (index < 0) return;
+
+    final item = _catalogue[index];
+    if (item is! TvShow) return;
+
+    final nextStatus = _nonEmptyTrimmed(status);
+    final nextDate = _nonEmptyTrimmed(nextEpisodeAirDate);
+    if (item.status == nextStatus && item.nextEpisodeAirDate == nextDate) {
+      return;
+    }
+
+    final updated = item.copyWith(
+      status: nextStatus,
+      nextEpisodeAirDate: nextDate,
+      clearStatus: nextStatus == null,
+      clearNextEpisodeAirDate: nextDate == null,
+    );
+    _catalogue[index] = updated;
+    _catalogueById[id] = updated;
+    await _persistCatalogueItem(updated);
+  }
+
+  /// Applies airing fields from already-fetched [details] when the show is
+  /// in the local catalogue.
+  Future<void> applyTvShowAiringDetails(int id, MediaDetails details) async {
+    if (details.isFilm) return;
+    await updateTvShowAiringState(
+      id,
+      status: details.status,
+      nextEpisodeAirDate: details.nextEpisodeAirDate,
+    );
+  }
+
+  /// Refreshes TMDB status / next-episode date for one catalogue TV show.
+  Future<void> syncTvShowAiringState(int id) async {
+    await NetworkFeedback.runSilent(() async {
+      final item = _catalogueById[id];
+      if (item is! TvShow) return;
+      try {
+        final details = await tmdbService.getMediaDetails(item);
+        if (details == null) return;
+        await applyTvShowAiringDetails(id, details);
+      } on ApiException {
+        // Keep last known airing state on network/API failure.
+      }
+    });
+  }
+
+  /// Refreshes airing metadata for every catalogue TV show (uses TMDB cache).
+  Future<void> syncTvShowAiringStates() async {
+    await NetworkFeedback.runSilent(() async {
+      for (final show in List<TvShow>.from(tvShows)) {
+        try {
+          final details = await tmdbService.getMediaDetails(show);
+          if (details == null) continue;
+          await applyTvShowAiringDetails(show.id, details);
+        } on ApiException {
+          continue;
+        }
+      }
+    });
   }
 
   Future<void> removeFromCatalogue(int id) async {
@@ -783,4 +859,10 @@ class AppServices {
       debugPrint('Failed to persist TMDB cache purge time: $error\n$stackTrace');
     }
   }
+}
+
+String? _nonEmptyTrimmed(String? value) {
+  final trimmed = value?.trim();
+  if (trimmed == null || trimmed.isEmpty) return null;
+  return trimmed;
 }
