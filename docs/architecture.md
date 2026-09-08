@@ -62,6 +62,6 @@ flutter run --dart-define=TMDB_API_KEY=your_token_here
 
 - **L1**: In-memory `CacheManager` with TTL per request type
 - **Rate limiting**: `ApiCacheService` tracks requests per minute (40 cap)
-- **Background**: Refreshes trending data every 4 hours
+- **Background**: Refreshes trending data every 2 hours
 
 Persistent Hive/SQLite cache for TMDb responses is not implemented in the current revision. User catalogue and watch history are persisted via Hive.

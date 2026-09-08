@@ -109,6 +109,13 @@ class NewEpisodeChecker {
     if (lastRegistered == null) return null;
 
     final details = await _tmdbService.getMediaDetails(show);
+    if (details != null &&
+        !shouldMonitorSeriesForNewEpisodes(
+          status: details.status,
+          nextEpisodeAirDate: details.nextEpisodeAirDate,
+        )) {
+      return null;
+    }
     final seasonCount = details?.numberOfSeasons ?? 0;
     if (seasonCount <= 0) return null;
 

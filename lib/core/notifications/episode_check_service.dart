@@ -3,6 +3,7 @@ import '../services/app_services.dart';
 import 'episode_notification_policy.dart';
 import 'new_episode_checker.dart';
 import 'notification_service.dart';
+import 'show_in_progress.dart';
 
 /// Runs catalogue episode checks and optionally raises system notifications.
 class EpisodeCheckService {
@@ -18,7 +19,9 @@ class EpisodeCheckService {
       );
 
       return checker.checkShows(
-        shows: appServices.followedTvShows,
+        shows: appServices.followedTvShows
+            .where(shouldMonitorShowForNewEpisodes)
+            .toList(growable: false),
         watchHistory: appServices.watchHistory,
         forceRefresh: true,
       );

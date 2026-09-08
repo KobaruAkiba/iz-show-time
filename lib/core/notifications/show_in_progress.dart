@@ -40,6 +40,30 @@ bool isShowInProgress(TvShow show) {
   );
 }
 
+/// Whether a series should be included in new-episode monitoring.
+///
+/// Unknown/missing TMDB status fails open so unsynced catalogue items are
+/// still checked; known concluded series without a next episode are skipped.
+bool shouldMonitorSeriesForNewEpisodes({
+  String? status,
+  String? nextEpisodeAirDate,
+}) {
+  final normalized = status?.trim();
+  if (normalized == null || normalized.isEmpty) return true;
+  return isSeriesInProgress(
+    status: status,
+    nextEpisodeAirDate: nextEpisodeAirDate,
+  );
+}
+
+/// Whether [show] should be included in new-episode monitoring.
+bool shouldMonitorShowForNewEpisodes(TvShow show) {
+  return shouldMonitorSeriesForNewEpisodes(
+    status: show.status,
+    nextEpisodeAirDate: show.nextEpisodeAirDate,
+  );
+}
+
 /// True for TMDB lifecycle statuses that are not Ended/Canceled.
 bool isOngoingSeriesStatus(String? status) {
   final normalized = status?.trim().toLowerCase();

@@ -8,6 +8,7 @@ import '../constants/storage_constants.dart';
 import '../network/api_error.dart';
 import '../network/network_feedback.dart';
 import '../notifications/new_episode_checker.dart';
+import '../notifications/show_in_progress.dart';
 import '../theme/app_theme.dart';
 import '../../data/repositories/hive_user_data_store.dart';
 import '../../data/repositories/user_data_store.dart';
@@ -604,8 +605,14 @@ class AppServices {
       try {
         final shows = forShowId == null
             ? followedTvShows
+                .where(shouldMonitorShowForNewEpisodes)
+                .toList(growable: false)
             : followedTvShows
-                .where((show) => show.id == forShowId)
+                .where(
+                  (show) =>
+                      show.id == forShowId &&
+                      shouldMonitorShowForNewEpisodes(show),
+                )
                 .toList(growable: false);
 
         if (forShowId != null && shows.isEmpty) {

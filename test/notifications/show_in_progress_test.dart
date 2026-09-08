@@ -93,4 +93,47 @@ void main() {
       expect(isShowInProgress(upcoming), isTrue);
     });
   });
+
+  group('shouldMonitorShowForNewEpisodes', () {
+    test('fails open when status is missing', () {
+      const unknown = TvShow(id: 1, title: 'Unknown');
+      expect(shouldMonitorShowForNewEpisodes(unknown), isTrue);
+      expect(
+        shouldMonitorSeriesForNewEpisodes(status: null),
+        isTrue,
+      );
+      expect(
+        shouldMonitorSeriesForNewEpisodes(status: '  '),
+        isTrue,
+      );
+    });
+
+    test('monitors returning series', () {
+      const show = TvShow(
+        id: 1,
+        title: 'Ongoing',
+        status: 'Returning Series',
+      );
+      expect(shouldMonitorShowForNewEpisodes(show), isTrue);
+    });
+
+    test('skips ended series without a next episode', () {
+      const show = TvShow(
+        id: 2,
+        title: 'Finished',
+        status: 'Ended',
+      );
+      expect(shouldMonitorShowForNewEpisodes(show), isFalse);
+    });
+
+    test('monitors ended series when a next episode is scheduled', () {
+      const show = TvShow(
+        id: 3,
+        title: 'Revival',
+        status: 'Ended',
+        nextEpisodeAirDate: '2026-12-01',
+      );
+      expect(shouldMonitorShowForNewEpisodes(show), isTrue);
+    });
+  });
 }

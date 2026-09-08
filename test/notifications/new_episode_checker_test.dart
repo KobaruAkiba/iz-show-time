@@ -127,10 +127,15 @@ class StubTmdbService extends TmdbService {
   StubTmdbService({
     required this.seasonCount,
     required this.episodesBySeason,
+    this.detailsStatus,
+    this.detailsNextEpisodeAirDate,
   }) : super(cacheManager: null);
 
   final int seasonCount;
   final Map<int, List<EpisodeModel>> episodesBySeason;
+  final String? detailsStatus;
+  final String? detailsNextEpisodeAirDate;
+  int seasonFetchCount = 0;
 
   @override
   Future<MediaDetails?> getMediaDetails(CatalogueItem item) async {
@@ -138,6 +143,8 @@ class StubTmdbService extends TmdbService {
       title: item.title,
       numberOfSeasons: seasonCount,
       isFilm: false,
+      status: detailsStatus,
+      nextEpisodeAirDate: detailsNextEpisodeAirDate,
     );
   }
 
@@ -147,6 +154,7 @@ class StubTmdbService extends TmdbService {
     required int seasonNumber,
     bool forceRefresh = false,
   }) async {
+    seasonFetchCount++;
     return episodesBySeason[seasonNumber] ?? const [];
   }
 }
@@ -351,6 +359,63 @@ void main() {
 
       expect(result.newlyDetected, isEmpty);
       expect(result.allAlerts, isEmpty);
+    });
+
+    test('skips ended shows from fresh TMDB details without season fetch',
+        () async {
+      const show = TvShow(
+        id: 42,
+        title: 'Finished Show',
+        status: 'Returning Series',
+      );
+      final watchHistory = [
+        WatchRecord(
+          mediaId: 42,
+          isFilm: false,
+          episodeId: 100,
+          seasonNumber: 1,
+          episodeNumber: 1,
+          durationMinutes: 45,
+          watchedAt: DateTime(2026, 1, 1),
+        ),
+      ];
+
+      final tmdb = StubTmdbService(
+        seasonCount: 1,
+        detailsStatus: 'Ended',
+        episodesBySeason: {
+          1: [
+            EpisodeModel.fromJson({
+              'id': 100,
+              'season_number': 1,
+              'episode_number': 1,
+              'name': 'Pilot',
+              'air_date': '2020-01-01',
+            }),
+            EpisodeModel.fromJson({
+              'id': 101,
+              'season_number': 1,
+              'episode_number': 2,
+              'name': 'Next',
+              'air_date': '2020-01-08',
+            }),
+          ],
+        },
+      );
+
+      final checker = NewEpisodeChecker(
+        tmdbService: tmdb,
+        userDataStore: store,
+      );
+
+      final result = await checker.checkShows(
+        shows: [show],
+        watchHistory: watchHistory,
+      );
+
+      expect(result.newlyDetected, isEmpty);
+      expect(result.allAlerts, isEmpty);
+      expect(tmdb.seasonFetchCount, 0);
     });
   });
 }

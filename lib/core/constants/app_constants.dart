@@ -18,7 +18,7 @@ class AppConstants {
   static const int episodeCacheTTL = 1440; // 24 hours
 
   // Notification / background episode-check settings
-  static const int notificationCheckIntervalHours = 4;
+  static const int notificationCheckIntervalHours = 2;
 
   /// First WorkManager run after registration (Android minimum ~15 minutes).
   static const int notificationCheckInitialDelayMinutes = 15;
