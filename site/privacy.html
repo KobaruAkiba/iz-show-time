@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IzShowTime — Privacy Policy</title>
+  <meta name="description" content="Privacy policy for IzShowTime. Informativa sulla privacy.">
+  <link rel="icon" href="assets/IzShowTimeIcon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a class="brand" href="index.html">
+        <img src="assets/IzShowTimeIcon.png" width="48" height="48" alt="">
+        <span class="brand-text">
+          <span class="brand-name">IzShowTime</span>
+          <span class="brand-tag" data-i18n="brandTag">Open-source film &amp; TV tracker</span>
+        </span>
+      </a>
+      <nav class="nav" aria-label="Primary">
+        <a href="index.html" data-i18n="navSupport">Assistenza</a>
+        <a href="privacy.html" aria-current="page" data-i18n="navPrivacy">Privacy</a>
+        <a href="https://github.com/KobaruAkiba/iz-show-time" rel="noopener noreferrer">GitHub</a>
+      </nav>
+      <div class="lang-switch" role="group" aria-label="Language">
+        <button type="button" data-lang="it" aria-pressed="true">IT</button>
+        <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero">
+      <h1 data-i18n="heroTitle">Privacy policy</h1>
+      <p class="lede" data-i18n="heroLede">
+        IzShowTime non crea account e non gestisce un backend per i tuoi dati. Il catalogo e la
+        cronologia restano sul tuo dispositivo.
+      </p>
+      <p class="meta" data-i18n="updated">Ultimo aggiornamento: 9 settembre 2026</p>
+    </div>
+
+    <section>
+      <h2 data-i18n="whoTitle">Titolare</h2>
+      <p data-i18n="whoBody">
+        IzShowTime è sviluppato da Mirko Corba. Per domande sulla privacy:
+        <a href="mailto:mirko.corba@gmail.com">mirko.corba@gmail.com</a>.
+      </p>
+      <p data-i18n="whoOss">
+        Il codice sorgente è pubblico (licenza MIT) su
+        <a href="https://github.com/KobaruAkiba/iz-show-time" rel="noopener noreferrer">GitHub</a>.
+      </p>
+    </section>
+
+    <section>
+      <h2 data-i18n="summaryTitle">In sintesi</h2>
+      <ul>
+        <li data-i18n="s1">Nessun account, login o profilo utente.</li>
+        <li data-i18n="s2">Nessuna raccolta di email, nome, posizione, contatti o foto.</li>
+        <li data-i18n="s3">Nessun analytics, pubblicità, crash reporter o push notification remoto nostro.</li>
+        <li data-i18n="s4">I dati del catalogo e della visione restano in locale sul dispositivo.</li>
+        <li data-i18n="s5">La connessione online serve principalmente a ottenere metadati e immagini da TMDb.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 data-i18n="localTitle">Dati sul dispositivo</h2>
+      <p data-i18n="localBody">
+        L’app salva in locale (storage Hive sul dispositivo) informazioni come:
+      </p>
+      <ul>
+        <li data-i18n="l1">Elementi del catalogo personale (ID TMDb, titoli, poster, preferiti, serie seguite).</li>
+        <li data-i18n="l2">Cronologia di visione (film/episodi guardati, durata, data).</li>
+        <li data-i18n="l3">Preferenze (tema, impostazioni notifiche episodi, metadati tecnici di sync locale).</li>
+      </ul>
+      <p data-i18n="localNote">
+        Questi dati non vengono inviati a un server gestito da IzShowTime. Non esistono account cloud
+        dell’app.
+      </p>
+    </section>
+
+    <section>
+      <h2 data-i18n="netTitle">Connessioni di rete</h2>
+      <p data-i18n="netBody">
+        Quando usi funzioni online, l’app può contattare:
+      </p>
+      <ul>
+        <li data-i18n="n1">
+          <strong>The Movie Database (TMDb)</strong> — API e immagini per ricerca, dettagli, trending
+          e metadati. Si applicano le policy e i termini di TMDb.
+        </li>
+        <li data-i18n="n2">
+          <strong>Google Fonts</strong> — l’app può scaricare font tipografici a runtime.
+        </li>
+        <li data-i18n="n3">
+          <strong>Link aperti da te</strong> — ad esempio il sito TMDb o un link di donazione PayPal
+          nelle Impostazioni; in quel caso valgono le policy del sito di destinazione.
+        </li>
+      </ul>
+      <p data-i18n="netNote">
+        IzShowTime non opera un backend proprio per sincronizzare o analizzare il tuo catalogo.
+      </p>
+    </section>
+
+    <section>
+      <h2 data-i18n="notifTitle">Notifiche</h2>
+      <p data-i18n="notifBody">
+        Le notifiche per i nuovi episodi sono locali al dispositivo. Controlli in background sul
+        device verificano le serie seguite; non usiamo servizi di push remoti (come FCM) per
+        consegnarti messaggi da un nostro server.
+      </p>
+    </section>
+
+    <section>
+      <h2 data-i18n="backupTitle">Backup e ripristino</h2>
+      <p data-i18n="backupBody">
+        Puoi esportare un file di backup JSON (catalogo, cronologia, alcune preferenze) e
+        salvarlo o condividerlo tu. L’app non carica automaticamente i backup su cloud. Se
+        condividi il file con un’altra app o servizio, quel trasferimento è sotto il tuo controllo.
+      </p>
+    </section>
+
+    <section>
+      <h2 data-i18n="childrenTitle">Minori</h2>
+      <p data-i18n="childrenBody">
+        L’app non è pensata per raccogliere dati personali di minori. Non richiediamo età o
+        informazioni identificative.
+      </p>
+    </section>
+
+    <section>
+      <h2 data-i18n="changesTitle">Modifiche</h2>
+      <p data-i18n="changesBody">
+        Possiamo aggiornare questa pagina se l’app cambia. La data in alto indica l’ultima
+        revisione. Per domande: <a href="mailto:mirko.corba@gmail.com">mirko.corba@gmail.com</a>.
+      </p>
+    </section>
+
+    <section>
+      <h2 data-i18n="legalTitle">Nota</h2>
+      <p data-i18n="legalBody">
+        Questo testo descrive le pratiche dell’app in linguaggio chiaro; non costituisce
+        consulenza legale.
+      </p>
+      <p data-i18n="tmdbLegal">
+        This product uses the TMDb API but is not endorsed, certified, or otherwise approved by TMDb.
+      </p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <p data-i18n="footerCopy">© 2026 Mirko Corba · IzShowTime · MIT</p>
+      <p><a href="index.html" data-i18n="backSupport">Torna all’assistenza</a></p>
+    </div>
+  </footer>
+
+  <script>
+    const messages = {
+      it: {
+        brandTag: "Tracker open source per film e serie",
+        navSupport: "Assistenza",
+        navPrivacy: "Privacy",
+        heroTitle: "Privacy policy",
+        heroLede: "IzShowTime non crea account e non gestisce un backend per i tuoi dati. Il catalogo e la cronologia restano sul tuo dispositivo.",
+        updated: "Ultimo aggiornamento: 9 settembre 2026",
+        whoTitle: "Titolare",
+        whoBody: "IzShowTime è sviluppato da Mirko Corba. Per domande sulla privacy: mirko.corba@gmail.com.",
+        whoOss: "Il codice sorgente è pubblico (licenza MIT) su GitHub.",
+        summaryTitle: "In sintesi",
+        s1: "Nessun account, login o profilo utente.",
+        s2: "Nessuna raccolta di email, nome, posizione, contatti o foto.",
+        s3: "Nessun analytics, pubblicità, crash reporter o push notification remoto nostro.",
+        s4: "I dati del catalogo e della visione restano in locale sul dispositivo.",
+        s5: "La connessione online serve principalmente a ottenere metadati e immagini da TMDb.",
+        localTitle: "Dati sul dispositivo",
+        localBody: "L’app salva in locale (storage Hive sul dispositivo) informazioni come:",
+        l1: "Elementi del catalogo personale (ID TMDb, titoli, poster, preferiti, serie seguite).",
+        l2: "Cronologia di visione (film/episodi guardati, durata, data).",
+        l3: "Preferenze (tema, impostazioni notifiche episodi, metadati tecnici di sync locale).",
+        localNote: "Questi dati non vengono inviati a un server gestito da IzShowTime. Non esistono account cloud dell’app.",
+        netTitle: "Connessioni di rete",
+        netBody: "Quando usi funzioni online, l’app può contattare:",
+        n1: "<strong>The Movie Database (TMDb)</strong> — API e immagini per ricerca, dettagli, trending e metadati. Si applicano le policy e i termini di TMDb.",
+        n2: "<strong>Google Fonts</strong> — l’app può scaricare font tipografici a runtime.",
+        n3: "<strong>Link aperti da te</strong> — ad esempio il sito TMDb o un link di donazione PayPal nelle Impostazioni; in quel caso valgono le policy del sito di destinazione.",
+        netNote: "IzShowTime non opera un backend proprio per sincronizzare o analizzare il tuo catalogo.",
+        notifTitle: "Notifiche",
+        notifBody: "Le notifiche per i nuovi episodi sono locali al dispositivo. Controlli in background sul device verificano le serie seguite; non usiamo servizi di push remoti (come FCM) per consegnarti messaggi da un nostro server.",
+        backupTitle: "Backup e ripristino",
+        backupBody: "Puoi esportare un file di backup JSON (catalogo, cronologia, alcune preferenze) e salvarlo o condividerlo tu. L’app non carica automaticamente i backup su cloud. Se condividi il file con un’altra app o servizio, quel trasferimento è sotto il tuo controllo.",
+        childrenTitle: "Minori",
+        childrenBody: "L’app non è pensata per raccogliere dati personali di minori. Non richiediamo età o informazioni identificative.",
+        changesTitle: "Modifiche",
+        changesBody: "Possiamo aggiornare questa pagina se l’app cambia. La data in alto indica l’ultima revisione. Per domande: mirko.corba@gmail.com.",
+        legalTitle: "Nota",
+        legalBody: "Questo testo descrive le pratiche dell’app in linguaggio chiaro; non costituisce consulenza legale.",
+        tmdbLegal: "This product uses the TMDb API but is not endorsed, certified, or otherwise approved by TMDb.",
+        footerCopy: "© 2026 Mirko Corba · IzShowTime · MIT",
+        backSupport: "Torna all’assistenza"
+      },
+      en: {
+        brandTag: "Open-source film & TV tracker",
+        navSupport: "Support",
+        navPrivacy: "Privacy",
+        heroTitle: "Privacy policy",
+        heroLede: "IzShowTime does not create accounts and does not run a backend for your data. Your catalogue and watch history stay on your device.",
+        updated: "Last updated: 9 September 2026",
+        whoTitle: "Who we are",
+        whoBody: "IzShowTime is developed by Mirko Corba. Privacy questions: mirko.corba@gmail.com.",
+        whoOss: "Source code is public (MIT license) on GitHub.",
+        summaryTitle: "Summary",
+        s1: "No accounts, logins, or user profiles.",
+        s2: "No collection of email, name, location, contacts, or photos.",
+        s3: "No analytics, ads, crash reporters, or our own remote push notifications.",
+        s4: "Catalogue and watch data stay locally on the device.",
+        s5: "Online access is mainly to fetch metadata and images from TMDb.",
+        localTitle: "On-device data",
+        localBody: "The app stores locally (Hive on the device) information such as:",
+        l1: "Personal catalogue items (TMDb IDs, titles, posters, favorites, followed shows).",
+        l2: "Watch history (watched films/episodes, duration, timestamps).",
+        l3: "Preferences (theme, episode-alert settings, local technical metadata).",
+        localNote: "This data is not sent to a server operated by IzShowTime. There are no app cloud accounts.",
+        netTitle: "Network connections",
+        netBody: "When you use online features, the app may contact:",
+        n1: "<strong>The Movie Database (TMDb)</strong> — API and images for search, details, trending, and metadata. TMDb’s policies and terms apply.",
+        n2: "<strong>Google Fonts</strong> — the app may download typefaces at runtime.",
+        n3: "<strong>Links you open</strong> — for example the TMDb website or a PayPal donation link in Settings; those destinations’ policies then apply.",
+        netNote: "IzShowTime does not operate its own backend to sync or analyze your catalogue.",
+        notifTitle: "Notifications",
+        notifBody: "New-episode alerts are local to the device. On-device background checks look at followed shows; we do not use remote push services (such as FCM) to deliver messages from our own server.",
+        backupTitle: "Backup & restore",
+        backupBody: "You can export a JSON backup (catalogue, history, some preferences) and save or share it yourself. The app does not automatically upload backups to the cloud. If you share the file with another app or service, that transfer is under your control.",
+        childrenTitle: "Children",
+        childrenBody: "The app is not designed to collect children’s personal data. We do not ask for age or identifying information.",
+        changesTitle: "Changes",
+        changesBody: "We may update this page if the app changes. The date above shows the latest revision. Questions: mirko.corba@gmail.com.",
+        legalTitle: "Note",
+        legalBody: "This text describes the app’s practices in plain language; it is not legal advice.",
+        tmdbLegal: "This product uses the TMDb API but is not endorsed, certified, or otherwise approved by TMDb.",
+        footerCopy: "© 2026 Mirko Corba · IzShowTime · MIT",
+        backSupport: "Back to support"
+      }
+    };
+
+    function applyLang(lang) {
+      const dict = messages[lang] || messages.it;
+      document.documentElement.lang = lang;
+      document.querySelectorAll("[data-i18n]").forEach((el) => {
+        const key = el.getAttribute("data-i18n");
+        if (dict[key] == null) return;
+        if (key === "whoBody" || key === "changesBody") {
+          const email = '<a href="mailto:mirko.corba@gmail.com">mirko.corba@gmail.com</a>';
+          if (lang === "it" && key === "whoBody") {
+            el.innerHTML = "IzShowTime è sviluppato da Mirko Corba. Per domande sulla privacy: " + email + ".";
+          } else if (lang === "en" && key === "whoBody") {
+            el.innerHTML = "IzShowTime is developed by Mirko Corba. Privacy questions: " + email + ".";
+          } else if (lang === "it" && key === "changesBody") {
+            el.innerHTML = "Possiamo aggiornare questa pagina se l’app cambia. La data in alto indica l’ultima revisione. Per domande: " + email + ".";
+          } else if (lang === "en" && key === "changesBody") {
+            el.innerHTML = "We may update this page if the app changes. The date above shows the latest revision. Questions: " + email + ".";
+          }
+          return;
+        }
+        if (key === "whoOss") {
+          const gh = '<a href="https://github.com/KobaruAkiba/iz-show-time" rel="noopener noreferrer">GitHub</a>';
+          el.innerHTML = lang === "it"
+            ? "Il codice sorgente è pubblico (licenza MIT) su " + gh + "."
+            : "Source code is public (MIT license) on " + gh + ".";
+          return;
+        }
+        if (key === "n1" || key === "n2" || key === "n3") {
+          el.innerHTML = dict[key];
+          return;
+        }
+        el.textContent = dict[key];
+      });
+      document.querySelectorAll(".lang-switch button").forEach((btn) => {
+        btn.setAttribute("aria-pressed", String(btn.dataset.lang === lang));
+      });
+      try { localStorage.setItem("izst-lang", lang); } catch (_) {}
+    }
+
+    document.querySelectorAll(".lang-switch button").forEach((btn) => {
+      btn.addEventListener("click", () => applyLang(btn.dataset.lang));
+    });
+
+    let initial = "it";
+    try {
+      const saved = localStorage.getItem("izst-lang");
+      if (saved === "en" || saved === "it") initial = saved;
+      else if (navigator.language && navigator.language.toLowerCase().startsWith("en")) initial = "en";
+    } catch (_) {}
+    applyLang(initial);
+  </script>
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IzShowTime — Support / Assistenza</title>
+  <meta name="description" content="Support and contact for IzShowTime, an open-source film and TV tracker. Assistenza e contatti.">
+  <link rel="icon" href="assets/IzShowTimeIcon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a class="brand" href="index.html">
+        <img src="assets/IzShowTimeIcon.png" width="48" height="48" alt="">
+        <span class="brand-text">
+          <span class="brand-name">IzShowTime</span>
+          <span class="brand-tag" data-i18n="brandTag">Open-source film &amp; TV tracker</span>
+        </span>
+      </a>
+      <nav class="nav" aria-label="Primary">
+        <a href="index.html" aria-current="page" data-i18n="navSupport">Assistenza</a>
+        <a href="privacy.html" data-i18n="navPrivacy">Privacy</a>
+        <a href="https://github.com/KobaruAkiba/iz-show-time" rel="noopener noreferrer">GitHub</a>
+      </nav>
+      <div class="lang-switch" role="group" aria-label="Language">
+        <button type="button" data-lang="it" aria-pressed="true">IT</button>
+        <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero">
+      <h1 data-i18n="heroTitle">Assistenza</h1>
+      <p class="lede" data-i18n="heroLede">
+        IzShowTime è un’app open source e trasparente: i tuoi dati restano sul dispositivo e online
+        ci colleghiamo solo per ottenere metadati di film e serie.
+      </p>
+      <div class="badge-row">
+        <span class="badge" data-i18n="badgeOss">MIT · codice pubblico</span>
+        <span class="badge" data-i18n="badgeLocal">Dati solo sul device</span>
+        <span class="badge" data-i18n="badgeNet">Rete solo per TMDb</span>
+      </div>
+    </div>
+
+    <section>
+      <h2 data-i18n="aboutTitle">Cos’è IzShowTime</h2>
+      <p data-i18n="aboutBody">
+        Un tracker personale per film e serie: scopri titoli, costruisci un catalogo, registra
+        cosa hai visto e ricevi avvisi locali quando escono nuovi episodi delle serie che segui.
+        I metadati e le immagini arrivano da The Movie Database (TMDb).
+      </p>
+    </section>
+
+    <section>
+      <h2 data-i18n="ossTitle">Open source e trasparenza</h2>
+      <p data-i18n="ossBody">
+        Il progetto è rilasciato con licenza MIT. Puoi leggere il codice, aprire issue e verificare
+        tu stesso come funzionano storage, rete e notifiche.
+      </p>
+      <p>
+        <a href="https://github.com/KobaruAkiba/iz-show-time" rel="noopener noreferrer" data-i18n="ossLink">
+          Repository su GitHub
+        </a>
+        ·
+        <a href="https://github.com/KobaruAkiba/iz-show-time/issues" rel="noopener noreferrer" data-i18n="issuesLink">
+          Segnala un problema
+        </a>
+      </p>
+    </section>
+
+    <section>
+      <h2 data-i18n="contactTitle">Contatto</h2>
+      <p data-i18n="contactBody">
+        Per assistenza sull’app, segnalazioni di bug, domande sulla privacy o richieste legate
+        all’App Store, scrivi a:
+      </p>
+      <div class="contact-box">
+        <a href="mailto:mirko.corba@gmail.com">mirko.corba@gmail.com</a>
+        <span class="meta" data-i18n="contactMeta">Rispondiamo di solito entro pochi giorni lavorativi.</span>
+      </div>
+    </section>
+
+    <section>
+      <h2 data-i18n="privacyTitle">Privacy</h2>
+      <p data-i18n="privacyBody">
+        Non creiamo account, non raccogliamo dati personali e non inviamo il tuo catalogo a un
+        nostro server. I dettagli sono nella privacy policy.
+      </p>
+      <p>
+        <a href="privacy.html" data-i18n="privacyLink">Leggi la privacy policy</a>
+      </p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <p data-i18n="footerCopy">© 2026 Mirko Corba · IzShowTime · MIT</p>
+      <div class="tmdb-note">
+        <img src="assets/TmdbLogo.png" alt="TMDb">
+        <span data-i18n="tmdbNote">This product uses the TMDb API but is not endorsed or certified by TMDb.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const messages = {
+      it: {
+        brandTag: "Tracker open source per film e serie",
+        navSupport: "Assistenza",
+        navPrivacy: "Privacy",
+        heroTitle: "Assistenza",
+        heroLede: "IzShowTime è un’app open source e trasparente: i tuoi dati restano sul dispositivo e online ci colleghiamo solo per ottenere metadati di film e serie.",
+        badgeOss: "MIT · codice pubblico",
+        badgeLocal: "Dati solo sul device",
+        badgeNet: "Rete solo per TMDb",
+        aboutTitle: "Cos’è IzShowTime",
+        aboutBody: "Un tracker personale per film e serie: scopri titoli, costruisci un catalogo, registra cosa hai visto e ricevi avvisi locali quando escono nuovi episodi delle serie che segui. I metadati e le immagini arrivano da The Movie Database (TMDb).",
+        ossTitle: "Open source e trasparenza",
+        ossBody: "Il progetto è rilasciato con licenza MIT. Puoi leggere il codice, aprire issue e verificare tu stesso come funzionano storage, rete e notifiche.",
+        ossLink: "Repository su GitHub",
+        issuesLink: "Segnala un problema",
+        contactTitle: "Contatto",
+        contactBody: "Per assistenza sull’app, segnalazioni di bug, domande sulla privacy o richieste legate all’App Store, scrivi a:",
+        contactMeta: "Rispondiamo di solito entro pochi giorni lavorativi.",
+        privacyTitle: "Privacy",
+        privacyBody: "Non creiamo account, non raccogliamo dati personali e non inviamo il tuo catalogo a un nostro server. I dettagli sono nella privacy policy.",
+        privacyLink: "Leggi la privacy policy",
+        footerCopy: "© 2026 Mirko Corba · IzShowTime · MIT",
+        tmdbNote: "This product uses the TMDb API but is not endorsed or certified by TMDb."
+      },
+      en: {
+        brandTag: "Open-source film & TV tracker",
+        navSupport: "Support",
+        navPrivacy: "Privacy",
+        heroTitle: "Support",
+        heroLede: "IzShowTime is an open-source, transparent app: your data stays on your device, and we only go online to fetch film and TV metadata.",
+        badgeOss: "MIT · public source",
+        badgeLocal: "On-device data only",
+        badgeNet: "Network for TMDb only",
+        aboutTitle: "What is IzShowTime",
+        aboutBody: "A personal film and TV tracker: discover titles, build a catalogue, log what you watch, and get local alerts when followed shows get new episodes. Metadata and images come from The Movie Database (TMDb).",
+        ossTitle: "Open source & transparency",
+        ossBody: "The project is released under the MIT license. You can read the code, open issues, and verify how storage, networking, and notifications work.",
+        ossLink: "GitHub repository",
+        issuesLink: "Report an issue",
+        contactTitle: "Contact",
+        contactBody: "For app support, bug reports, privacy questions, or App Store–related requests, email:",
+        contactMeta: "We usually reply within a few business days.",
+        privacyTitle: "Privacy",
+        privacyBody: "We do not create accounts, collect personal data, or send your catalogue to our own server. Details are in the privacy policy.",
+        privacyLink: "Read the privacy policy",
+        footerCopy: "© 2026 Mirko Corba · IzShowTime · MIT",
+        tmdbNote: "This product uses the TMDb API but is not endorsed or certified by TMDb."
+      }
+    };
+
+    function applyLang(lang) {
+      const dict = messages[lang] || messages.it;
+      document.documentElement.lang = lang;
+      document.querySelectorAll("[data-i18n]").forEach((el) => {
+        const key = el.getAttribute("data-i18n");
+        if (dict[key] != null) el.textContent = dict[key];
+      });
+      document.querySelectorAll(".lang-switch button").forEach((btn) => {
+        btn.setAttribute("aria-pressed", String(btn.dataset.lang === lang));
+      });
+      try { localStorage.setItem("izst-lang", lang); } catch (_) {}
+    }
+
+    document.querySelectorAll(".lang-switch button").forEach((btn) => {
+      btn.addEventListener("click", () => applyLang(btn.dataset.lang));
+    });
+
+    let initial = "it";
+    try {
+      const saved = localStorage.getItem("izst-lang");
+      if (saved === "en" || saved === "it") initial = saved;
+      else if (navigator.language && navigator.language.toLowerCase().startsWith("en")) initial = "en";
+    } catch (_) {}
+    applyLang(initial);
+  </script>
+</body>
+</html>

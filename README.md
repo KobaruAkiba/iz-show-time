@@ -99,6 +99,12 @@ docs/
 ├── architecture.md
 ├── roadmap.md
 └── tmdb-integration.md
+
+site/                    # Support + privacy pages (GitHub Pages)
+├── index.html
+├── privacy.html
+├── styles.css
+└── assets/
 ```
 
 ## Documentation
@@ -106,6 +112,15 @@ docs/
 - [Architecture](docs/architecture.md)
 - [Roadmap](docs/roadmap.md)
 - [TMDb integration](docs/tmdb-integration.md)
+
+## Support & privacy (App Store)
+
+Static pages live in [`site/`](site/) and publish to GitHub Pages:
+
+- Support: https://kobaruakiba.github.io/iz-show-time/
+- Privacy policy: https://kobaruakiba.github.io/iz-show-time/privacy.html
+
+Use these URLs in App Store Connect (*Support URL* and *Privacy Policy URL*). After the first merge to `main`, set the repo **Settings → Pages** source to **GitHub Actions** if it is not already enabled.
 
 ## Testing
 

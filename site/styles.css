@@ -1,0 +1,305 @@
+:root {
+  --bg: #eef2f6;
+  --bg-accent: #dce6f0;
+  --surface: #ffffff;
+  --ink: #121820;
+  --ink-muted: #4a5563;
+  --accent: #c45c26;
+  --accent-soft: #f3e0d4;
+  --line: #c8d2de;
+  --nav: #0f1724;
+  --nav-ink: #f4f7fb;
+  --radius: 4px;
+  --max: 42rem;
+  --font-sans: "Outfit", "Avenir Next", "Segoe UI", sans-serif;
+  --font-display: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  font-size: 1.05rem;
+  line-height: 1.65;
+  color: var(--ink);
+  background:
+    radial-gradient(ellipse 80% 50% at 10% -10%, var(--bg-accent), transparent 55%),
+    radial-gradient(ellipse 60% 40% at 100% 0%, #e8ddd4, transparent 45%),
+    var(--bg);
+}
+
+a {
+  color: var(--accent);
+  text-underline-offset: 0.15em;
+}
+
+a:hover {
+  color: var(--ink);
+}
+
+.site-header {
+  background: var(--nav);
+  color: var(--nav-ink);
+  padding: 1.25rem 1.25rem 1.5rem;
+}
+
+.site-header-inner {
+  max-width: var(--max);
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.5rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.brand img {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.brand-name {
+  font-family: var(--font-display);
+  font-size: 1.55rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.brand-tag {
+  font-size: 0.8rem;
+  opacity: 0.75;
+  letter-spacing: 0.02em;
+}
+
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  margin-left: auto;
+  font-size: 0.95rem;
+}
+
+.nav a {
+  color: var(--nav-ink);
+  text-decoration: none;
+  opacity: 0.85;
+  border-bottom: 1px solid transparent;
+  padding-bottom: 0.1rem;
+}
+
+.nav a:hover,
+.nav a[aria-current="page"] {
+  opacity: 1;
+  border-bottom-color: var(--accent);
+  color: var(--nav-ink);
+}
+
+.lang-switch {
+  display: flex;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.lang-switch button {
+  appearance: none;
+  border: 1px solid rgba(244, 247, 251, 0.25);
+  background: transparent;
+  color: var(--nav-ink);
+  border-radius: var(--radius);
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  font: inherit;
+  opacity: 0.7;
+}
+
+.lang-switch button[aria-pressed="true"] {
+  opacity: 1;
+  background: rgba(244, 247, 251, 0.12);
+  border-color: var(--accent);
+}
+
+main {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 2.25rem 1.25rem 3.5rem;
+}
+
+.hero {
+  margin-bottom: 2rem;
+}
+
+.hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.85rem, 4vw, 2.35rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.75rem;
+}
+
+.lede {
+  margin: 0;
+  font-size: 1.12rem;
+  color: var(--ink-muted);
+  max-width: 36rem;
+}
+
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: var(--radius);
+}
+
+section {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.35rem 1.35rem 1.45rem;
+  margin-bottom: 1.15rem;
+}
+
+section h2 {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin: 0 0 0.65rem;
+  letter-spacing: -0.015em;
+}
+
+section h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 1.15rem 0 0.4rem;
+}
+
+section p,
+section ul {
+  margin: 0 0 0.75rem;
+  color: var(--ink);
+}
+
+section p:last-child,
+section ul:last-child {
+  margin-bottom: 0;
+}
+
+section ul {
+  padding-left: 1.2rem;
+}
+
+section li {
+  margin-bottom: 0.35rem;
+}
+
+.contact-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem 1.1rem;
+  background: var(--bg);
+  border-radius: var(--radius);
+  border-left: 3px solid var(--accent);
+  margin-top: 0.75rem;
+}
+
+.contact-box a {
+  font-weight: 600;
+  font-size: 1.1rem;
+  text-decoration: none;
+}
+
+.contact-box a:hover {
+  text-decoration: underline;
+}
+
+.meta {
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+}
+
+.site-footer {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 0 1.25rem 2.5rem;
+  font-size: 0.88rem;
+  color: var(--ink-muted);
+}
+
+.site-footer-inner {
+  border-top: 1px solid var(--line);
+  padding-top: 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tmdb-note {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.tmdb-note img {
+  height: 1.1rem;
+  width: auto;
+  opacity: 0.85;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 560px) {
+  .nav {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .site-header-inner {
+    align-items: flex-start;
+  }
+}
