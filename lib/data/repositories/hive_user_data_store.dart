@@ -15,6 +15,16 @@ import 'user_data_store.dart';
 /// to [flush] so bulk catalogue/watch mutations stay O(batch) instead of
 /// O(items × fsync).
 class HiveUserDataStore implements UserDataStore {
+  static const String _backupFormat = 'iz_show_time_backup';
+  static const int _backupVersion = 1;
+  static const Set<String> _backupMetaKeys = {
+    StorageConstants.newEpisodeAlertsKey,
+    StorageConstants.lastEpisodeCheckKey,
+    StorageConstants.notifiedEpisodeIdsKey,
+    StorageConstants.notificationPermissionPrePromptShownKey,
+    StorageConstants.themeModeKey,
+  };
+
   Box? _catalogueBox;
   Box? _watchHistoryBox;
   Box? _metaBox;
@@ -33,6 +43,57 @@ class HiveUserDataStore implements UserDataStore {
 
     if (!wasClosed) return;
     await _ensureSchema();
+  }
+
+  @override
+  Future<Map<String, dynamic>> exportBackupData() async {
+    await open();
+    return {
+      'format': _backupFormat,
+      'version': _backupVersion,
+      'schemaVersion': StorageConstants.storageSchemaVersion,
+      'exportedAt': DateTime.now().toUtc().toIso8601String(),
+      'catalogue': _stringifyMapEntries(catalogueBox.toMap()),
+      'watchHistory': _stringifyMapEntries(watchHistoryBox.toMap()),
+      'meta': _stringifyMapEntries(_filteredBackupMetaMap()),
+    };
+  }
+
+  @override
+  Future<void> importBackupData(Map<String, dynamic> data) async {
+    await open();
+
+    final format = data['format'];
+    final version = data['version'];
+    if (format != _backupFormat ||
+        version is! int ||
+        version > _backupVersion) {
+      throw const FormatException('Unsupported backup file');
+    }
+
+    final catalogue = _decodeBackupSection(data['catalogue']);
+    final watchHistory = _decodeBackupSection(data['watchHistory']);
+    final meta = _decodeBackupSection(data['meta']);
+
+    await catalogueBox.clear();
+    await watchHistoryBox.clear();
+    await metaBox.clear();
+
+    if (catalogue.isNotEmpty) {
+      await catalogueBox.putAll(catalogue);
+    }
+    if (watchHistory.isNotEmpty) {
+      await watchHistoryBox.putAll(watchHistory);
+    }
+    if (meta.isNotEmpty) {
+      await metaBox.putAll(_filteredBackupMetaEntries(meta));
+    }
+
+    await metaBox.put(
+      StorageConstants.schemaVersionKey,
+      StorageConstants.storageSchemaVersion,
+    );
+    await flush();
   }
 
   Future<void> _ensureSchema() async {
@@ -61,8 +122,7 @@ class HiveUserDataStore implements UserDataStore {
         if (json == null) continue;
         final item = catalogueItemFromStorageJson(json);
         if (item == null) continue;
-        catalogueEntries[key] =
-            jsonEncode(catalogueItemToStorageJson(item));
+        catalogueEntries[key] = jsonEncode(catalogueItemToStorageJson(item));
       } catch (error, stackTrace) {
         debugPrint(
           'Skipping catalogue migration for $key: $error\n$stackTrace',
@@ -259,10 +319,7 @@ class HiveUserDataStore implements UserDataStore {
       if (decoded is! List) return <int>{};
       return {
         for (final value in decoded)
-          if (value is int)
-            value
-          else if (value is num)
-            value.toInt(),
+          if (value is int) value else if (value is num) value.toInt(),
       };
     } catch (_) {
       return <int>{};
@@ -372,6 +429,41 @@ class HiveUserDataStore implements UserDataStore {
     }
 
     return null;
+  }
+
+  Map<String, dynamic> _stringifyMapEntries(Map<dynamic, dynamic> source) {
+    return {
+      for (final entry in source.entries) entry.key.toString(): entry.value,
+    };
+  }
+
+  Map<dynamic, dynamic> _decodeBackupSection(Object? raw) {
+    if (raw is! Map) {
+      throw const FormatException('Invalid backup structure');
+    }
+
+    return {
+      for (final entry in raw.entries)
+        _restoreBackupKey(entry.key.toString()): entry.value,
+    };
+  }
+
+  Object _restoreBackupKey(String key) {
+    final asInt = int.tryParse(key);
+    return asInt ?? key;
+  }
+
+  Map<dynamic, dynamic> _filteredBackupMetaMap() {
+    final meta = metaBox.toMap();
+    return _filteredBackupMetaEntries(meta);
+  }
+
+  Map<dynamic, dynamic> _filteredBackupMetaEntries(
+      Map<dynamic, dynamic> source) {
+    return {
+      for (final entry in source.entries)
+        if (_backupMetaKeys.contains(entry.key)) entry.key: entry.value,
+    };
   }
 
   Future<void> _putEncodedMap(

@@ -916,6 +916,96 @@ abstract class AppLocalizations {
   /// **'Data Management'**
   String get settingsDataManagement;
 
+  /// No description provided for @settingsBackupRestoreTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup & Restore'**
+  String get settingsBackupRestoreTitle;
+
+  /// No description provided for @settingsBackupRestoreSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Export or restore your catalogue data'**
+  String get settingsBackupRestoreSubtitle;
+
+  /// No description provided for @settingsBackupExportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Backup'**
+  String get settingsBackupExportTitle;
+
+  /// No description provided for @settingsBackupExportSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose where to save your data file'**
+  String get settingsBackupExportSubtitle;
+
+  /// No description provided for @settingsBackupSaveLocallyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save to device'**
+  String get settingsBackupSaveLocallyTitle;
+
+  /// No description provided for @settingsBackupSaveLocallySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a local folder with the system file picker'**
+  String get settingsBackupSaveLocallySubtitle;
+
+  /// No description provided for @settingsBackupShareTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Share backup'**
+  String get settingsBackupShareTitle;
+
+  /// No description provided for @settingsBackupShareSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send via apps like Drive, Mail, or Messages'**
+  String get settingsBackupShareSubtitle;
+
+  /// No description provided for @settingsBackupImportTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore Backup'**
+  String get settingsBackupImportTitle;
+
+  /// No description provided for @settingsBackupImportSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a backup file to restore'**
+  String get settingsBackupImportSubtitle;
+
+  /// No description provided for @settingsBackupRestoreConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore Backup'**
+  String get settingsBackupRestoreConfirmTitle;
+
+  /// No description provided for @settingsBackupRestoreConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This replaces your current catalogue, watch history, and saved app data with the selected backup.\n\nThis can\'t be undone.'**
+  String get settingsBackupRestoreConfirmBody;
+
+  /// No description provided for @settingsBackupRestoreConfirmAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get settingsBackupRestoreConfirmAction;
+
+  /// No description provided for @settingsBackupExportError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the backup file. Try again.'**
+  String get settingsBackupExportError;
+
+  /// No description provided for @settingsBackupRestoreError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t restore the backup file. Check the file and try again.'**
+  String get settingsBackupRestoreError;
+
   /// No description provided for @settingsClearCacheTitle.
   ///
   /// In en, this message translates to:
@@ -949,13 +1039,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsClearAllSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Remove catalogue, watch history, and cached data'**
+  /// **'Remove catalogue, watch history, and cache. Backups stay.'**
   String get settingsClearAllSubtitle;
 
   /// No description provided for @settingsClearAllBody.
   ///
   /// In en, this message translates to:
-  /// **'This permanently deletes your catalogue, watch history, and cached data.\n\nThis can\'t be undone.'**
+  /// **'This permanently deletes your catalogue, watch history, and cached data. Backup files are not deleted.\n\nTo restore your catalogue later, use Restore Backup with a backup you made earlier.\n\nThis can\'t be undone.'**
   String get settingsClearAllBody;
 
   /// No description provided for @settingsClearAllConfirm.
@@ -981,6 +1071,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t open The Movie Database. Try again later.'**
   String get settingsTmdbLinkError;
+
+  /// No description provided for @backupExportedSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup saved successfully'**
+  String get backupExportedSuccessfully;
+
+  /// No description provided for @backupRestoredSuccessfully.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup restored successfully'**
+  String get backupRestoredSuccessfully;
 
   /// No description provided for @notificationChannelName.
   ///

@@ -78,7 +78,8 @@ void main() {
         loadedCatalogue.firstWhere((item) => item.id == 550).tags,
         ['classic'],
       );
-      expect(loadedCatalogue.firstWhere((item) => item.id == 550).overview, isNull);
+      expect(loadedCatalogue.firstWhere((item) => item.id == 550).overview,
+          isNull);
       final rawFilm = store.catalogueBox.get(550) as String;
       expect(rawFilm.contains('overview'), isFalse);
       final rawWatch = store.watchHistoryBox.get(filmRecord.watchKey) as String;
@@ -89,7 +90,8 @@ void main() {
         loadedHistory.map((record) => record.watchKey).toSet(),
         {filmRecord.watchKey, episodeRecord.watchKey},
       );
-      expect(loadedHistory.firstWhere((record) => record.isFilm).durationMinutes,
+      expect(
+          loadedHistory.firstWhere((record) => record.isFilm).durationMinutes,
           139);
     });
 
@@ -228,6 +230,62 @@ void main() {
       expect(raw, isA<String>());
     });
 
+    test('exports and imports portable backup payloads', () async {
+      const show = TvShow(
+        id: 101,
+        title: 'Portable Show',
+        posterPath: '/portable.jpg',
+        voteAverage: 7.8,
+        tags: [kFollowedTag],
+      );
+      final record = WatchRecord(
+        mediaId: show.id,
+        isFilm: false,
+        episodeId: 2001,
+        seasonNumber: 1,
+        episodeNumber: 1,
+        durationMinutes: 44,
+        watchedAt: DateTime(2026, 2, 2, 20),
+      );
+      final alert = NewEpisodeAlert(
+        showId: show.id,
+        showTitle: show.title,
+        episodeId: 2002,
+        seasonNumber: 1,
+        episodeNumber: 2,
+        episodeName: 'Episode 2',
+        detectedAt: DateTime(2026, 2, 3, 8),
+      );
+
+      await store.saveCatalogueItem(show);
+      await store.saveWatchRecord(record);
+      await store.saveNewEpisodeAlerts([alert]);
+      await store.saveThemeMode('dark');
+      await store.saveAppInForeground(true);
+      await store.saveLastTmdbCachePurgeAt(DateTime(2026, 2, 1).toUtc());
+      await store.flush();
+
+      final backup = await store.exportBackupData();
+      final backupMeta = Map<String, dynamic>.from(backup['meta'] as Map);
+
+      expect(
+        backupMeta.containsKey(StorageConstants.appInForegroundKey),
+        isFalse,
+      );
+      expect(
+        backupMeta.containsKey(StorageConstants.lastTmdbCachePurgeKey),
+        isFalse,
+      );
+
+      await store.clearAll();
+      await store.importBackupData(backup);
+
+      expect(await store.loadCatalogue(), hasLength(1));
+      expect(await store.loadWatchHistory(), hasLength(1));
+      expect(await store.loadNewEpisodeAlerts(), hasLength(1));
+      expect(await store.loadThemeMode(), 'dark');
+    });
+
     test('migrates legacy bulky payloads to schema v2', () async {
       await store.catalogueBox.put(
         1,
@@ -293,9 +351,11 @@ void main() {
     });
 
     test('returns null for missing or invalid type', () {
-      expect(catalogueItemFromStorageJson({'id': 1, 'title': 'No type'}), isNull);
       expect(
-        catalogueItemFromStorageJson({'type': 'person', 'id': 2, 'name': 'Actor'}),
+          catalogueItemFromStorageJson({'id': 1, 'title': 'No type'}), isNull);
+      expect(
+        catalogueItemFromStorageJson(
+            {'type': 'person', 'id': 2, 'name': 'Actor'}),
         isNull,
       );
     });

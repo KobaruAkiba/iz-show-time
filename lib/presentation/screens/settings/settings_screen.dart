@@ -1,4 +1,11 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:file_selector/file_selector.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_file_dialog/flutter_file_dialog.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../widgets/app_page_header.dart';
@@ -38,6 +45,13 @@ class SettingsScreen extends StatelessWidget {
                   _buildSupportMeSection(context),
                   const Divider(),
                   _buildSectionTitle(context, l10n.settingsDataManagement),
+                  ListTile(
+                    leading: const Icon(Icons.import_export_outlined),
+                    title: Text(l10n.settingsBackupRestoreTitle),
+                    subtitle: Text(l10n.settingsBackupRestoreSubtitle),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _showBackupRestoreActions(context),
+                  ),
                   ListTile(
                     leading: const Icon(Icons.cleaning_services_outlined),
                     title: Text(l10n.settingsClearCacheTitle),
@@ -290,6 +304,266 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _showBackupRestoreActions(BuildContext context) async {
+    final l10n = context.l10n;
+    final action = await showModalBottomSheet<_BackupAction>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.save_alt_outlined),
+              title: Text(l10n.settingsBackupExportTitle),
+              subtitle: Text(l10n.settingsBackupExportSubtitle),
+              onTap: () => Navigator.pop(sheetContext, _BackupAction.backup),
+            ),
+            ListTile(
+              leading: const Icon(Icons.restore_outlined),
+              title: Text(l10n.settingsBackupImportTitle),
+              subtitle: Text(l10n.settingsBackupImportSubtitle),
+              onTap: () => Navigator.pop(sheetContext, _BackupAction.restore),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (!context.mounted || action == null) return;
+
+    switch (action) {
+      case _BackupAction.backup:
+        await _exportBackup(context);
+      case _BackupAction.restore:
+        await _restoreBackup(context);
+    }
+  }
+
+  Future<_BackupExportDestination?> _pickBackupExportDestination(
+    BuildContext context,
+  ) {
+    final l10n = context.l10n;
+    return showModalBottomSheet<_BackupExportDestination>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.folder_outlined),
+              title: Text(l10n.settingsBackupSaveLocallyTitle),
+              subtitle: Text(l10n.settingsBackupSaveLocallySubtitle),
+              onTap: () => Navigator.pop(
+                sheetContext,
+                _BackupExportDestination.saveLocally,
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.share_outlined),
+              title: Text(l10n.settingsBackupShareTitle),
+              subtitle: Text(l10n.settingsBackupShareSubtitle),
+              onTap: () => Navigator.pop(
+                sheetContext,
+                _BackupExportDestination.share,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _exportBackup(BuildContext context) async {
+    final l10n = context.l10n;
+
+    try {
+      final jsonBackup = await AppServices().exportUserDataBackup();
+      if (!context.mounted) return;
+
+      final suggestedName = _buildBackupFileName();
+      final bytes = Uint8List.fromList(utf8.encode(jsonBackup));
+
+      final bool saved;
+      if (_isMobileBackupPlatform) {
+        final destination = await _pickBackupExportDestination(context);
+        if (!context.mounted || destination == null) return;
+
+        saved = switch (destination) {
+          _BackupExportDestination.saveLocally =>
+            await _saveBackupLocally(bytes, suggestedName),
+          _BackupExportDestination.share =>
+            await _shareBackup(bytes, suggestedName, l10n),
+        };
+      } else {
+        saved = await _saveBackupWithDesktopPicker(bytes, suggestedName);
+      }
+
+      if (!saved || !context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.backupExportedSuccessfully)),
+      );
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.settingsBackupExportError)),
+        );
+      }
+    }
+  }
+
+  Future<bool> _saveBackupLocally(Uint8List bytes, String fileName) async {
+    final savedPath = await FlutterFileDialog.saveFile(
+      params: SaveFileDialogParams(
+        data: bytes,
+        fileName: fileName,
+        mimeTypesFilter: const ['application/json'],
+      ),
+    );
+    return savedPath != null && savedPath.isNotEmpty;
+  }
+
+  Future<bool> _shareBackup(
+    Uint8List bytes,
+    String fileName,
+    AppLocalizations l10n,
+  ) async {
+    final tempFile = File('${Directory.systemTemp.path}/$fileName');
+    await tempFile.writeAsBytes(bytes, flush: true);
+
+    try {
+      final result = await Share.shareXFiles(
+        [XFile(tempFile.path, mimeType: 'application/json', name: fileName)],
+        text: l10n.settingsBackupShareSubtitle,
+      );
+      return result.status == ShareResultStatus.success;
+    } finally {
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
+    }
+  }
+
+  Future<bool> _saveBackupWithDesktopPicker(
+    Uint8List bytes,
+    String suggestedName,
+  ) async {
+    final location = await getSaveLocation(
+      suggestedName: suggestedName,
+      acceptedTypeGroups: const [
+        XTypeGroup(
+          label: 'JSON',
+          extensions: ['json'],
+          mimeTypes: ['application/json'],
+        ),
+      ],
+    );
+    if (location == null) return false;
+
+    final backupFile = XFile.fromData(
+      bytes,
+      mimeType: 'application/json',
+      name: suggestedName,
+    );
+    await backupFile.saveTo(location.path);
+    return true;
+  }
+
+  Future<void> _restoreBackup(BuildContext context) async {
+    final l10n = context.l10n;
+
+    try {
+      final jsonBackup = await _pickBackupFileContents();
+      if (jsonBackup == null || !context.mounted) return;
+
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          icon: Icon(Icons.warning_amber_rounded, color: Colors.orange[700]),
+          title: Text(l10n.settingsBackupRestoreConfirmTitle),
+          content: Text(l10n.settingsBackupRestoreConfirmBody),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(l10n.actionCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(l10n.settingsBackupRestoreConfirmAction),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true || !context.mounted) return;
+
+      await AppServices().restoreUserDataBackup(jsonBackup);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.backupRestoredSuccessfully)),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.settingsBackupRestoreError)),
+        );
+      }
+    }
+  }
+
+  Future<String?> _pickBackupFileContents() async {
+    if (_isMobileBackupPlatform) {
+      final path = await FlutterFileDialog.pickFile(
+        params: const OpenFileDialogParams(
+          dialogType: OpenFileDialogType.document,
+          fileExtensionsFilter: ['json'],
+          mimeTypesFilter: ['application/json'],
+          // Helps iOS document picker recognize JSON backups.
+          allowedUtiTypes: [
+            'public.json',
+            'public.text',
+            'public.data',
+          ],
+          copyFileToCacheDir: true,
+        ),
+      );
+      if (path == null || path.isEmpty) return null;
+      return File(path).readAsString();
+    }
+
+    final file = await openFile(
+      acceptedTypeGroups: const [
+        XTypeGroup(
+          label: 'JSON',
+          extensions: ['json'],
+          mimeTypes: ['application/json'],
+        ),
+      ],
+    );
+    if (file == null) return null;
+    return file.readAsString();
+  }
+
+  String _buildBackupFileName() {
+    final now = DateTime.now().toUtc();
+    final y = now.year.toString().padLeft(4, '0');
+    final m = now.month.toString().padLeft(2, '0');
+    final d = now.day.toString().padLeft(2, '0');
+    final hh = now.hour.toString().padLeft(2, '0');
+    final mm = now.minute.toString().padLeft(2, '0');
+    final ss = now.second.toString().padLeft(2, '0');
+    return 'iz-show-time-backup-$y$m$d-$hh$mm$ss.json';
+  }
+
+  bool get _isMobileBackupPlatform {
+    return switch (defaultTargetPlatform) {
+      TargetPlatform.android || TargetPlatform.iOS => true,
+      _ => false,
+    };
+  }
+
   void _showClearDataDialog(BuildContext context) {
     final l10n = context.l10n;
 
@@ -327,3 +601,7 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 }
+
+enum _BackupAction { backup, restore }
+
+enum _BackupExportDestination { saveLocally, share }

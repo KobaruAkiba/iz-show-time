@@ -6,6 +6,12 @@ import '../models/watch_record.dart';
 abstract class UserDataStore {
   Future<void> open();
 
+  /// Exports user-managed data to a portable backup payload.
+  Future<Map<String, dynamic>> exportBackupData();
+
+  /// Restores user-managed data from a portable backup payload.
+  Future<void> importBackupData(Map<String, dynamic> data);
+
   Future<List<CatalogueItem>> loadCatalogue();
 
   Future<void> saveCatalogueItem(CatalogueItem item);

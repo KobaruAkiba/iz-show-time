@@ -77,5 +77,22 @@
 		<array>
 			<string>com.izshowtime.tracker.episode_check</string>
 		</array>
+		<key>CFBundleDocumentTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeName</key>
+				<string>IzShowTime Backup</string>
+				<key>CFBundleTypeRole</key>
+				<string>Viewer</string>
+				<key>LSHandlerRank</key>
+				<string>Alternate</string>
+				<key>LSItemContentTypes</key>
+				<array>
+					<string>public.json</string>
+					<string>public.text</string>
+					<string>public.data</string>
+				</array>
+			</dict>
+		</array>
 	</dict>
 </plist>

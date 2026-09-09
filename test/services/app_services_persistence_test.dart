@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iz_show_time_tracker/core/services/app_services.dart';
 import 'package:iz_show_time_tracker/data/models/catalogue_item.dart';
@@ -9,6 +11,8 @@ import 'package:iz_show_time_tracker/data/repositories/user_data_store.dart';
 import 'package:iz_show_time_tracker/data/services/tmdb_service.dart';
 
 class FakeUserDataStore implements UserDataStore {
+  final List<CatalogueItem> catalogue = [];
+  final List<WatchRecord> history = [];
   final List<CatalogueItem> savedCatalogueItems = [];
   final List<int> removedCatalogueIds = [];
   final List<WatchRecord> savedWatchRecords = [];
@@ -22,20 +26,69 @@ class FakeUserDataStore implements UserDataStore {
   Future<void> open() async {}
 
   @override
-  Future<List<CatalogueItem>> loadCatalogue() async => [];
+  Future<Map<String, dynamic>> exportBackupData() async => {
+        'catalogue': catalogue
+            .map(
+              (item) => item is Film
+                  ? {'type': 'film', ...item.toJson()}
+                  : {'type': 'tv', ...(item as TvShow).toJson()},
+            )
+            .toList(),
+        'watchHistory': history.map((record) => record.toJson()).toList(),
+        'alerts': alerts.map((alert) => alert.toJson()).toList(),
+        'themeMode': themeMode,
+      };
+
+  @override
+  Future<void> importBackupData(Map<String, dynamic> data) async {
+    catalogue
+      ..clear()
+      ..addAll(
+        (data['catalogue'] as List<dynamic>? ?? const [])
+            .map((entry) => Map<String, dynamic>.from(entry as Map))
+            .map(
+              (json) => json['type'] == 'film'
+                  ? Film.fromJson(json)
+                  : TvShow.fromJson(json),
+            ),
+      );
+    history
+      ..clear()
+      ..addAll(
+        (data['watchHistory'] as List<dynamic>? ?? const []).map((entry) =>
+            WatchRecord.fromJson(Map<String, dynamic>.from(entry as Map))),
+      );
+    alerts = (data['alerts'] as List<dynamic>? ?? const [])
+        .map((entry) =>
+            NewEpisodeAlert.fromJson(Map<String, dynamic>.from(entry as Map)))
+        .toList();
+    themeMode = data['themeMode'] as String?;
+  }
+
+  @override
+  Future<List<CatalogueItem>> loadCatalogue() async =>
+      List<CatalogueItem>.from(catalogue);
 
   @override
   Future<void> saveCatalogueItem(CatalogueItem item) async {
     savedCatalogueItems.add(item);
+    final index = catalogue.indexWhere((entry) => entry.id == item.id);
+    if (index >= 0) {
+      catalogue[index] = item;
+    } else {
+      catalogue.add(item);
+    }
   }
 
   @override
   Future<void> removeCatalogueItem(int mediaId) async {
     removedCatalogueIds.add(mediaId);
+    catalogue.removeWhere((item) => item.id == mediaId);
   }
 
   @override
-  Future<List<WatchRecord>> loadWatchHistory() async => [];
+  Future<List<WatchRecord>> loadWatchHistory() async =>
+      List<WatchRecord>.from(history);
 
   int flushCount = 0;
   int saveWatchRecordsCalls = 0;
@@ -49,7 +102,11 @@ class FakeUserDataStore implements UserDataStore {
   @override
   Future<void> saveWatchRecords(Iterable<WatchRecord> records) async {
     saveWatchRecordsCalls++;
-    savedWatchRecords.addAll(records);
+    for (final record in records) {
+      history.removeWhere((entry) => entry.watchKey == record.watchKey);
+      history.add(record);
+      savedWatchRecords.add(record);
+    }
   }
 
   @override
@@ -60,7 +117,9 @@ class FakeUserDataStore implements UserDataStore {
   @override
   Future<void> removeWatchRecords(Iterable<String> watchKeys) async {
     removeWatchRecordsCalls++;
-    removedWatchKeys.addAll(watchKeys);
+    final keys = watchKeys.toSet();
+    removedWatchKeys.addAll(keys);
+    history.removeWhere((record) => keys.contains(record.watchKey));
   }
 
   @override
@@ -138,6 +197,8 @@ class FakeUserDataStore implements UserDataStore {
   @override
   Future<void> clearAll() async {
     cleared = true;
+    catalogue.clear();
+    history.clear();
     alerts = [];
     lastEpisodeCheckAt = null;
     notifiedEpisodeIds = {};
@@ -293,6 +354,48 @@ void main() {
       await appServices.clearAllData();
 
       expect(store.cleared, isTrue);
+    });
+
+    test('export and restore backup round-trip app state', () async {
+      const show = TvShow(id: 5, title: 'Backed Up Show');
+      final watchedAt = DateTime(2026, 1, 10, 12);
+      final alert = NewEpisodeAlert(
+        showId: show.id,
+        showTitle: show.title,
+        episodeId: 99,
+        seasonNumber: 1,
+        episodeNumber: 2,
+        episodeName: 'Next',
+        detectedAt: watchedAt,
+      );
+
+      await appServices.addToCatalogue(show);
+      await store.saveWatchRecord(
+        WatchRecord(
+          mediaId: show.id,
+          isFilm: false,
+          episodeId: 10,
+          seasonNumber: 1,
+          episodeNumber: 1,
+          durationMinutes: 42,
+          watchedAt: watchedAt,
+        ),
+      );
+      await store.saveThemeMode('dark');
+      await store.saveNewEpisodeAlerts([alert]);
+
+      final backup = await appServices.exportUserDataBackup();
+
+      await appServices.clearAllData();
+      expect(appServices.catalogue, isEmpty);
+
+      await appServices.restoreUserDataBackup(backup);
+
+      expect(appServices.catalogue.map((item) => item.id), [show.id]);
+      expect(appServices.watchHistory, hasLength(1));
+      expect(appServices.newEpisodeAlerts, hasLength(1));
+      expect(appServices.themeMode.name, 'dark');
+      expect(jsonDecode(backup), isA<Map<String, dynamic>>());
     });
   });
 
@@ -828,7 +931,7 @@ void main() {
     test('clearCacheData keeps catalogue and updates purge stamp', () async {
       await appServices.initialize(userDataStore: store);
       await appServices.addToCatalogue(
-        Film(
+        const Film(
           id: 1,
           title: 'Kept',
           posterPath: '/p.jpg',

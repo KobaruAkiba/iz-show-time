@@ -481,6 +481,58 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsDataManagement => 'Data Management';
 
   @override
+  String get settingsBackupRestoreTitle => 'Backup & Restore';
+
+  @override
+  String get settingsBackupRestoreSubtitle =>
+      'Export or restore your catalogue data';
+
+  @override
+  String get settingsBackupExportTitle => 'Create Backup';
+
+  @override
+  String get settingsBackupExportSubtitle =>
+      'Choose where to save your data file';
+
+  @override
+  String get settingsBackupSaveLocallyTitle => 'Save to device';
+
+  @override
+  String get settingsBackupSaveLocallySubtitle =>
+      'Pick a local folder with the system file picker';
+
+  @override
+  String get settingsBackupShareTitle => 'Share backup';
+
+  @override
+  String get settingsBackupShareSubtitle =>
+      'Send via apps like Drive, Mail, or Messages';
+
+  @override
+  String get settingsBackupImportTitle => 'Restore Backup';
+
+  @override
+  String get settingsBackupImportSubtitle => 'Select a backup file to restore';
+
+  @override
+  String get settingsBackupRestoreConfirmTitle => 'Restore Backup';
+
+  @override
+  String get settingsBackupRestoreConfirmBody =>
+      'This replaces your current catalogue, watch history, and saved app data with the selected backup.\n\nThis can\'t be undone.';
+
+  @override
+  String get settingsBackupRestoreConfirmAction => 'Restore';
+
+  @override
+  String get settingsBackupExportError =>
+      'Couldn\'t save the backup file. Try again.';
+
+  @override
+  String get settingsBackupRestoreError =>
+      'Couldn\'t restore the backup file. Check the file and try again.';
+
+  @override
   String get settingsClearCacheTitle => 'Clear Cache';
 
   @override
@@ -499,11 +551,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsClearAllSubtitle =>
-      'Remove catalogue, watch history, and cached data';
+      'Remove catalogue, watch history, and cache. Backups stay.';
 
   @override
   String get settingsClearAllBody =>
-      'This permanently deletes your catalogue, watch history, and cached data.\n\nThis can\'t be undone.';
+      'This permanently deletes your catalogue, watch history, and cached data. Backup files are not deleted.\n\nTo restore your catalogue later, use Restore Backup with a backup you made earlier.\n\nThis can\'t be undone.';
 
   @override
   String get settingsClearAllConfirm => 'Delete All Data';
@@ -519,6 +571,12 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get settingsTmdbLinkError =>
       'Couldn\'t open The Movie Database. Try again later.';
+
+  @override
+  String get backupExportedSuccessfully => 'Backup saved successfully';
+
+  @override
+  String get backupRestoredSuccessfully => 'Backup restored successfully';
 
   @override
   String get notificationChannelName => 'New Episodes';

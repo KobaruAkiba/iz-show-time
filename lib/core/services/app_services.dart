@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
@@ -72,16 +73,14 @@ class AppServices {
 
   int get episodesWatchedCount => _watchedEpisodeIds.length;
 
-  List<Film> get films =>
-      _catalogue.whereType<Film>().toList(growable: false);
+  List<Film> get films => _catalogue.whereType<Film>().toList(growable: false);
 
   List<TvShow> get tvShows =>
       _catalogue.whereType<TvShow>().toList(growable: false);
 
   /// TV shows marked as followed; only these feed New Episodes / notifications.
-  List<TvShow> get followedTvShows => tvShows
-      .where((show) => show.isFollowed)
-      .toList(growable: false);
+  List<TvShow> get followedTvShows =>
+      tvShows.where((show) => show.isFollowed).toList(growable: false);
 
   bool isInCatalogue(int id) => _catalogueById.containsKey(id);
 
@@ -193,7 +192,8 @@ class AppServices {
     final index = _catalogue.indexWhere((item) => item.id == id);
     if (index < 0) return;
 
-    final updated = _catalogue[index].withFavorite(!_catalogue[index].isFavorite);
+    final updated =
+        _catalogue[index].withFavorite(!_catalogue[index].isFavorite);
     _catalogue[index] = updated;
     _catalogueById[id] = updated;
     await _persistCatalogueItem(updated);
@@ -356,7 +356,8 @@ class AppServices {
       final removedRecords = _watchHistory
           .where(
             (record) =>
-                record.episodeId != null && episodeIds.contains(record.episodeId),
+                record.episodeId != null &&
+                episodeIds.contains(record.episodeId),
           )
           .toList(growable: false);
       if (removedRecords.isEmpty) return 0;
@@ -822,7 +823,8 @@ class AppServices {
       await userDataStore.saveLastTmdbCachePurgeAt(DateTime.now().toUtc());
       await _maybeFlush();
     } catch (error, stackTrace) {
-      debugPrint('Failed to persist TMDB cache purge time: $error\n$stackTrace');
+      debugPrint(
+          'Failed to persist TMDB cache purge time: $error\n$stackTrace');
     }
   }
 
@@ -852,8 +854,24 @@ class AppServices {
       await userDataStore.saveLastTmdbCachePurgeAt(DateTime.now().toUtc());
       await _maybeFlush();
     } catch (error, stackTrace) {
-      debugPrint('Failed to persist TMDB cache purge time: $error\n$stackTrace');
+      debugPrint(
+          'Failed to persist TMDB cache purge time: $error\n$stackTrace');
     }
+  }
+
+  Future<String> exportUserDataBackup() async {
+    final data = await userDataStore.exportBackupData();
+    return const JsonEncoder.withIndent('  ').convert(data);
+  }
+
+  Future<void> restoreUserDataBackup(String jsonBackup) async {
+    final decoded = jsonDecode(jsonBackup);
+    if (decoded is! Map) {
+      throw const FormatException('Invalid backup file');
+    }
+
+    await userDataStore.importBackupData(Map<String, dynamic>.from(decoded));
+    await initialize(userDataStore: userDataStore);
   }
 }
 
