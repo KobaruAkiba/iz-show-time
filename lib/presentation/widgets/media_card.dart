@@ -307,13 +307,23 @@ class MediaPosterCard extends StatelessWidget {
           curve: Curves.easeOut,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
+            // Soft ambient halo (even) + slight lift. Keep projection modest so
+            // the carousel can reserve padding instead of hard-clipping glow.
             boxShadow: [
               BoxShadow(
                 color: colorScheme.primary.withValues(
-                  alpha: isActive ? 0.25 : 0.08,
+                  alpha: isActive ? 0.14 : 0.05,
                 ),
-                blurRadius: isActive ? 20 : 8,
-                offset: Offset(0, isActive ? 8 : 4),
+                blurRadius: isActive ? 22 : 10,
+                spreadRadius: isActive ? 0.5 : 0,
+                offset: Offset.zero,
+              ),
+              BoxShadow(
+                color: colorScheme.primary.withValues(
+                  alpha: isActive ? 0.22 : 0.07,
+                ),
+                blurRadius: isActive ? 16 : 8,
+                offset: Offset(0, isActive ? 4 : 2),
               ),
             ],
           ),

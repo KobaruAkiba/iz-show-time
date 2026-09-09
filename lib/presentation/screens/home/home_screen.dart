@@ -26,7 +26,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const _carouselHeight = 400.0;
+  /// Includes vertical inset (14+24) so active poster glow is not clipped.
+  static const _carouselHeight = 438.0;
 
   bool _isLoading = true;
   ApiErrorType? _errorType;

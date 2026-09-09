@@ -230,8 +230,11 @@ class _AutoScrollingPageCarouselState extends State<AutoScrollingPageCarousel>
                     }
                     return Transform.scale(scale: scale, child: child);
                   },
+                  // Inset so MediaPosterCard glow (ambient blur≈22 + lift
+                  // blur 16 / dy 4) paints inside PageView's default clip —
+                  // prefer this over Clip.none to avoid bleed into indicators.
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
+                    padding: const EdgeInsets.fromLTRB(8, 14, 8, 24),
                     child: widget.itemBuilder(context, index, isActive),
                   ),
                 );
