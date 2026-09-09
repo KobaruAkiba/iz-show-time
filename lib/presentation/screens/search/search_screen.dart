@@ -323,7 +323,11 @@ class _SearchScreenState extends State<SearchScreen> {
     if (results.isEmpty) {
       return Column(
         children: [
-          if (totalCount > 0) _buildFiltersBar(totalCount, filteredCount: 0),
+          if (totalCount > 0)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: _buildFiltersBar(totalCount, filteredCount: 0),
+            ),
           Expanded(
             child: Center(
               child: Text(
@@ -341,33 +345,39 @@ class _SearchScreenState extends State<SearchScreen> {
     // With active filters, only paginate the filtered in-memory list (no extra API).
     final canLoadMoreRemote = !_hasActiveFilters && _hasMoreRemote;
 
-    return LazyPagedListView(
-      resetKey: Object.hash(_lastQuery, _mediaFilter, _sortOption),
-      totalItemCount: results.length,
-      hasMoreRemote: canLoadMoreRemote,
-      isLoadingMore: _isLoadingMore,
-      onLoadMore: canLoadMoreRemote ? _loadMoreRemote : null,
-      onRefresh: () => _performSearch(_lastQuery),
-      leading: Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: _buildFiltersBar(totalCount, filteredCount: results.length),
-      ),
-      itemBuilder: (context, index) {
-        final item = results[index];
-        final inCatalogue = _appServices.isInCatalogue(item.id);
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: MediaCard(
-            item: item,
-            isBookmarked: inCatalogue,
-            isFavorite: inCatalogue && _appServices.isFavorite(item.id),
-            onTap: () => _openDetails(item),
-            onToggleFavorite:
-                inCatalogue ? () => _toggleFavorite(item) : null,
-            onAddRemove: () => _toggleItem(item),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: _buildFiltersBar(totalCount, filteredCount: results.length),
+        ),
+        Expanded(
+          child: LazyPagedListView(
+            resetKey: Object.hash(_lastQuery, _mediaFilter, _sortOption),
+            totalItemCount: results.length,
+            hasMoreRemote: canLoadMoreRemote,
+            isLoadingMore: _isLoadingMore,
+            onLoadMore: canLoadMoreRemote ? _loadMoreRemote : null,
+            onRefresh: () => _performSearch(_lastQuery),
+            itemBuilder: (context, index) {
+              final item = results[index];
+              final inCatalogue = _appServices.isInCatalogue(item.id);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: MediaCard(
+                  item: item,
+                  isBookmarked: inCatalogue,
+                  isFavorite: inCatalogue && _appServices.isFavorite(item.id),
+                  onTap: () => _openDetails(item),
+                  onToggleFavorite:
+                      inCatalogue ? () => _toggleFavorite(item) : null,
+                  onAddRemove: () => _toggleItem(item),
+                ),
+              );
+            },
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 
