@@ -41,9 +41,8 @@ class _SearchScreenState extends State<SearchScreen> {
   String? _errorMessage;
   String _lastQuery = '';
 
-  List<Film> _filmResults = [];
-  List<TvShow> _tvShowResults = [];
-  final Set<int> _seenIds = {};
+  List<CatalogueItem> _results = [];
+  final Set<String> _seenKeys = {};
 
   int _remotePage = 0;
   int _remoteTotalPages = 0;
@@ -119,9 +118,8 @@ class _SearchScreenState extends State<SearchScreen> {
       _hasSearched = false;
       _isLoading = false;
       _isLoadingMore = false;
-      _filmResults = [];
-      _tvShowResults = [];
-      _seenIds.clear();
+      _results = [];
+      _seenKeys.clear();
       _errorType = null;
       _errorMessage = null;
       _lastQuery = '';
@@ -141,22 +139,20 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _resetResultBuffers() {
-    _filmResults = [];
-    _tvShowResults = [];
-    _seenIds.clear();
+    _results = [];
+    _seenKeys.clear();
     _remotePage = 0;
     _remoteTotalPages = 0;
   }
 
-  void _appendUnique({
-    required Iterable<Film> films,
-    required Iterable<TvShow> tvShows,
-  }) {
-    for (final film in films) {
-      if (_seenIds.add(film.id)) _filmResults.add(film);
-    }
-    for (final show in tvShows) {
-      if (_seenIds.add(show.id)) _tvShowResults.add(show);
+  String _mediaSeenKey(CatalogueItem item) =>
+      '${item.isFilm ? 'm' : 't'}-${item.id}';
+
+  void _appendUnique(Iterable<CatalogueItem> items) {
+    for (final item in items) {
+      if (_seenKeys.add(_mediaSeenKey(item))) {
+        _results.add(item);
+      }
     }
   }
 
@@ -175,8 +171,7 @@ class _SearchScreenState extends State<SearchScreen> {
     });
 
     try {
-      final localResults = _appServices.searchLocal(trimmedQuery);
-      _appendUnique(films: localResults.films, tvShows: localResults.tvShows);
+      _appendUnique(_appServices.searchLocal(trimmedQuery));
 
       final remoteResults = await _appServices.tmdbService.searchMulti(
         query: trimmedQuery,
@@ -185,10 +180,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
       if (!mounted || _lastQuery != trimmedQuery) return;
 
-      _appendUnique(
-        films: remoteResults.films,
-        tvShows: remoteResults.tvShows,
-      );
+      _appendUnique(remoteResults.items);
 
       setState(() {
         _remotePage = remoteResults.page;
@@ -228,10 +220,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
       if (!mounted || _lastQuery != query) return;
 
-      _appendUnique(
-        films: remoteResults.films,
-        tvShows: remoteResults.tvShows,
-      );
+      _appendUnique(remoteResults.items);
 
       setState(() {
         _remotePage = remoteResults.page;
@@ -318,7 +307,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     final results = _buildFilteredResults();
-    final totalCount = _filmResults.length + _tvShowResults.length;
+    final totalCount = _results.length;
 
     if (results.isEmpty) {
       return Column(
@@ -363,6 +352,7 @@ class _SearchScreenState extends State<SearchScreen> {
               final item = results[index];
               final inCatalogue = _appServices.isInCatalogue(item.id);
               return Padding(
+                key: ValueKey(_mediaSeenKey(item)),
                 padding: const EdgeInsets.only(bottom: 8),
                 child: MediaCard(
                   item: item,
@@ -422,7 +412,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   List<CatalogueItem> _buildFilteredResults() {
     return applyMediaFilters(
-      [..._filmResults, ..._tvShowResults],
+      _results,
       mediaFilter: _mediaFilter,
       sortOption: _sortOption,
     );

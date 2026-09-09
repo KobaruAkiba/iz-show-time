@@ -467,36 +467,31 @@ class AppServices {
   }
 
   /// Search the user's catalogue and locally cached TMDB data.
-  ({List<Film> films, List<TvShow> tvShows}) searchLocal(String query) {
+  List<CatalogueItem> searchLocal(String query) {
     final normalizedQuery = query.trim().toLowerCase();
     if (normalizedQuery.isEmpty) {
-      return (films: <Film>[], tvShows: <TvShow>[]);
+      return <CatalogueItem>[];
     }
 
-    final films = <Film>[];
-    final tvShows = <TvShow>[];
-    final seenIds = <int>{};
+    final items = <CatalogueItem>[];
+    final seenKeys = <String>{};
 
     for (final item in _catalogue) {
       if (!item.title.toLowerCase().contains(normalizedQuery)) continue;
-      if (!seenIds.add(item.id)) continue;
-      if (item is Film) {
-        films.add(item);
-      } else if (item is TvShow) {
-        tvShows.add(item);
-      }
+      if (!seenKeys.add(_mediaSeenKey(item))) continue;
+      items.add(item);
     }
 
-    final cached = tmdbService.searchLocalCache(query: query);
-    for (final film in cached.films) {
-      if (seenIds.add(film.id)) films.add(film);
-    }
-    for (final show in cached.tvShows) {
-      if (seenIds.add(show.id)) tvShows.add(show);
+    for (final item in tmdbService.searchLocalCache(query: query)) {
+      if (!seenKeys.add(_mediaSeenKey(item))) continue;
+      items.add(item);
     }
 
-    return (films: films, tvShows: tvShows);
+    return items;
   }
+
+  String _mediaSeenKey(CatalogueItem item) =>
+      '${item.isFilm ? 'm' : 't'}-${item.id}';
 
   Future<void> initialize({UserDataStore? userDataStore}) async {
     if (userDataStore != null) {

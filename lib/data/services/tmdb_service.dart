@@ -48,10 +48,10 @@ class TmdbService {
 
   /// Searches TMDB multi endpoint. Pass [page] to fetch subsequent pages.
   /// TMDB returns a fixed ~20 results per page; UI may window further locally.
+  /// Items keep API relevance order (films and TV interleaved).
   Future<
       ({
-        List<Film> films,
-        List<TvShow> tvShows,
+        List<CatalogueItem> items,
         int page,
         int totalPages,
       })> searchMulti({
@@ -60,8 +60,7 @@ class TmdbService {
   }) async {
     if (query.trim().isEmpty) {
       return (
-        films: <Film>[],
-        tvShows: <TvShow>[],
+        items: <CatalogueItem>[],
         page: 1,
         totalPages: 0,
       );
@@ -77,65 +76,57 @@ class TmdbService {
       ttlMinutes: AppConstants.searchCacheTTL,
     );
 
-    final parsed = _parseSearchResults(pageData.results);
     return (
-      films: parsed.films,
-      tvShows: parsed.tvShows,
+      items: _parseSearchResults(pageData.results),
       page: pageData.page,
       totalPages: pageData.totalPages,
     );
   }
 
   /// Search films and shows already stored in the local API cache.
-  ({List<Film> films, List<TvShow> tvShows}) searchLocalCache({
+  List<CatalogueItem> searchLocalCache({
     required String query,
   }) {
     final normalizedQuery = query.trim().toLowerCase();
     if (normalizedQuery.isEmpty) {
-      return (films: <Film>[], tvShows: <TvShow>[]);
+      return <CatalogueItem>[];
     }
 
-    final films = <Film>[];
-    final tvShows = <TvShow>[];
-    final seenIds = <int>{};
+    final items = <CatalogueItem>[];
+    final seenKeys = <String>{};
 
     for (final key in _cache.keys) {
       _collectCachedMatches(
         key: key,
         query: normalizedQuery,
-        seenIds: seenIds,
-        films: films,
-        tvShows: tvShows,
+        seenKeys: seenKeys,
+        items: items,
       );
     }
 
-    return (films: films, tvShows: tvShows);
+    return items;
   }
 
-  ({List<Film> films, List<TvShow> tvShows}) _parseSearchResults(
+  List<CatalogueItem> _parseSearchResults(
     List<Map<String, dynamic>> results,
   ) {
-    final films = <Film>[];
-    final tvShows = <TvShow>[];
+    final items = <CatalogueItem>[];
 
     for (final item in results) {
       final parsed = catalogueItemFromSearchJson(item);
-      if (parsed is Film) {
-        films.add(parsed);
-      } else if (parsed is TvShow) {
-        tvShows.add(parsed);
+      if (parsed != null) {
+        items.add(parsed);
       }
     }
 
-    return (films: films, tvShows: tvShows);
+    return items;
   }
 
   void _collectCachedMatches({
     required String key,
     required String query,
-    required Set<int> seenIds,
-    required List<Film> films,
-    required List<TvShow> tvShows,
+    required Set<String> seenKeys,
+    required List<CatalogueItem> items,
   }) {
     if (_isCachedListKey(key)) {
       final list = _cache.get<List<dynamic>>(key);
@@ -146,9 +137,8 @@ class TmdbService {
         _tryAddLocalMatch(
           item: _parseCachedListItem(entry, key),
           query: query,
-          seenIds: seenIds,
-          films: films,
-          tvShows: tvShows,
+          seenKeys: seenKeys,
+          items: items,
         );
       }
       return;
@@ -160,9 +150,8 @@ class TmdbService {
       _tryAddLocalMatch(
         item: _safeParse(() => Film.fromJson(data)),
         query: query,
-        seenIds: seenIds,
-        films: films,
-        tvShows: tvShows,
+        seenKeys: seenKeys,
+        items: items,
       );
       return;
     }
@@ -173,9 +162,8 @@ class TmdbService {
       _tryAddLocalMatch(
         item: _safeParse(() => TvShow.fromJson(data)),
         query: query,
-        seenIds: seenIds,
-        films: films,
-        tvShows: tvShows,
+        seenKeys: seenKeys,
+        items: items,
       );
     }
   }
@@ -221,19 +209,16 @@ class TmdbService {
   void _tryAddLocalMatch({
     required CatalogueItem? item,
     required String query,
-    required Set<int> seenIds,
-    required List<Film> films,
-    required List<TvShow> tvShows,
+    required Set<String> seenKeys,
+    required List<CatalogueItem> items,
   }) {
     if (item == null || !item.title.toLowerCase().contains(query)) return;
-    if (!seenIds.add(item.id)) return;
-
-    if (item is Film) {
-      films.add(item);
-    } else if (item is TvShow) {
-      tvShows.add(item);
-    }
+    if (!seenKeys.add(_mediaSeenKey(item))) return;
+    items.add(item);
   }
+
+  String _mediaSeenKey(CatalogueItem item) =>
+      '${item.isFilm ? 'm' : 't'}-${item.id}';
 
   Future<List<EpisodeModel>> getSeasonEpisodes({
     required int tvId,
