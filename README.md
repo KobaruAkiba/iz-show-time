@@ -137,4 +137,7 @@ flutter test
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Copyright (c) 2026 Mirko.
+MIT — see [LICENSE](LICENSE).
+
+**Author and copyright holder:** Mirko Corba  
+Copyright (c) 2026 Mirko Corba. All rights in this project’s original source code and documentation are held by Mirko Corba. The MIT license grants others permission to use, modify, and redistribute the Software subject to that license; it does not transfer ownership. This notice asserts authorship and copyright ownership of the work as expressed in this repository; it does not claim inventive originality beyond copyright in that expression. Third-party libraries and services (e.g. Flutter packages, TMDb) remain under their own terms.

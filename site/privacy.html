@@ -46,7 +46,8 @@
     <section>
       <h2 data-i18n="whoTitle">Titolare</h2>
       <p data-i18n="whoBody">
-        IzShowTime è sviluppato da Mirko Corba. Per domande sulla privacy:
+        IzShowTime è sviluppato da Mirko Corba, autore e detentore dei diritti sul progetto.
+        Per domande sulla privacy:
         <a href="mailto:mirko.corba@gmail.com">mirko.corba@gmail.com</a>.
       </p>
       <p data-i18n="whoOss">
@@ -168,7 +169,7 @@
         heroLede: "IzShowTime non crea account e non gestisce un backend per i tuoi dati. Il catalogo e la cronologia restano sul tuo dispositivo.",
         updated: "Ultimo aggiornamento: 9 settembre 2026",
         whoTitle: "Titolare",
-        whoBody: "IzShowTime è sviluppato da Mirko Corba. Per domande sulla privacy: mirko.corba@gmail.com.",
+        whoBody: "IzShowTime è sviluppato da Mirko Corba, autore e detentore dei diritti sul progetto. Per domande sulla privacy: mirko.corba@gmail.com.",
         whoOss: "Il codice sorgente è pubblico (licenza MIT) su GitHub.",
         summaryTitle: "In sintesi",
         s1: "Nessun account, login o profilo utente.",
@@ -210,7 +211,7 @@
         heroLede: "IzShowTime does not create accounts and does not run a backend for your data. Your catalogue and watch history stay on your device.",
         updated: "Last updated: 9 September 2026",
         whoTitle: "Who we are",
-        whoBody: "IzShowTime is developed by Mirko Corba. Privacy questions: mirko.corba@gmail.com.",
+        whoBody: "IzShowTime is developed by Mirko Corba, author and copyright holder of the project. Privacy questions: mirko.corba@gmail.com.",
         whoOss: "Source code is public (MIT license) on GitHub.",
         summaryTitle: "Summary",
         s1: "No accounts, logins, or user profiles.",
@@ -255,9 +256,9 @@
         if (key === "whoBody" || key === "changesBody") {
           const email = '<a href="mailto:mirko.corba@gmail.com">mirko.corba@gmail.com</a>';
           if (lang === "it" && key === "whoBody") {
-            el.innerHTML = "IzShowTime è sviluppato da Mirko Corba. Per domande sulla privacy: " + email + ".";
+            el.innerHTML = "IzShowTime è sviluppato da Mirko Corba, autore e detentore dei diritti sul progetto. Per domande sulla privacy: " + email + ".";
           } else if (lang === "en" && key === "whoBody") {
-            el.innerHTML = "IzShowTime is developed by Mirko Corba. Privacy questions: " + email + ".";
+            el.innerHTML = "IzShowTime is developed by Mirko Corba, author and copyright holder of the project. Privacy questions: " + email + ".";
           } else if (lang === "it" && key === "changesBody") {
             el.innerHTML = "Possiamo aggiornare questa pagina se l’app cambia. La data in alto indica l’ultima revisione. Per domande: " + email + ".";
           } else if (lang === "en" && key === "changesBody") {
