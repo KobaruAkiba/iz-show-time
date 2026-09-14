@@ -478,6 +478,24 @@ abstract class AppLocalizations {
   /// **'Overview'**
   String get overview;
 
+  /// No description provided for @whereToWatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Where to watch'**
+  String get whereToWatch;
+
+  /// No description provided for @ratingSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating {rating}'**
+  String ratingSemantics(String rating);
+
+  /// No description provided for @whereToWatchSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Where to watch: {providers}'**
+  String whereToWatchSemantics(String providers);
+
   /// No description provided for @networks.
   ///
   /// In en, this message translates to:

@@ -334,6 +334,8 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     final isFollowed = !isFilm && _appServices.isFollowed(widget.item.id);
     final filmWatched =
         isFilm && _appServices.isWatched(mediaId: widget.item.id);
+    final ratingChipLabel =
+        details != null ? _ratingChipLabel(details) : null;
 
     return DraggableScrollableSheet(
       initialChildSize: isFilm ? 0.55 : 0.75,
@@ -407,6 +409,16 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                             spacing: 8,
                             runSpacing: 4,
                             children: [
+                              if (ratingChipLabel != null)
+                                Semantics(
+                                  label: l10n.ratingSemantics(ratingChipLabel),
+                                  child: ExcludeSemantics(
+                                    child: _MetaChip(
+                                      icon: Icons.star_rounded,
+                                      label: ratingChipLabel,
+                                    ),
+                                  ),
+                                ),
                               if (details.year != null)
                                 _MetaChip(
                                   icon: Icons.calendar_today,
@@ -534,13 +546,37 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                         ),
                   ),
                 ],
+                if (details.watchProviderNames.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  _buildSectionLabel(l10n.whereToWatch),
+                  const SizedBox(height: 8),
+                  Semantics(
+                    label: l10n.whereToWatchSemantics(
+                      details.watchProviderNames.join(', '),
+                    ),
+                    child: ExcludeSemantics(
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          for (final provider in details.watchProviderNames)
+                            _GenreChip(label: provider),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
                 if (details.networkNames.isNotEmpty) ...[
                   const SizedBox(height: 20),
                   _buildSectionLabel(l10n.networks),
-                  const SizedBox(height: 4),
-                  Text(
-                    details.networkNames.join(', '),
-                    style: Theme.of(context).textTheme.bodyLarge,
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      for (final network in details.networkNames)
+                        _GenreChip(label: network),
+                    ],
                   ),
                 ],
               ],
@@ -851,6 +887,18 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
         ],
       ),
     );
+  }
+
+  String? _ratingChipLabel(MediaDetails details) {
+    final fromDetails = details.voteAverage;
+    if (fromDetails != null && fromDetails != 0) {
+      return fromDetails.toStringAsFixed(1);
+    }
+    final fromItem = widget.item.voteAverage;
+    if (fromDetails == null && fromItem > 0) {
+      return fromItem.toStringAsFixed(1);
+    }
+    return null;
   }
 
   String _formatShortAirDate(DateTime date) {

@@ -89,6 +89,19 @@
   "createdBy": "Created by",
   "cast": "Cast",
   "overview": "Overview",
+  "whereToWatch": "Where to watch",
+  "ratingSemantics": "Rating {rating}",
+  "@ratingSemantics": {
+    "placeholders": {
+      "rating": {"type": "String"}
+    }
+  },
+  "whereToWatchSemantics": "Where to watch: {providers}",
+  "@whereToWatchSemantics": {
+    "placeholders": {
+      "providers": {"type": "String"}
+    }
+  },
   "networks": "Networks",
   "statusReturningSeries": "Returning Series",
   "statusPlanned": "Planned",

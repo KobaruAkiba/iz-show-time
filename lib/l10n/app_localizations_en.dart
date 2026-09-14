@@ -208,6 +208,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get overview => 'Overview';
 
   @override
+  String get whereToWatch => 'Where to watch';
+
+  @override
+  String ratingSemantics(String rating) {
+    return 'Rating $rating';
+  }
+
+  @override
+  String whereToWatchSemantics(String providers) {
+    return 'Where to watch: $providers';
+  }
+
+  @override
   String get networks => 'Networks';
 
   @override
