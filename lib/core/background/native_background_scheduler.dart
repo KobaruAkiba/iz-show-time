@@ -28,6 +28,8 @@ class NativeBackgroundScheduler {
 
     // Android clamps periodic frequency to ≥15 minutes. Initial delay uses the
     // same floor so the first closed-app check is not deferred a full interval.
+    // keep: first registration creates the period; later app launches must not
+    // reset the 2h countdown (update would re-apply initialDelay and restart).
     await Workmanager().registerPeriodicTask(
       BackgroundTaskConstants.episodeCheckUniqueName,
       BackgroundTaskConstants.episodeCheckTaskName,
@@ -40,7 +42,7 @@ class NativeBackgroundScheduler {
       constraints: Constraints(
         networkType: NetworkType.connected,
       ),
-      existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
     );
   }
 }

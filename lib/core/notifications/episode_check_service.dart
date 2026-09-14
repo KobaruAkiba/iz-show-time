@@ -27,8 +27,9 @@ class EpisodeCheckService {
     });
   }
 
-  /// Native background task: persists alerts and notifies for episodes that
-  /// aired today (local calendar day), at most once per episode.
+  /// Native periodic task: always refreshes alerts; OS notify only when the app
+  /// is not in foreground (option B). Eligible episodes aired today, were not
+  /// notified yet, and are not already in the catalogue.
   static Future<void> runNativeBackgroundCheck(AppServices appServices) async {
     final result = await checkCatalogue(appServices: appServices);
     appServices.updateNewEpisodeAlerts(result.allAlerts);
@@ -38,9 +39,14 @@ class EpisodeCheckService {
 
     final alreadyNotified =
         await appServices.userDataStore.loadNotifiedEpisodeIds();
+    final catalogueEpisodeIds = {
+      for (final record in appServices.watchHistory)
+        if (!record.isFilm && record.episodeId != null) record.episodeId!,
+    };
     final eligible = alertsEligibleForSystemNotification(
       alerts: result.allAlerts,
       alreadyNotifiedEpisodeIds: alreadyNotified,
+      catalogueEpisodeIds: catalogueEpisodeIds,
     );
     if (eligible.isEmpty) return;
 

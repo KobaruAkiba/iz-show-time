@@ -5,17 +5,20 @@ import '../../data/models/new_episode_alert.dart';
 ///
 /// Only the immediate-next episode for a followed show qualifies, and only when
 /// its TMDB [NewEpisodeAlert.airDate] is the local calendar day of [now].
-/// Already-notified episode IDs are excluded so backlog / re-checks stay quiet.
+/// Already-notified and already-catalogued episode IDs are excluded so backlog /
+/// re-checks stay quiet.
 List<NewEpisodeAlert> alertsEligibleForSystemNotification({
   required Iterable<NewEpisodeAlert> alerts,
   required Set<int> alreadyNotifiedEpisodeIds,
+  Set<int> catalogueEpisodeIds = const {},
   DateTime? now,
 }) {
   final moment = now ?? DateTime.now();
   return [
     for (final alert in alerts)
       if (EpisodeModel.isAiredToday(alert.airDate, now: moment) &&
-          !alreadyNotifiedEpisodeIds.contains(alert.episodeId))
+          !alreadyNotifiedEpisodeIds.contains(alert.episodeId) &&
+          !catalogueEpisodeIds.contains(alert.episodeId))
         alert,
   ];
 }

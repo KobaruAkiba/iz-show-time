@@ -63,5 +63,20 @@ void main() {
 
       expect(eligible, isEmpty);
     });
+
+    test('excludes today-aired alerts already in the catalogue', () {
+      final now = DateTime(2026, 3, 15, 21);
+      final eligible = alertsEligibleForSystemNotification(
+        alerts: [
+          alert(episodeId: 1, airDate: DateTime(2026, 3, 15)),
+          alert(episodeId: 2, airDate: DateTime(2026, 3, 15)),
+        ],
+        alreadyNotifiedEpisodeIds: {},
+        catalogueEpisodeIds: {2},
+        now: now,
+      );
+
+      expect(eligible.map((a) => a.episodeId), [1]);
+    });
   });
 }
