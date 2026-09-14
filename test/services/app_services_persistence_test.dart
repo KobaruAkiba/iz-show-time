@@ -238,6 +238,36 @@ class StubTmdbService extends TmdbService {
   }
 }
 
+/// Delays only force-refresh season fetches so a stale full refresh can
+/// finish after a fast per-show refresh from markEpisodeWatched.
+class DelayedStubTmdbService extends StubTmdbService {
+  DelayedStubTmdbService({
+    required super.seasonCount,
+    required super.episodesBySeason,
+    this.delay = const Duration(milliseconds: 80),
+  });
+
+  final Duration delay;
+  int seasonFetchCount = 0;
+
+  @override
+  Future<List<EpisodeModel>> getSeasonEpisodes({
+    required int tvId,
+    required int seasonNumber,
+    bool forceRefresh = false,
+  }) async {
+    seasonFetchCount++;
+    if (forceRefresh) {
+      await Future<void>.delayed(delay);
+    }
+    return super.getSeasonEpisodes(
+      tvId: tvId,
+      seasonNumber: seasonNumber,
+      forceRefresh: forceRefresh,
+    );
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -483,6 +513,144 @@ void main() {
         expect(appServices.newEpisodeAlerts, hasLength(1));
         expect(appServices.newEpisodeAlerts.first.episodeId, 102);
         expect(appServices.newEpisodeAlerts.first.episodeNumber, 4);
+      },
+    );
+
+    test(
+      'marking a same-day aired Continue Watching episode clears that alert',
+      () async {
+        final today = DateTime.now();
+        final todayIso =
+            '${today.year.toString().padLeft(4, '0')}-'
+            '${today.month.toString().padLeft(2, '0')}-'
+            '${today.day.toString().padLeft(2, '0')}';
+
+        appServices.tmdbService = StubTmdbService(
+          seasonCount: 1,
+          episodesBySeason: {
+            1: [
+              EpisodeModel.fromJson({
+                'id': 200,
+                'season_number': 1,
+                'episode_number': 1,
+                'name': 'Pilot',
+                'air_date': '2026-01-01',
+                'runtime': 45,
+              }),
+              EpisodeModel.fromJson({
+                'id': 201,
+                'season_number': 1,
+                'episode_number': 2,
+                'name': 'Aired Today',
+                'air_date': todayIso,
+                'runtime': 45,
+              }),
+            ],
+          },
+        );
+
+        const show = TvShow(id: 77, title: 'Same Day Show');
+        final pilot = EpisodeModel.fromJson({
+          'id': 200,
+          'season_number': 1,
+          'episode_number': 1,
+          'name': 'Pilot',
+          'air_date': '2026-01-01',
+          'runtime': 45,
+        });
+        final airedToday = EpisodeModel.fromJson({
+          'id': 201,
+          'season_number': 1,
+          'episode_number': 2,
+          'name': 'Aired Today',
+          'air_date': todayIso,
+          'runtime': 45,
+        });
+
+        expect(airedToday.hasAired, isTrue);
+        expect(EpisodeModel.isAiredToday(airedToday.airDate), isTrue);
+
+        await appServices.addEpisodeToCatalogue(show: show, episode: pilot);
+        expect(appServices.newEpisodeAlerts.single.episodeId, 201);
+
+        await appServices.markEpisodeWatched(show: show, episode: airedToday);
+
+        expect(
+          appServices.newEpisodeAlerts.any((a) => a.episodeId == 201),
+          isFalse,
+        );
+      },
+    );
+
+    test(
+      'stale concurrent network refresh must not restore a just-watched alert',
+      () async {
+        final today = DateTime.now();
+        final todayIso =
+            '${today.year.toString().padLeft(4, '0')}-'
+            '${today.month.toString().padLeft(2, '0')}-'
+            '${today.day.toString().padLeft(2, '0')}';
+
+        final delayed = DelayedStubTmdbService(
+          seasonCount: 1,
+          delay: const Duration(milliseconds: 120),
+          episodesBySeason: {
+            1: [
+              EpisodeModel.fromJson({
+                'id': 300,
+                'season_number': 1,
+                'episode_number': 1,
+                'name': 'Pilot',
+                'air_date': '2026-01-01',
+                'runtime': 45,
+              }),
+              EpisodeModel.fromJson({
+                'id': 301,
+                'season_number': 1,
+                'episode_number': 2,
+                'name': 'Aired Today',
+                'air_date': todayIso,
+                'runtime': 45,
+              }),
+            ],
+          },
+        );
+        appServices.tmdbService = delayed;
+
+        const show = TvShow(id: 88, title: 'Race Show');
+        final pilot = EpisodeModel.fromJson({
+          'id': 300,
+          'season_number': 1,
+          'episode_number': 1,
+          'name': 'Pilot',
+          'air_date': '2026-01-01',
+          'runtime': 45,
+        });
+        final airedToday = EpisodeModel.fromJson({
+          'id': 301,
+          'season_number': 1,
+          'episode_number': 2,
+          'name': 'Aired Today',
+          'air_date': todayIso,
+          'runtime': 45,
+        });
+
+        await appServices.addEpisodeToCatalogue(show: show, episode: pilot);
+        expect(appServices.newEpisodeAlerts.single.episodeId, 301);
+
+        // Simulate startup/foreground force-refresh overlapping a user mark.
+        final inFlight = appServices.refreshNewEpisodeAlertsFromNetwork();
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        await appServices.markEpisodeWatched(show: show, episode: airedToday);
+        await inFlight;
+
+        expect(
+          appServices.newEpisodeAlerts.any((a) => a.episodeId == 301),
+          isFalse,
+          reason:
+              'A slower full refresh started with a stale watch snapshot must '
+              'not put the just-watched same-day episode back into Continue Watching',
+        );
       },
     );
 

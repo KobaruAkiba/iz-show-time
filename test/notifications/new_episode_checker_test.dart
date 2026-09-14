@@ -120,6 +120,14 @@ class FakeEpisodeCheckStore implements UserDataStore {
   }
 
   @override
+  Future<Map<String, dynamic>> exportBackupData() async => {
+        'alerts': alerts.map((alert) => alert.toJson()).toList(),
+      };
+
+  @override
+  Future<void> importBackupData(Map<String, dynamic> data) async {}
+
+  @override
   Future<void> close() async {}
 }
 

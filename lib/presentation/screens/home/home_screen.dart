@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../widgets/auto_scrolling_page_carousel.dart';
@@ -426,6 +428,6 @@ class _HomeScreenState extends State<HomeScreen> {
       title: alert.showTitle,
       posterPath: alert.showPosterPath,
     );
-    showMediaDetailSheet(context, show);
+    unawaited(_openDetails(show));
   }
 }

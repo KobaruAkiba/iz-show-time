@@ -31,22 +31,28 @@ class NewEpisodeChecker {
   final TmdbService _tmdbService;
   final UserDataStore _userDataStore;
 
-  /// Checks [shows] and persists alerts.
+  /// Checks [shows] and optionally persists alerts.
   ///
-  /// When [mergeWithExisting] is true, alerts for shows not in [shows] are kept.
+  /// When [mergeWithExisting] is true, alerts for shows not in [shows] are kept
+  /// from [existingAlerts] (or the store when that is null).
   /// Use [forceRefresh] for background/network freshness; UI paths should leave
   /// it false so TMDB cache is reused.
+  /// Set [persistAlerts] to false when the caller will commit/persist after
+  /// reconciling concurrent refreshes.
   Future<NewEpisodeCheckResult> checkShows({
     required List<TvShow> shows,
     required List<WatchRecord> watchHistory,
     bool forceRefresh = false,
     bool mergeWithExisting = false,
+    List<NewEpisodeAlert>? existingAlerts,
+    bool persistAlerts = true,
   }) async {
     await _userDataStore.open();
 
-    final existingAlerts = await _userDataStore.loadNewEpisodeAlerts();
+    final priorAlerts =
+        existingAlerts ?? await _userDataStore.loadNewEpisodeAlerts();
     final existingByEpisodeId = {
-      for (final alert in existingAlerts) alert.episodeId: alert,
+      for (final alert in priorAlerts) alert.episodeId: alert,
     };
     final newlyDetected = <NewEpisodeAlert>[];
     final checkedAlerts = <NewEpisodeAlert>[];
@@ -76,7 +82,7 @@ class NewEpisodeChecker {
     if (mergeWithExisting) {
       final checkedShowIds = {for (final show in shows) show.id};
       allAlerts = [
-        ...existingAlerts.where((alert) => !checkedShowIds.contains(alert.showId)),
+        ...priorAlerts.where((alert) => !checkedShowIds.contains(alert.showId)),
         ...checkedAlerts,
       ];
     } else {
@@ -90,8 +96,10 @@ class NewEpisodeChecker {
       ),
     );
 
-    await _userDataStore.saveNewEpisodeAlerts(allAlerts);
-    await _userDataStore.saveLastEpisodeCheckAt(now);
+    if (persistAlerts) {
+      await _userDataStore.saveNewEpisodeAlerts(allAlerts);
+      await _userDataStore.saveLastEpisodeCheckAt(now);
+    }
 
     return NewEpisodeCheckResult(
       newlyDetected: newlyDetected,

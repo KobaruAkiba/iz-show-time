@@ -59,6 +59,11 @@ class AppServices {
   /// mutating operation completes (enables one fsync per user action).
   bool _deferFlush = false;
 
+  /// Bumped when a watch-driven (per-show) Continue Watching refresh commits.
+  /// Full network scans started earlier discard their result if this changed
+  /// mid-flight, so they cannot restore a just-watched episode alert.
+  int _watchDrivenAlertEpoch = 0;
+
   ThemeMode get themeMode => themeModeListenable.value;
 
   List<CatalogueItem> get catalogue => List.unmodifiable(_catalogue);
@@ -432,6 +437,7 @@ class AppServices {
       );
       _addWatchRecordInMemory(record);
       await _persistWatchRecords([record]);
+      _removeAlertForEpisode(episode.id);
       await _refreshNewEpisodeAlerts(forShowId: show.id);
       return record;
     });
@@ -569,10 +575,37 @@ class AppServices {
   }
 
   void updateNewEpisodeAlerts(List<NewEpisodeAlert> alerts) {
+    final pruned = [
+      for (final alert in alerts)
+        if (!_watchedEpisodeIds.contains(alert.episodeId)) alert,
+    ];
     _newEpisodeAlerts
       ..clear()
-      ..addAll(alerts);
-    newEpisodeAlertsListenable.value = List<NewEpisodeAlert>.from(alerts);
+      ..addAll(pruned);
+    newEpisodeAlertsListenable.value = List<NewEpisodeAlert>.from(pruned);
+  }
+
+  Future<void> _persistNewEpisodeAlerts() async {
+    try {
+      await userDataStore.saveNewEpisodeAlerts(_newEpisodeAlerts);
+      await userDataStore.saveLastEpisodeCheckAt(DateTime.now());
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Failed to persist new episode alerts: $error\n$stackTrace',
+      );
+    }
+  }
+
+  /// Drops any Continue Watching row for [episodeId] immediately so Home
+  /// cannot keep showing a just-catalogued episode while a refresh is in flight.
+  void _removeAlertForEpisode(int episodeId) {
+    final before = _newEpisodeAlerts.length;
+    _newEpisodeAlerts.removeWhere((alert) => alert.episodeId == episodeId);
+    if (_newEpisodeAlerts.length == before) return;
+    newEpisodeAlertsListenable.value = List<NewEpisodeAlert>.from(
+      _newEpisodeAlerts,
+    );
+    _watchDrivenAlertEpoch++;
   }
 
   Future<void> reloadNewEpisodeAlertsFromStore() async {
@@ -592,10 +625,16 @@ class AppServices {
   /// Only followed shows are considered. When [forShowId] is set, only that
   /// show is rechecked and merged into existing alerts (avoids scanning the
   /// whole catalogue on every toggle).
+  ///
+  /// A slow full network scan must not commit after a newer watch-driven
+  /// refresh: it may still hold a stale watch-history snapshot and would
+  /// put a just-catalogued episode back into Continue Watching.
   Future<void> _refreshNewEpisodeAlerts({
     int? forShowId,
     bool forceRefresh = false,
   }) async {
+    final watchEpochAtStart = _watchDrivenAlertEpoch;
+    final watchDriven = forShowId != null;
     await NetworkFeedback.runSilent(() async {
       try {
         final shows = forShowId == null
@@ -603,14 +642,15 @@ class AppServices {
             : followedTvShows
                 .where((show) => show.id == forShowId)
                 .toList(growable: false);
+        final historySnapshot = List<WatchRecord>.of(_watchHistory);
 
         if (forShowId != null && shows.isEmpty) {
-          // Unfollowed / missing — clear that show's alerts only.
           _newEpisodeAlerts.removeWhere((alert) => alert.showId == forShowId);
           newEpisodeAlertsListenable.value = List<NewEpisodeAlert>.from(
             _newEpisodeAlerts,
           );
-          await userDataStore.saveNewEpisodeAlerts(_newEpisodeAlerts);
+          await _persistNewEpisodeAlerts();
+          _watchDrivenAlertEpoch++;
           return;
         }
 
@@ -620,11 +660,20 @@ class AppServices {
         );
         final result = await checker.checkShows(
           shows: shows,
-          watchHistory: watchHistory,
+          watchHistory: historySnapshot,
           forceRefresh: forceRefresh,
           mergeWithExisting: forShowId != null,
+          existingAlerts: List<NewEpisodeAlert>.of(_newEpisodeAlerts),
+          persistAlerts: false,
         );
+        final staleFullRefresh = !watchDriven &&
+            watchEpochAtStart != _watchDrivenAlertEpoch;
+        if (staleFullRefresh) return;
         updateNewEpisodeAlerts(result.allAlerts);
+        await _persistNewEpisodeAlerts();
+        if (watchDriven) {
+          _watchDrivenAlertEpoch++;
+        }
       } catch (error, stackTrace) {
         debugPrint(
           'Failed to refresh new episode alerts: $error\n$stackTrace',
@@ -848,6 +897,7 @@ class AppServices {
     _episodeCountByMediaId.clear();
     _newEpisodeAlerts.clear();
     newEpisodeAlertsListenable.value = const [];
+    _watchDrivenAlertEpoch = 0;
     await userDataStore.clearAll();
     // clearAll removes the purge stamp; re-record so the next launch is not forced.
     try {
