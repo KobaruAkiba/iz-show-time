@@ -7,10 +7,11 @@
 .buildlog/
 .history
 
+# Local files for pulish on stores
+.publish
+
 # Local secrets (API tokens)
 environment.local
-
-
 
 # Flutter repo-specific
 /bin/cache/
