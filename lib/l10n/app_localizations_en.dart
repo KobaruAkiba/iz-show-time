@@ -111,6 +111,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Shows still airing or with an upcoming episode.';
 
   @override
+  String get filtersNotFollowed => 'Not Followed';
+
+  @override
+  String get filtersNotFollowedHint =>
+      'TV shows you aren\'t following for new-episode alerts.';
+
+  @override
   String get filtersSortBy => 'Sort by';
 
   @override
@@ -451,6 +458,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get catalogueNoInProgress =>
       'No shows in progress.\nStill-airing series or those with an upcoming episode appear here.';
+
+  @override
+  String get catalogueNoNotFollowed =>
+      'All your shows are followed.\nUnfollow a show from its details to see it here.';
 
   @override
   String get settingsAppearance => 'Appearance';

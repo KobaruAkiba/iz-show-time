@@ -44,6 +44,8 @@
   "filtersFavorites": "Favorites",
   "filtersInProgress": "In Progress",
   "filtersInProgressHint": "Shows still airing or with an upcoming episode.",
+  "filtersNotFollowed": "Not Followed",
+  "filtersNotFollowedHint": "TV shows you aren't following for new-episode alerts.",
   "filtersSortBy": "Sort by",
   "filtersReset": "Reset",
   "filtersApply": "Apply",
@@ -279,6 +281,7 @@
   "catalogueNoFilterMatches": "No results match your filters",
   "catalogueNoFavorites": "No favorites yet.\nTap the heart on any title to add one.",
   "catalogueNoInProgress": "No shows in progress.\nStill-airing series or those with an upcoming episode appear here.",
+  "catalogueNoNotFollowed": "All your shows are followed.\nUnfollow a show from its details to see it here.",
 
   "settingsAppearance": "Appearance",
   "settingsThemeSystem": "System",

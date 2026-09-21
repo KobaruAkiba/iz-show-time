@@ -27,8 +27,11 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
   MediaSortOption _sortOption = MediaSortOption.none;
   bool _inProgressOnly = false;
   bool _favoritesOnly = false;
+  bool _notFollowedOnly = false;
   bool _statsExpanded = false;
   final _appServices = AppServices();
+
+  bool get _forcesTvOnly => _inProgressOnly || _notFollowedOnly;
 
   /// Chips row: type + sheet filters (status / sort).
   bool get _hasActiveFilters => hasActiveMediaFilters(
@@ -36,13 +39,15 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
         sortOption: _sortOption,
         inProgressOnly: _inProgressOnly,
         favoritesOnly: _favoritesOnly,
+        notFollowedOnly: _notFollowedOnly,
       );
 
   /// Tune button badge: only filters controlled by the sheet (not media type).
   bool get _hasActiveSheetFilters =>
       _sortOption != MediaSortOption.none ||
       _inProgressOnly ||
-      _favoritesOnly;
+      _favoritesOnly ||
+      _notFollowedOnly;
 
   @override
   void initState() {
@@ -79,15 +84,21 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
       );
     }
 
+    if (_notFollowedOnly) {
+      filtered = filtered.where(
+        (item) => item is TvShow && !item.isFollowed,
+      );
+    }
+
     if (_searchQuery.isNotEmpty) {
       final query = _searchQuery.toLowerCase();
       filtered =
           filtered.where((item) => item.title.toLowerCase().contains(query));
     }
 
-    // In Progress implies TV-only even when media filter is "All".
+    // In Progress / Not Followed imply TV-only even when media filter is "All".
     final effectiveMediaFilter =
-        _inProgressOnly && _mediaFilter == MediaFilter.all
+        _forcesTvOnly && _mediaFilter == MediaFilter.all
             ? MediaFilter.tvOnly
             : _mediaFilter;
 
@@ -107,8 +118,10 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
       sortOption: _sortOption,
       inProgressOnly: _inProgressOnly,
       favoritesOnly: _favoritesOnly,
+      notFollowedOnly: _notFollowedOnly,
       showInProgressFilter: true,
       showFavoritesFilter: true,
+      showNotFollowedFilter: true,
       showMediaTypeFilter: false,
     );
     if (result == null || !mounted) return;
@@ -116,8 +129,10 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
       _sortOption = result.sortOption;
       _inProgressOnly = result.inProgressOnly;
       _favoritesOnly = result.favoritesOnly;
-      // Sheet no longer owns media type; keep counters in sync with In Progress.
-      if (result.inProgressOnly && _mediaFilter == MediaFilter.filmsOnly) {
+      _notFollowedOnly = result.notFollowedOnly;
+      // Sheet no longer owns media type; keep counters in sync with TV-only filters.
+      if ((result.inProgressOnly || result.notFollowedOnly) &&
+          _mediaFilter == MediaFilter.filmsOnly) {
         _mediaFilter = MediaFilter.tvOnly;
       } else {
         _mediaFilter = result.mediaFilter;
@@ -128,9 +143,10 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
   void _onMediaFilterSelected(MediaFilter filter) {
     setState(() {
       _mediaFilter = filter;
-      // Films + In Progress is incompatible; intentional Films tap clears it.
-      if (filter == MediaFilter.filmsOnly && _inProgressOnly) {
-        _inProgressOnly = false;
+      // Films + TV-only status filters are incompatible; Films tap clears them.
+      if (filter == MediaFilter.filmsOnly) {
+        if (_inProgressOnly) _inProgressOnly = false;
+        if (_notFollowedOnly) _notFollowedOnly = false;
       }
     });
   }
@@ -145,6 +161,10 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
 
   void _clearFavorites() {
     setState(() => _favoritesOnly = false);
+  }
+
+  void _clearNotFollowed() {
+    setState(() => _notFollowedOnly = false);
   }
 
   void _clearSort() {
@@ -257,6 +277,12 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
                 onDeleted: _clearInProgress,
                 visualDensity: VisualDensity.compact,
               ),
+            if (_notFollowedOnly)
+              InputChip(
+                label: Text(l10n.filtersNotFollowed),
+                onDeleted: _clearNotFollowed,
+                visualDensity: VisualDensity.compact,
+              ),
             if (_sortOption != MediaSortOption.none)
               InputChip(
                 label: Text(mediaSortOptionLabel(_sortOption, l10n)),
@@ -293,10 +319,14 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
         _sortOption,
         _inProgressOnly,
         _favoritesOnly,
+        _notFollowedOnly,
         items.length,
         items
             .whereType<TvShow>()
-            .map((show) => '${show.id}:${show.status}:${show.nextEpisodeAirDate}')
+            .map(
+              (show) =>
+                  '${show.id}:${show.status}:${show.nextEpisodeAirDate}:${show.isFollowed}',
+            )
             .join('|'),
       ),
       totalItemCount: items.length,
@@ -334,11 +364,21 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
     if (_favoritesOnly &&
         _searchQuery.isEmpty &&
         !_inProgressOnly &&
+        !_notFollowedOnly &&
         _mediaFilter == MediaFilter.all) {
       return l10n.catalogueNoFavorites;
     }
+    if (_notFollowedOnly &&
+        _searchQuery.isEmpty &&
+        !_favoritesOnly &&
+        !_inProgressOnly &&
+        _mediaFilter != MediaFilter.filmsOnly) {
+      return l10n.catalogueNoNotFollowed;
+    }
     if (_inProgressOnly &&
         _searchQuery.isEmpty &&
+        !_favoritesOnly &&
+        !_notFollowedOnly &&
         _mediaFilter != MediaFilter.filmsOnly) {
       return l10n.catalogueNoInProgress;
     }

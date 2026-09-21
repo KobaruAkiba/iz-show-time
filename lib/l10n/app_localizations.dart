@@ -292,6 +292,18 @@ abstract class AppLocalizations {
   /// **'Shows still airing or with an upcoming episode.'**
   String get filtersInProgressHint;
 
+  /// No description provided for @filtersNotFollowed.
+  ///
+  /// In en, this message translates to:
+  /// **'Not Followed'**
+  String get filtersNotFollowed;
+
+  /// No description provided for @filtersNotFollowedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'TV shows you aren\'t following for new-episode alerts.'**
+  String get filtersNotFollowedHint;
+
   /// No description provided for @filtersSortBy.
   ///
   /// In en, this message translates to:
@@ -855,6 +867,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No shows in progress.\nStill-airing series or those with an upcoming episode appear here.'**
   String get catalogueNoInProgress;
+
+  /// No description provided for @catalogueNoNotFollowed.
+  ///
+  /// In en, this message translates to:
+  /// **'All your shows are followed.\nUnfollow a show from its details to see it here.'**
+  String get catalogueNoNotFollowed;
 
   /// No description provided for @settingsAppearance.
   ///

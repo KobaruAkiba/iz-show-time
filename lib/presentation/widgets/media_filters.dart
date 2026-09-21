@@ -35,11 +35,13 @@ bool hasActiveMediaFilters({
   required MediaSortOption sortOption,
   bool inProgressOnly = false,
   bool favoritesOnly = false,
+  bool notFollowedOnly = false,
 }) {
   return mediaFilter != MediaFilter.all ||
       sortOption != MediaSortOption.none ||
       inProgressOnly ||
-      favoritesOnly;
+      favoritesOnly ||
+      notFollowedOnly;
 }
 
 List<CatalogueItem> applyMediaFilters(
@@ -121,6 +123,7 @@ typedef MediaFiltersResult = ({
   MediaSortOption sortOption,
   bool inProgressOnly,
   bool favoritesOnly,
+  bool notFollowedOnly,
 });
 
 Future<MediaFiltersResult?> showMediaFiltersSheet(
@@ -129,19 +132,25 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
   required MediaSortOption sortOption,
   bool inProgressOnly = false,
   bool favoritesOnly = false,
+  bool notFollowedOnly = false,
   bool showInProgressFilter = false,
   bool showFavoritesFilter = false,
+  bool showNotFollowedFilter = false,
   bool showMediaTypeFilter = true,
 }) {
   var draftMediaFilter = mediaFilter;
   var draftSortOption = sortOption;
   var draftInProgressOnly = inProgressOnly;
   var draftFavoritesOnly = favoritesOnly;
-  final showStatusSection = showInProgressFilter || showFavoritesFilter;
+  var draftNotFollowedOnly = notFollowedOnly;
+  final showStatusSection =
+      showInProgressFilter || showFavoritesFilter || showNotFollowedFilter;
 
-  void applyInProgressConstraints() {
-    if (!showMediaTypeFilter || !draftInProgressOnly) return;
-    // In Progress is TV-only: films-only is incompatible.
+  bool draftForcesTvOnly() => draftInProgressOnly || draftNotFollowedOnly;
+
+  void applyTvOnlyConstraints() {
+    if (!showMediaTypeFilter || !draftForcesTvOnly()) return;
+    // In Progress / Not Followed are TV-only: films-only is incompatible.
     if (draftMediaFilter == MediaFilter.filmsOnly) {
       draftMediaFilter = MediaFilter.tvOnly;
     }
@@ -194,7 +203,7 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                         value: MediaFilter.filmsOnly,
                         label: Text(l10n.filterFilms),
                         icon: const Icon(Icons.movie_filter, size: 18),
-                        enabled: !draftInProgressOnly,
+                        enabled: !draftForcesTvOnly(),
                       ),
                       ButtonSegment(
                         value: MediaFilter.tvOnly,
@@ -206,7 +215,7 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                     onSelectionChanged: (selection) {
                       setSheetState(() {
                         draftMediaFilter = selection.first;
-                        applyInProgressConstraints();
+                        applyTvOnlyConstraints();
                       });
                     },
                   ),
@@ -254,7 +263,25 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                           onSelected: (selected) {
                             setSheetState(() {
                               draftInProgressOnly = selected;
-                              applyInProgressConstraints();
+                              applyTvOnlyConstraints();
+                            });
+                          },
+                        ),
+                      if (showNotFollowedFilter)
+                        FilterChip(
+                          label: Text(l10n.filtersNotFollowed),
+                          selected: draftNotFollowedOnly,
+                          showCheckmark: false,
+                          avatar: Icon(
+                            draftNotFollowedOnly
+                                ? Icons.notifications_off
+                                : Icons.notifications_outlined,
+                            size: 18,
+                          ),
+                          onSelected: (selected) {
+                            setSheetState(() {
+                              draftNotFollowedOnly = selected;
+                              applyTvOnlyConstraints();
                             });
                           },
                         ),
@@ -265,6 +292,19 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
                         l10n.filtersInProgressHint,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.7),
+                            ),
+                      ),
+                    ),
+                  if (draftNotFollowedOnly && showNotFollowedFilter)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        l10n.filtersNotFollowedHint,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Theme.of(context)
                                   .colorScheme
@@ -310,6 +350,7 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                           draftSortOption = MediaSortOption.none;
                           draftInProgressOnly = false;
                           draftFavoritesOnly = false;
+                          draftNotFollowedOnly = false;
                         });
                       },
                       child: Text(l10n.filtersReset),
@@ -317,7 +358,7 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                     const Spacer(),
                     FilledButton(
                       onPressed: () {
-                        applyInProgressConstraints();
+                        applyTvOnlyConstraints();
                         Navigator.pop(
                           context,
                           (
@@ -330,6 +371,9 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                                 : false,
                             favoritesOnly: showFavoritesFilter
                                 ? draftFavoritesOnly
+                                : false,
+                            notFollowedOnly: showNotFollowedFilter
+                                ? draftNotFollowedOnly
                                 : false,
                           ),
                         );
