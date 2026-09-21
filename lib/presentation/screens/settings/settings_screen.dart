@@ -17,7 +17,7 @@ import '../../../l10n/l10n.dart';
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
-  static const _appVersion = '1.0.0';
+  static const _appVersion = '1.0.1';
   static const _authorName = 'Mirko Corba';
   static const _tmdbLogoAsset = 'assets/images/TmdbLogo.png';
   static const _paypalLogoAsset = 'assets/images/PaypalLogo.png';
