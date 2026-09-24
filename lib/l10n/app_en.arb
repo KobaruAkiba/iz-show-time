@@ -120,6 +120,8 @@
       "date": {"type": "String"}
     }
   },
+  "badgeNew": "New",
+
   "episodesInCatalogue": "{count} episode(s) in catalogue",
   "@episodesInCatalogue": {
     "placeholders": {

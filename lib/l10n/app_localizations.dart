@@ -574,6 +574,12 @@ abstract class AppLocalizations {
   /// **'Upcoming · {date}'**
   String upcomingWithDate(String date);
 
+  /// No description provided for @badgeNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get badgeNew;
+
   /// No description provided for @episodesInCatalogue.
   ///
   /// In en, this message translates to:

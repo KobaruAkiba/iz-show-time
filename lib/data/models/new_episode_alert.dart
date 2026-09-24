@@ -60,6 +60,9 @@ class NewEpisodeAlert {
       ? episodeName
       : AppL10n.current.episodeFallbackTitle(episodeNumber);
 
+  /// True when this alert's TMDB air date is today's local calendar day.
+  bool get showsNewBadge => EpisodeModel.isAiredToday(airDate);
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||

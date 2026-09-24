@@ -263,6 +263,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get badgeNew => 'New';
+
+  @override
   String episodesInCatalogue(int count) {
     return '$count episode(s) in catalogue';
   }
