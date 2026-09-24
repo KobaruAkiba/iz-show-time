@@ -200,7 +200,10 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
   Future<void> _addEpisodeToCatalogue(EpisodeModel episode) async {
     final show = widget.item as TvShow;
     final l10n = context.l10n;
-    final fallbackRuntime = _details?.averageEpisodeRuntimeMinutes;
+    final season = _seasons
+        .where((s) => s.seasonNumber == episode.seasonNumber)
+        .firstOrNull;
+    final fallbackRuntime = _runtimeFallbackFor(episode, season: season);
     final isWatched =
         _appServices.isWatched(mediaId: show.id, episodeId: episode.id);
 
@@ -264,11 +267,13 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
 
     final show = widget.item as TvShow;
     final l10n = context.l10n;
-    final fallbackRuntime = _details?.averageEpisodeRuntimeMinutes;
     final catalogueEpisodes = season.episodes
         .where(
           (episode) => episode.isCatalogueAddable(
-            fallbackRuntimeMinutes: fallbackRuntime,
+            fallbackRuntimeMinutes: _runtimeFallbackFor(
+              episode,
+              season: season,
+            ),
           ),
         )
         .toList(growable: false);
@@ -309,7 +314,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     final addedCount = await _appServices.addSeasonToCatalogue(
       show: show,
       episodes: season.episodes,
-      fallbackRuntimeMinutes: fallbackRuntime,
+      fallbackRuntimeMinutes: _details?.averageEpisodeRuntimeMinutes,
     );
 
     if (!mounted) return;
@@ -753,12 +758,14 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
   Widget _buildSeasonSection(SeasonModel season) {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = context.l10n;
-    final fallbackRuntime = _details?.averageEpisodeRuntimeMinutes;
     final isExpanded = _expandedSeasons.contains(season.seasonNumber);
     final catalogueEpisodes = season.episodes
         .where(
           (episode) => episode.isCatalogueAddable(
-            fallbackRuntimeMinutes: fallbackRuntime,
+            fallbackRuntimeMinutes: _runtimeFallbackFor(
+              episode,
+              season: season,
+            ),
           ),
         )
         .toList(growable: false);
@@ -842,17 +849,33 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
           ),
           if (isExpanded)
             ...season.episodes.map(
-              (episode) => _buildEpisodeTile(episode),
+              (episode) => _buildEpisodeTile(episode, season: season),
             ),
         ],
       ),
     );
   }
 
-  Widget _buildEpisodeTile(EpisodeModel episode) {
+  int? _runtimeFallbackFor(
+    EpisodeModel episode, {
+    SeasonModel? season,
+  }) {
+    final showAverage = _details?.averageEpisodeRuntimeMinutes;
+    if (showAverage != null && showAverage > 0) return showAverage;
+    if (season == null) return null;
+    return EpisodeModel.averagePositiveRuntimeMinutes(
+      season.episodes,
+      excludeEpisodeId: episode.id,
+    );
+  }
+
+  Widget _buildEpisodeTile(
+    EpisodeModel episode, {
+    required SeasonModel season,
+  }) {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = context.l10n;
-    final fallbackRuntime = _details?.averageEpisodeRuntimeMinutes;
+    final fallbackRuntime = _runtimeFallbackFor(episode, season: season);
     final isWatched = _appServices.isWatched(
       mediaId: widget.item.id,
       episodeId: episode.id,

@@ -395,7 +395,9 @@ class TmdbService {
 
     if (!bypassCache) {
       final cached = _cache.get<Map<String, dynamic>>(cacheKey);
-      if (cached != null) return cached;
+      if (cached != null) {
+        return cached;
+      }
     }
 
     if (AppApiKey.tmdb.isEmpty) return null;

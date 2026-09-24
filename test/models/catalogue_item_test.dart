@@ -168,6 +168,43 @@ void main() {
       expect(undatedWithRuntime.isCatalogueAddable(), isTrue);
       expect(undatedWithRuntime.isAiringSoon(), isFalse);
     });
+
+    test('averagePositiveRuntimeMinutes ignores missing and excluded ids', () {
+      final episodes = [
+        EpisodeModel.fromJson({
+          'id': 1,
+          'episode_number': 1,
+          'season_number': 1,
+          'name': 'A',
+          'runtime': 40,
+        }),
+        EpisodeModel.fromJson({
+          'id': 2,
+          'episode_number': 2,
+          'season_number': 1,
+          'name': 'B',
+          'runtime': 50,
+        }),
+        EpisodeModel.fromJson({
+          'id': 3,
+          'episode_number': 3,
+          'season_number': 1,
+          'name': 'C',
+        }),
+      ];
+
+      expect(
+        EpisodeModel.averagePositiveRuntimeMinutes(
+          episodes,
+          excludeEpisodeId: 3,
+        ),
+        45,
+      );
+      expect(
+        EpisodeModel.averagePositiveRuntimeMinutes(const []),
+        isNull,
+      );
+    });
   });
 
   group('Episode signature helpers', () {

@@ -291,7 +291,6 @@ void main() {
               'episode_number': 2,
               'name': 'Registered',
               'air_date': '2026-01-01',
-              'runtime': 45,
             }),
             EpisodeModel.fromJson({
               'id': 101,
@@ -317,6 +316,70 @@ void main() {
       expect(result.allAlerts, isEmpty);
       expect(result.newlyDetected, isEmpty);
     });
+
+    test(
+      'uses peer season average when next episode runtime is missing',
+      () async {
+        const show = TvShow(id: 42, title: 'Sample Show');
+        final watchHistory = [
+          WatchRecord(
+            mediaId: 42,
+            isFilm: false,
+            episodeId: 100,
+            seasonNumber: 1,
+            episodeNumber: 1,
+            durationMinutes: 45,
+            watchedAt: DateTime(2026, 1, 1),
+          ),
+        ];
+
+        final tmdb = StubTmdbService(
+          seasonCount: 1,
+          averageEpisodeRuntimeMinutes: null,
+          episodesBySeason: {
+            1: [
+              EpisodeModel.fromJson({
+                'id': 100,
+                'season_number': 1,
+                'episode_number': 1,
+                'name': 'Registered',
+                'air_date': '2026-01-01',
+                'runtime': 40,
+              }),
+              EpisodeModel.fromJson({
+                'id': 101,
+                'season_number': 1,
+                'episode_number': 2,
+                'name': 'Missing runtime',
+                'air_date': '2026-01-08',
+              }),
+              EpisodeModel.fromJson({
+                'id': 102,
+                'season_number': 1,
+                'episode_number': 3,
+                'name': 'Peer',
+                'air_date': '2026-01-15',
+                'runtime': 50,
+              }),
+            ],
+          },
+        );
+
+        final checker = NewEpisodeChecker(
+          tmdbService: tmdb,
+          userDataStore: store,
+        );
+
+        final result = await checker.checkShows(
+          shows: [show],
+          watchHistory: watchHistory,
+        );
+
+        expect(result.allAlerts, hasLength(1));
+        expect(result.allAlerts.first.episodeId, 101);
+        expect(result.allAlerts.first.runtimeMinutes, 45);
+      },
+    );
 
     test('skips later aired episodes when an earlier next episode exists', () async {
       const show = TvShow(id: 42, title: 'Sample Show');

@@ -119,6 +119,27 @@ class EpisodeModel {
     return duration > 0;
   }
 
+  /// Average of positive runtimes in [episodes], optionally skipping one id.
+  /// Used as catalogue fallback when TMDB omits runtime on a single episode.
+  static int? averagePositiveRuntimeMinutes(
+    Iterable<EpisodeModel> episodes, {
+    int? excludeEpisodeId,
+  }) {
+    var sum = 0;
+    var count = 0;
+    for (final episode in episodes) {
+      if (excludeEpisodeId != null && episode.id == excludeEpisodeId) {
+        continue;
+      }
+      final runtime = episode.runtimeMinutes;
+      if (runtime == null || runtime <= 0) continue;
+      sum += runtime;
+      count++;
+    }
+    if (count == 0) return null;
+    return sum ~/ count;
+  }
+
   /// Compares [a] vs [b] by season then episode number.
   /// Returns negative if [a] is earlier, positive if later, 0 if equal.
   static int compareBySeasonAndNumber(

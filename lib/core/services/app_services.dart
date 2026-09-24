@@ -313,15 +313,18 @@ class AppServices {
       final now = DateTime.now();
       final toAdd = <WatchRecord>[];
       for (final episode in episodes) {
-        if (!episode.isCatalogueAddable(
-          fallbackRuntimeMinutes: fallbackRuntimeMinutes,
-        )) {
+        final peerAverage = EpisodeModel.averagePositiveRuntimeMinutes(
+          episodes,
+          excludeEpisodeId: episode.id,
+        );
+        final fallback = fallbackRuntimeMinutes ?? peerAverage;
+        if (!episode.isCatalogueAddable(fallbackRuntimeMinutes: fallback)) {
           continue;
         }
         if (isWatched(mediaId: show.id, episodeId: episode.id)) continue;
 
         final duration = episode.resolvedRuntimeMinutes(
-          fallbackRuntimeMinutes: fallbackRuntimeMinutes,
+          fallbackRuntimeMinutes: fallback,
         );
 
         toAdd.add(

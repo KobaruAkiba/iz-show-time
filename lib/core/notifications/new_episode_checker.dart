@@ -128,20 +128,23 @@ class NewEpisodeChecker {
         (lastRegistered.seasonNumber + 1);
     if (seasonCount <= 0) return null;
 
-    final nextEpisode = await _findImmediateNextEpisode(
+    final next = await _findImmediateNextEpisode(
       tvId: show.id,
       lastRegistered: lastRegistered,
       seasonCount: seasonCount,
       forceRefresh: forceRefresh,
     );
 
-    final fallbackRuntime = details?.averageEpisodeRuntimeMinutes;
-    if (nextEpisode == null ||
-        !isAvailableImmediateNextEpisode(
+    final fallbackRuntime = details?.averageEpisodeRuntimeMinutes ??
+        next?.peerAverageRuntime;
+    final nextEpisode = next?.episode;
+    final addable = nextEpisode != null &&
+        isAvailableImmediateNextEpisode(
           nextEpisode,
           watchHistory,
           fallbackRuntimeMinutes: fallbackRuntime,
-        )) {
+        );
+    if (nextEpisode == null || !addable) {
       return null;
     }
 
@@ -173,7 +176,8 @@ class NewEpisodeChecker {
     return path;
   }
 
-  Future<EpisodeModel?> _findImmediateNextEpisode({
+  Future<({EpisodeModel episode, int? peerAverageRuntime})?>
+      _findImmediateNextEpisode({
     required int tvId,
     required EpisodeSignature lastRegistered,
     required int seasonCount,
@@ -191,7 +195,15 @@ class NewEpisodeChecker {
       );
       // Dated next ep (aired or upcoming): stay in-season.
       // Undated TMDB stubs are skipped so we can cross to the next season.
-      if (nextInSeason != null) return nextInSeason;
+      if (nextInSeason != null) {
+        return (
+          episode: nextInSeason,
+          peerAverageRuntime: EpisodeModel.averagePositiveRuntimeMinutes(
+            seasonEpisodes,
+            excludeEpisodeId: nextInSeason.id,
+          ),
+        );
+      }
     }
 
     final nextSeason = lastRegistered.seasonNumber + 1;
@@ -203,11 +215,19 @@ class NewEpisodeChecker {
       forceRefresh: forceRefresh,
     );
     // Prefer the first dated episode so undated E1 stubs don't block S2E2, etc.
-    return _nextDatedEpisodeAfter(
+    final nextEpisode = _nextDatedEpisodeAfter(
           nextSeasonEpisodes,
           afterEpisodeNumber: 0,
         ) ??
         _episodeWithNumber(nextSeasonEpisodes, 1);
+    if (nextEpisode == null) return null;
+    return (
+      episode: nextEpisode,
+      peerAverageRuntime: EpisodeModel.averagePositiveRuntimeMinutes(
+        nextSeasonEpisodes,
+        excludeEpisodeId: nextEpisode.id,
+      ),
+    );
   }
 
   /// First episode after [afterEpisodeNumber] that has an air date (aired or
