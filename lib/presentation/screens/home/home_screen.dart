@@ -349,18 +349,32 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: SizedBox(
-                    width: 56,
-                    height: 84,
-                    child: posterUrl.isNotEmpty
-                        ? Image.network(
-                            posterUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _posterFallback(),
-                          )
-                        : _posterFallback(),
+                SizedBox(
+                  width: 56,
+                  height: 84,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned.fill(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: posterUrl.isNotEmpty
+                              ? Image.network(
+                                  posterUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) =>
+                                      _posterFallback(),
+                                )
+                              : _posterFallback(),
+                        ),
+                      ),
+                      if (alert.showsNewBadge)
+                        const Positioned(
+                          top: -6,
+                          left: -6,
+                          child: _NewEpisodeBadge(),
+                        ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -368,26 +382,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              alert.showTitle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleSmall
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                      Text(
+                        alert.showTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
                             ),
-                          ),
-                          if (alert.showsNewBadge) ...[
-                            const SizedBox(width: 8),
-                            const _NewEpisodeBadge(),
-                          ],
-                        ],
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -457,6 +458,16 @@ class _NewEpisodeBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: colorScheme.onPrimaryContainer.withValues(alpha: 0.12),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.28),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: Text(
         context.l10n.badgeNew,
