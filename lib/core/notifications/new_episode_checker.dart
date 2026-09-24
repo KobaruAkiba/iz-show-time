@@ -55,6 +55,9 @@ class NewEpisodeChecker {
     final existingByEpisodeId = {
       for (final alert in priorAlerts) alert.episodeId: alert,
     };
+    final priorByShowId = {
+      for (final alert in priorAlerts) alert.showId: alert,
+    };
     final newlyDetected = <NewEpisodeAlert>[];
     final checkedAlerts = <NewEpisodeAlert>[];
     final now = DateTime.now();
@@ -66,6 +69,7 @@ class NewEpisodeChecker {
           watchHistory: watchHistory,
           checkedAt: now,
           forceRefresh: forceRefresh,
+          priorAlert: priorByShowId[show.id],
         );
         if (nextAlert == null) continue;
 
@@ -111,6 +115,7 @@ class NewEpisodeChecker {
     required List<WatchRecord> watchHistory,
     required DateTime checkedAt,
     required bool forceRefresh,
+    NewEpisodeAlert? priorAlert,
   }) async {
     final lastRegistered = lastRegisteredEpisodeForShow(show.id, watchHistory);
     if (lastRegistered == null) return null;
@@ -144,10 +149,14 @@ class NewEpisodeChecker {
       fallbackRuntimeMinutes: fallbackRuntime,
     );
 
+    final resolvedPoster = _nonEmptyPosterPath(details?.posterPath) ??
+        _nonEmptyPosterPath(show.posterPath) ??
+        _nonEmptyPosterPath(priorAlert?.showPosterPath);
+
     return NewEpisodeAlert(
       showId: show.id,
       showTitle: show.title,
-      showPosterPath: show.posterPath,
+      showPosterPath: resolvedPoster,
       episodeId: nextEpisode.id,
       seasonNumber: nextEpisode.seasonNumber,
       episodeNumber: nextEpisode.episodeNumber,
@@ -156,6 +165,12 @@ class NewEpisodeChecker {
       runtimeMinutes: resolvedRuntime,
       detectedAt: checkedAt,
     );
+  }
+
+  /// Prefers a non-empty TMDB path; treats blank strings as missing.
+  static String? _nonEmptyPosterPath(String? path) {
+    if (path == null || path.isEmpty) return null;
+    return path;
   }
 
   Future<EpisodeModel?> _findImmediateNextEpisode({

@@ -377,6 +377,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildNewEpisodeTile(NewEpisodeAlert alert) {
     final colorScheme = Theme.of(context).colorScheme;
     final posterUrl = ApiConstants.posterUrl(alert.showPosterPath);
+    final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
+    final cacheWidth = (56 * devicePixelRatio).round();
+    final cacheHeight = (84 * devicePixelRatio).round();
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -403,6 +406,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               ? Image.network(
                                   posterUrl,
                                   fit: BoxFit.cover,
+                                  cacheWidth: cacheWidth,
+                                  cacheHeight: cacheHeight,
                                   errorBuilder: (_, __, ___) =>
                                       _posterFallback(),
                                 )

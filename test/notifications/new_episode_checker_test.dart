@@ -137,6 +137,7 @@ class StubTmdbService extends TmdbService {
     required this.episodesBySeason,
     this.detailsStatus,
     this.detailsNextEpisodeAirDate,
+    this.detailsPosterPath,
     this.averageEpisodeRuntimeMinutes = 45,
   }) : super(cacheManager: null);
 
@@ -144,6 +145,7 @@ class StubTmdbService extends TmdbService {
   final Map<int, List<EpisodeModel>> episodesBySeason;
   final String? detailsStatus;
   final String? detailsNextEpisodeAirDate;
+  final String? detailsPosterPath;
   final int? averageEpisodeRuntimeMinutes;
   int seasonFetchCount = 0;
 
@@ -155,6 +157,7 @@ class StubTmdbService extends TmdbService {
       isFilm: false,
       status: detailsStatus,
       nextEpisodeAirDate: detailsNextEpisodeAirDate,
+      posterPath: detailsPosterPath,
       averageEpisodeRuntimeMinutes: averageEpisodeRuntimeMinutes,
     );
   }
@@ -863,5 +866,130 @@ void main() {
 
       expect(result.allAlerts.map((a) => a.showId).toList(), [2, 3, 4, 1]);
     });
+
+    test(
+      'uses details poster when catalogue show has no posterPath',
+      () async {
+        const show = TvShow(id: 42, title: 'Sample Show');
+        final watchHistory = [
+          WatchRecord(
+            mediaId: 42,
+            isFilm: false,
+            episodeId: 100,
+            seasonNumber: 1,
+            episodeNumber: 1,
+            durationMinutes: 45,
+            watchedAt: DateTime(2026, 1, 1),
+          ),
+        ];
+
+        final tmdb = StubTmdbService(
+          seasonCount: 1,
+          detailsPosterPath: '/from-details.jpg',
+          episodesBySeason: {
+            1: [
+              EpisodeModel.fromJson({
+                'id': 100,
+                'season_number': 1,
+                'episode_number': 1,
+                'name': 'Pilot',
+                'air_date': '2026-01-01',
+                'runtime': 45,
+              }),
+              EpisodeModel.fromJson({
+                'id': 101,
+                'season_number': 1,
+                'episode_number': 2,
+                'name': 'Next',
+                'air_date': '2026-01-08',
+                'runtime': 45,
+              }),
+            ],
+          },
+        );
+
+        final checker = NewEpisodeChecker(
+          tmdbService: tmdb,
+          userDataStore: store,
+        );
+
+        final result = await checker.checkShows(
+          shows: [show],
+          watchHistory: watchHistory,
+        );
+
+        expect(result.allAlerts, hasLength(1));
+        expect(result.allAlerts.single.showPosterPath, '/from-details.jpg');
+      },
+    );
+
+    test(
+      'preserves prior alert poster when catalogue and details lack one',
+      () async {
+        const show = TvShow(id: 42, title: 'Sample Show');
+        final watchHistory = [
+          WatchRecord(
+            mediaId: 42,
+            isFilm: false,
+            episodeId: 100,
+            seasonNumber: 1,
+            episodeNumber: 1,
+            durationMinutes: 45,
+            watchedAt: DateTime(2026, 1, 1),
+          ),
+        ];
+
+        final prior = NewEpisodeAlert(
+          showId: 42,
+          showTitle: 'Sample Show',
+          showPosterPath: '/prior-poster.jpg',
+          episodeId: 99,
+          seasonNumber: 1,
+          episodeNumber: 1,
+          episodeName: 'Old',
+          airDate: DateTime(2026, 1, 1),
+          detectedAt: DateTime(2026, 1, 2),
+        );
+
+        final tmdb = StubTmdbService(
+          seasonCount: 1,
+          episodesBySeason: {
+            1: [
+              EpisodeModel.fromJson({
+                'id': 100,
+                'season_number': 1,
+                'episode_number': 1,
+                'name': 'Pilot',
+                'air_date': '2026-01-01',
+                'runtime': 45,
+              }),
+              EpisodeModel.fromJson({
+                'id': 101,
+                'season_number': 1,
+                'episode_number': 2,
+                'name': 'Next',
+                'air_date': '2026-01-08',
+                'runtime': 45,
+              }),
+            ],
+          },
+        );
+
+        final checker = NewEpisodeChecker(
+          tmdbService: tmdb,
+          userDataStore: store,
+        );
+
+        final result = await checker.checkShows(
+          shows: [show],
+          watchHistory: watchHistory,
+          existingAlerts: [prior],
+        );
+
+        expect(result.allAlerts, hasLength(1));
+        expect(result.allAlerts.single.showPosterPath, '/prior-poster.jpg');
+        expect(result.allAlerts.single.episodeId, 101);
+      },
+    );
   });
 }
