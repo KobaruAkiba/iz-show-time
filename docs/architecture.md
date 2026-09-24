@@ -61,7 +61,8 @@ flutter run --dart-define=TMDB_API_KEY=your_token_here
 ## Caching
 
 - **L1**: In-memory `CacheManager` with TTL per request type
-- **Rate limiting**: `ApiCacheService` tracks requests per minute (40 cap)
+- **429 handling**: `DioClient` retries rate-limited responses up to 5 times (honours `Retry-After` when present)
+- **Season fetch**: `TmdbService.getTvSeasons` loads seasons in chunks of 6 concurrent requests
 - **Background**: Refreshes trending data every 2 hours
 
 Persistent Hive/SQLite cache for TMDb responses is not implemented in the current revision. User catalogue and watch history are persisted via Hive.

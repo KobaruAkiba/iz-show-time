@@ -8,6 +8,15 @@ class AppConstants {
   /// (banner / inline hint) so slow networks feel intentional rather than frozen.
   static const Duration slowConnectionThreshold = Duration(seconds: 4);
 
+  /// Max in-flight season fetches for a single TV show (avoids TMDb 429 bursts).
+  static const int tvSeasonsFetchConcurrency = 6;
+
+  /// Retries after the first HTTP 429 before returning [ApiErrorType.rateLimit].
+  static const int tmdbMaxRateLimitRetries = 5;
+
+  /// Upper bound for Retry-After / backoff delay between 429 retries.
+  static const Duration tmdbRateLimitRetryMaxDelay = Duration(seconds: 30);
+
   static const int defaultCacheTTLMinutes = 60;
 
   // Cache TTL settings for different data types (in minutes)

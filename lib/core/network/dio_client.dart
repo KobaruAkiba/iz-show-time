@@ -157,34 +157,61 @@ class DioClient {
     });
 
     try {
-      final response = await _dio.get(
-        path,
-        queryParameters: queryParameters,
-        options: Options(),
-      );
-
-      if (response.statusCode == 200) {
-        if (!_hasJsonBody(response.data)) {
-          return ApiResult.error(
-            ApiErrorType.invalidResponse,
-            message: 'HTTP 200: empty or non-JSON response body',
+      var rateLimitAttempts = 0;
+      while (true) {
+        try {
+          final response = await _dio.get(
+            path,
+            queryParameters: queryParameters,
+            options: Options(),
           );
-        }
-        return ApiResult.success(response.data as T);
-      } else if (response.statusCode == 429) {
-        slowTimer.cancel();
-        if (reportedSlow) NetworkFeedback.dismissSlowConnection();
-        await Future.delayed(const Duration(seconds: 5));
-        return get<T>(path, queryParameters: queryParameters);
-      }
 
-      return ApiResult.error(
-        _errorTypeForStatus(response.statusCode),
-        message: 'HTTP ${response.statusCode}: ${response.data ?? 'no body'}',
-      );
-    } on DioException catch (e) {
-      final type = _errorTypeForDio(e);
-      return ApiResult.error(type);
+          if (response.statusCode == 200) {
+            if (!_hasJsonBody(response.data)) {
+              return ApiResult.error(
+                ApiErrorType.invalidResponse,
+                message: 'HTTP 200: empty or non-JSON response body',
+              );
+            }
+            return ApiResult.success(response.data as T);
+          }
+
+          if (response.statusCode == 429) {
+            rateLimitAttempts++;
+            if (rateLimitAttempts > AppConstants.tmdbMaxRateLimitRetries) {
+              return ApiResult.error(ApiErrorType.rateLimit);
+            }
+            await Future.delayed(
+              _rateLimitDelay(
+                attempt: rateLimitAttempts,
+                headers: response.headers.map,
+              ),
+            );
+            continue;
+          }
+
+          return ApiResult.error(
+            _errorTypeForStatus(response.statusCode),
+            message:
+                'HTTP ${response.statusCode}: ${response.data ?? 'no body'}',
+          );
+        } on DioException catch (e) {
+          if (e.response?.statusCode == 429) {
+            rateLimitAttempts++;
+            if (rateLimitAttempts > AppConstants.tmdbMaxRateLimitRetries) {
+              return ApiResult.error(ApiErrorType.rateLimit);
+            }
+            await Future.delayed(
+              _rateLimitDelay(
+                attempt: rateLimitAttempts,
+                headers: e.response?.headers.map,
+              ),
+            );
+            continue;
+          }
+          return ApiResult.error(_errorTypeForDio(e));
+        }
+      }
     } catch (_) {
       return ApiResult.error(
         ApiErrorType.networkError,
@@ -196,6 +223,37 @@ class DioClient {
         NetworkFeedback.dismissSlowConnection();
       }
     }
+  }
+
+  /// Delay before the next 429 retry: prefer Retry-After, else exponential backoff.
+  Duration _rateLimitDelay({
+    required int attempt,
+    Map<String, List<String>>? headers,
+  }) {
+    final fromHeader = _retryAfterDelay(headers);
+    if (fromHeader != null) return fromHeader;
+
+    final seconds = 1 << (attempt - 1).clamp(0, 4); // 1, 2, 4, 8, 16
+    final delay = Duration(seconds: seconds);
+    if (delay > AppConstants.tmdbRateLimitRetryMaxDelay) {
+      return AppConstants.tmdbRateLimitRetryMaxDelay;
+    }
+    return delay;
+  }
+
+  Duration? _retryAfterDelay(Map<String, List<String>>? headers) {
+    if (headers == null) return null;
+    final values = headers['retry-after'] ?? headers['Retry-After'];
+    if (values == null || values.isEmpty) return null;
+
+    final asSeconds = int.tryParse(values.first.trim());
+    if (asSeconds == null) return null;
+
+    final delay = Duration(seconds: asSeconds < 0 ? 0 : asSeconds);
+    if (delay > AppConstants.tmdbRateLimitRetryMaxDelay) {
+      return AppConstants.tmdbRateLimitRetryMaxDelay;
+    }
+    return delay;
   }
 
   Map<String, String> get headers => _dio.options.headers.cast<String, String>();

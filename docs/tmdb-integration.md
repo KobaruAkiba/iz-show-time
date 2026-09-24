@@ -76,10 +76,11 @@ ApiConstants.posterUrl(item.posterPath)
 
 ## Rate limits
 
-Free tier: **40 requests/minute**. The app uses:
+TMDb soft ceiling is roughly **40–50 requests/second** (the legacy 40/10s limit was disabled in 2019). The app mitigates bursts with:
 
 1. In-memory TTL cache (avoid repeat calls; max TTL 30 days)
-2. Dio retry on HTTP 429
+2. Dio retry on HTTP 429 (up to 5 retries, prefers `Retry-After` when present)
+3. Capped concurrency (6) when fetching all seasons for a TV show
 
 ## TMDb API Terms compliance
 

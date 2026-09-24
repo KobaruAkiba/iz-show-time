@@ -256,15 +256,20 @@ class TmdbService {
   }) async {
     if (numberOfSeasons <= 0) return const [];
 
-    final seasons = await Future.wait(
-      List.generate(
-        numberOfSeasons,
-        (index) => getSeason(
-          tvId: tvId,
-          seasonNumber: index + 1,
-        ),
-      ),
-    );
+    final seasons = <SeasonModel?>[];
+    const concurrency = AppConstants.tvSeasonsFetchConcurrency;
+
+    for (var start = 0; start < numberOfSeasons; start += concurrency) {
+      final end = (start + concurrency).clamp(0, numberOfSeasons);
+      final chunk = await Future.wait([
+        for (var index = start; index < end; index++)
+          getSeason(
+            tvId: tvId,
+            seasonNumber: index + 1,
+          ),
+      ]);
+      seasons.addAll(chunk);
+    }
 
     return [
       for (var i = 0; i < seasons.length; i++)
