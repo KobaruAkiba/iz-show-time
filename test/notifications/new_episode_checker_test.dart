@@ -137,12 +137,14 @@ class StubTmdbService extends TmdbService {
     required this.episodesBySeason,
     this.detailsStatus,
     this.detailsNextEpisodeAirDate,
+    this.averageEpisodeRuntimeMinutes = 45,
   }) : super(cacheManager: null);
 
   final int seasonCount;
   final Map<int, List<EpisodeModel>> episodesBySeason;
   final String? detailsStatus;
   final String? detailsNextEpisodeAirDate;
+  final int? averageEpisodeRuntimeMinutes;
   int seasonFetchCount = 0;
 
   @override
@@ -153,6 +155,7 @@ class StubTmdbService extends TmdbService {
       isFilm: false,
       status: detailsStatus,
       nextEpisodeAirDate: detailsNextEpisodeAirDate,
+      averageEpisodeRuntimeMinutes: averageEpisodeRuntimeMinutes,
     );
   }
 
@@ -223,7 +226,60 @@ void main() {
 
       expect(result.newlyDetected, hasLength(1));
       expect(result.newlyDetected.first.episodeNumber, 3);
+      expect(result.newlyDetected.first.runtimeMinutes, 45);
       expect(result.allAlerts, hasLength(1));
+    });
+
+    test('skips aired next episode when runtime cannot be resolved', () async {
+      const show = TvShow(id: 42, title: 'Sample Show');
+      final watchHistory = [
+        WatchRecord(
+          mediaId: 42,
+          isFilm: false,
+          episodeId: 100,
+          seasonNumber: 1,
+          episodeNumber: 2,
+          durationMinutes: 45,
+          watchedAt: DateTime(2026, 1, 1),
+        ),
+      ];
+
+      final tmdb = StubTmdbService(
+        seasonCount: 1,
+        averageEpisodeRuntimeMinutes: null,
+        episodesBySeason: {
+          1: [
+            EpisodeModel.fromJson({
+              'id': 100,
+              'season_number': 1,
+              'episode_number': 2,
+              'name': 'Registered',
+              'air_date': '2026-01-01',
+              'runtime': 45,
+            }),
+            EpisodeModel.fromJson({
+              'id': 101,
+              'season_number': 1,
+              'episode_number': 3,
+              'name': 'Airing Soon',
+              'air_date': '2026-01-08',
+            }),
+          ],
+        },
+      );
+
+      final checker = NewEpisodeChecker(
+        tmdbService: tmdb,
+        userDataStore: store,
+      );
+
+      final result = await checker.checkShows(
+        shows: [show],
+        watchHistory: watchHistory,
+      );
+
+      expect(result.allAlerts, isEmpty);
+      expect(result.newlyDetected, isEmpty);
     });
 
     test('skips later aired episodes when an earlier next episode exists', () async {

@@ -752,6 +752,42 @@ void main() {
       expect(store.flushCount, 1);
     });
 
+    test('skips airing-soon episodes without resolvable runtime', () async {
+      const show = TvShow(id: 71, title: 'Airing Soon Show');
+      final ready = EpisodeModel.fromJson({
+        'id': 211,
+        'season_number': 1,
+        'episode_number': 1,
+        'name': 'Ready',
+        'air_date': '2020-01-01',
+        'runtime': 42,
+      });
+      final airingSoon = EpisodeModel.fromJson({
+        'id': 212,
+        'season_number': 1,
+        'episode_number': 2,
+        'name': 'No Runtime',
+        'air_date': '2020-01-08',
+      });
+
+      expect(airingSoon.isAiringSoon(), isTrue);
+
+      final addedCount = await appServices.addSeasonToCatalogue(
+        show: show,
+        episodes: [ready, airingSoon],
+      );
+
+      expect(addedCount, 1);
+      expect(
+        appServices.isWatched(mediaId: show.id, episodeId: ready.id),
+        isTrue,
+      );
+      expect(
+        appServices.isWatched(mediaId: show.id, episodeId: airingSoon.id),
+        isFalse,
+      );
+    });
+
     test('persists a season in one batch write and one flush', () async {
       const show = TvShow(id: 8, title: 'Batch Show');
       final episodes = List.generate(

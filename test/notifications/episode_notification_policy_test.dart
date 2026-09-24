@@ -23,6 +23,7 @@ void main() {
     NewEpisodeAlert alert({
       required int episodeId,
       required DateTime? airDate,
+      int? runtimeMinutes,
     }) {
       return NewEpisodeAlert(
         showId: 1,
@@ -32,30 +33,57 @@ void main() {
         episodeNumber: episodeId,
         episodeName: 'Ep $episodeId',
         airDate: airDate,
+        runtimeMinutes: runtimeMinutes,
         detectedAt: DateTime(2026, 3, 15),
       );
     }
 
-    test('includes only today-aired alerts that were not notified yet', () {
+    test('includes catalogue-addable alerts that were not notified yet', () {
       final now = DateTime(2026, 3, 15, 21);
       final eligible = alertsEligibleForSystemNotification(
         alerts: [
-          alert(episodeId: 1, airDate: DateTime(2026, 3, 15)),
-          alert(episodeId: 2, airDate: DateTime(2026, 3, 14)),
-          alert(episodeId: 3, airDate: DateTime(2026, 3, 15)),
-          alert(episodeId: 4, airDate: null),
+          alert(
+            episodeId: 1,
+            airDate: DateTime(2026, 3, 15),
+            runtimeMinutes: 42,
+          ),
+          alert(
+            episodeId: 2,
+            airDate: DateTime(2026, 3, 14),
+            runtimeMinutes: 42,
+          ),
+          alert(
+            episodeId: 3,
+            airDate: DateTime(2026, 3, 15),
+            runtimeMinutes: 42,
+          ),
+          alert(episodeId: 4, airDate: null, runtimeMinutes: 42),
+          alert(
+            episodeId: 5,
+            airDate: DateTime(2026, 3, 15),
+            runtimeMinutes: null,
+          ),
         ],
         alreadyNotifiedEpisodeIds: {3},
         now: now,
       );
 
-      expect(eligible.map((a) => a.episodeId), [1]);
+      expect(eligible.map((a) => a.episodeId), [1, 2, 4]);
     });
 
-    test('returns empty when nothing aired today', () {
+    test('excludes upcoming and missing-runtime alerts', () {
       final eligible = alertsEligibleForSystemNotification(
         alerts: [
-          alert(episodeId: 1, airDate: DateTime(2026, 3, 10)),
+          alert(
+            episodeId: 1,
+            airDate: DateTime(2099, 6, 1),
+            runtimeMinutes: 42,
+          ),
+          alert(
+            episodeId: 2,
+            airDate: DateTime(2026, 3, 10),
+            runtimeMinutes: null,
+          ),
         ],
         alreadyNotifiedEpisodeIds: {},
         now: DateTime(2026, 3, 15),
@@ -64,12 +92,20 @@ void main() {
       expect(eligible, isEmpty);
     });
 
-    test('excludes today-aired alerts already in the catalogue', () {
+    test('excludes catalogue-addable alerts already in the catalogue', () {
       final now = DateTime(2026, 3, 15, 21);
       final eligible = alertsEligibleForSystemNotification(
         alerts: [
-          alert(episodeId: 1, airDate: DateTime(2026, 3, 15)),
-          alert(episodeId: 2, airDate: DateTime(2026, 3, 15)),
+          alert(
+            episodeId: 1,
+            airDate: DateTime(2026, 3, 15),
+            runtimeMinutes: 42,
+          ),
+          alert(
+            episodeId: 2,
+            airDate: DateTime(2026, 3, 15),
+            runtimeMinutes: 42,
+          ),
         ],
         alreadyNotifiedEpisodeIds: {},
         catalogueEpisodeIds: {2},

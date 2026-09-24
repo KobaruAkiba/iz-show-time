@@ -121,6 +121,53 @@ void main() {
       expect(episode.hasAired, isFalse);
       expect(episode.isUpcoming, isFalse);
     });
+
+    test('isCatalogueAddable requires resolvable runtime', () {
+      final airedNoRuntime = EpisodeModel.fromJson({
+        'id': 13,
+        'episode_number': 1,
+        'season_number': 1,
+        'name': 'Pilot',
+        'air_date': '2020-01-01',
+      });
+      final airedWithRuntime = EpisodeModel.fromJson({
+        'id': 14,
+        'episode_number': 2,
+        'season_number': 1,
+        'name': 'E2',
+        'air_date': '2020-01-08',
+        'runtime': 42,
+      });
+      final upcoming = EpisodeModel.fromJson({
+        'id': 15,
+        'episode_number': 3,
+        'season_number': 1,
+        'name': 'Future',
+        'air_date': '2099-01-01',
+        'runtime': 42,
+      });
+      final undatedWithRuntime = EpisodeModel.fromJson({
+        'id': 16,
+        'episode_number': 4,
+        'season_number': 1,
+        'name': 'Undated',
+        'runtime': 40,
+      });
+
+      expect(airedNoRuntime.isCatalogueAddable(), isFalse);
+      expect(
+        airedNoRuntime.isCatalogueAddable(fallbackRuntimeMinutes: 45),
+        isTrue,
+      );
+      expect(airedNoRuntime.isAiringSoon(), isTrue);
+      expect(airedWithRuntime.isCatalogueAddable(), isTrue);
+      expect(airedWithRuntime.isAiringSoon(), isFalse);
+      expect(upcoming.isCatalogueAddable(), isFalse);
+      expect(upcoming.isAiringSoon(), isFalse);
+      expect(upcoming.isUpcoming, isTrue);
+      expect(undatedWithRuntime.isCatalogueAddable(), isTrue);
+      expect(undatedWithRuntime.isAiringSoon(), isFalse);
+    });
   });
 
   group('Episode signature helpers', () {

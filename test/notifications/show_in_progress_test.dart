@@ -6,7 +6,20 @@ import 'package:iz_show_time_tracker/data/models/watch_record.dart';
 
 void main() {
   group('isAvailableImmediateNextEpisode', () {
-    test('true when aired and not registered', () {
+    test('true when aired with runtime and not registered', () {
+      final episode = EpisodeModel.fromJson({
+        'id': 101,
+        'season_number': 1,
+        'episode_number': 3,
+        'name': 'Next',
+        'air_date': '2020-01-01',
+        'runtime': 42,
+      });
+
+      expect(isAvailableImmediateNextEpisode(episode, const []), isTrue);
+    });
+
+    test('true when aired without runtime but show fallback resolves', () {
       final episode = EpisodeModel.fromJson({
         'id': 101,
         'season_number': 1,
@@ -15,7 +28,26 @@ void main() {
         'air_date': '2020-01-01',
       });
 
-      expect(isAvailableImmediateNextEpisode(episode, const []), isTrue);
+      expect(
+        isAvailableImmediateNextEpisode(
+          episode,
+          const [],
+          fallbackRuntimeMinutes: 45,
+        ),
+        isTrue,
+      );
+    });
+
+    test('false when aired without runtime or fallback', () {
+      final episode = EpisodeModel.fromJson({
+        'id': 101,
+        'season_number': 1,
+        'episode_number': 3,
+        'name': 'Next',
+        'air_date': '2020-01-01',
+      });
+
+      expect(isAvailableImmediateNextEpisode(episode, const []), isFalse);
     });
 
     test('false when already registered', () {
@@ -25,6 +57,7 @@ void main() {
         'episode_number': 3,
         'name': 'Next',
         'air_date': '2020-01-01',
+        'runtime': 42,
       });
       final history = [
         WatchRecord(

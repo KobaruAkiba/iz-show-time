@@ -200,6 +200,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
   Future<void> _addEpisodeToCatalogue(EpisodeModel episode) async {
     final show = widget.item as TvShow;
     final l10n = context.l10n;
+    final fallbackRuntime = _details?.averageEpisodeRuntimeMinutes;
     final isWatched =
         _appServices.isWatched(mediaId: show.id, episodeId: episode.id);
 
@@ -233,10 +234,17 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
       return;
     }
 
+    if (episode.isAiringSoon(fallbackRuntimeMinutes: fallbackRuntime)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.episodeAiringSoon)),
+      );
+      return;
+    }
+
     final record = await _appServices.addEpisodeToCatalogue(
       show: show,
       episode: episode,
-      fallbackRuntimeMinutes: _details?.averageEpisodeRuntimeMinutes,
+      fallbackRuntimeMinutes: fallbackRuntime,
     );
 
     if (!mounted) return;
@@ -256,8 +264,13 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
 
     final show = widget.item as TvShow;
     final l10n = context.l10n;
+    final fallbackRuntime = _details?.averageEpisodeRuntimeMinutes;
     final catalogueEpisodes = season.episodes
-        .where((episode) => !episode.isUpcoming)
+        .where(
+          (episode) => episode.isCatalogueAddable(
+            fallbackRuntimeMinutes: fallbackRuntime,
+          ),
+        )
         .toList(growable: false);
     if (catalogueEpisodes.isEmpty) return;
 
@@ -296,14 +309,14 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     final addedCount = await _appServices.addSeasonToCatalogue(
       show: show,
       episodes: season.episodes,
-      fallbackRuntimeMinutes: _details?.averageEpisodeRuntimeMinutes,
+      fallbackRuntimeMinutes: fallbackRuntime,
     );
 
     if (!mounted) return;
 
     if (addedCount == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.episodeRuntimeNotAvailable)),
+        SnackBar(content: Text(l10n.episodeAiringSoon)),
       );
       return;
     }
@@ -740,9 +753,14 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
   Widget _buildSeasonSection(SeasonModel season) {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = context.l10n;
+    final fallbackRuntime = _details?.averageEpisodeRuntimeMinutes;
     final isExpanded = _expandedSeasons.contains(season.seasonNumber);
     final catalogueEpisodes = season.episodes
-        .where((episode) => !episode.isUpcoming)
+        .where(
+          (episode) => episode.isCatalogueAddable(
+            fallbackRuntimeMinutes: fallbackRuntime,
+          ),
+        )
         .toList(growable: false);
     final watchedInSeason = catalogueEpisodes
         .where(
@@ -756,7 +774,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
         watchedInSeason == catalogueEpisodes.length;
     final partialInCatalogue =
         watchedInSeason > 0 && watchedInSeason < catalogueEpisodes.length;
-    final canAddSeason = season.episodes.isNotEmpty && !season.isUpcoming;
+    final canAddSeason = catalogueEpisodes.isNotEmpty && !season.isUpcoming;
 
     final String subtitle;
     if (season.isUpcoming) {
@@ -790,7 +808,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                 ),
                 if (season.isUpcoming) ...[
                   const SizedBox(width: 8),
-                  const _UpcomingBadge(),
+                  const _StatusBadge.upcoming(),
                 ],
               ],
             ),
@@ -834,11 +852,29 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
   Widget _buildEpisodeTile(EpisodeModel episode) {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = context.l10n;
+    final fallbackRuntime = _details?.averageEpisodeRuntimeMinutes;
     final isWatched = _appServices.isWatched(
       mediaId: widget.item.id,
       episodeId: episode.id,
     );
     final isUpcoming = episode.isUpcoming;
+    final isAiringSoon = episode.isAiringSoon(
+      fallbackRuntimeMinutes: fallbackRuntime,
+    );
+    final addDisabled = isUpcoming || isAiringSoon;
+
+    final String? subtitle;
+    if (isUpcoming) {
+      subtitle = episode.airDate != null
+          ? l10n.upcomingWithDate(_formatShortAirDate(episode.airDate!))
+          : l10n.upcoming;
+    } else if (isAiringSoon) {
+      subtitle = episode.airDate != null
+          ? l10n.airingSoonWithDate(_formatShortAirDate(episode.airDate!))
+          : l10n.airingSoon;
+    } else {
+      subtitle = null;
+    }
 
     return ListTile(
       dense: true,
@@ -855,34 +891,32 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
       ),
-      subtitle: isUpcoming
-          ? Text(
-              episode.airDate != null
-                  ? l10n.upcomingWithDate(
-                      _formatShortAirDate(episode.airDate!),
-                    )
-                  : l10n.upcoming,
-            )
-          : null,
+      subtitle: subtitle != null ? Text(subtitle) : null,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (isUpcoming) ...[
-            const _UpcomingBadge(),
+            const _StatusBadge.upcoming(),
+            const SizedBox(width: 4),
+          ] else if (isAiringSoon) ...[
+            const _StatusBadge.airingSoon(),
             const SizedBox(width: 4),
           ],
           IconButton(
             tooltip: isUpcoming
                 ? l10n.episodeHasNotAiredYet
-                : isWatched
-                    ? l10n.removeFromCatalogue
-                    : l10n.addEpisodeToCatalogue,
+                : isAiringSoon
+                    ? l10n.episodeAiringSoon
+                    : isWatched
+                        ? l10n.removeFromCatalogue
+                        : l10n.addEpisodeToCatalogue,
             icon: Icon(
               isWatched ? Icons.bookmark : Icons.bookmark_add_outlined,
               color: isWatched ? colorScheme.primary : null,
             ),
-            onPressed:
-                isUpcoming ? null : () => _addEpisodeToCatalogue(episode),
+            onPressed: addDisabled
+                ? null
+                : () => _addEpisodeToCatalogue(episode),
           ),
         ],
       ),
@@ -972,12 +1006,16 @@ class _GenreChip extends StatelessWidget {
   }
 }
 
-class _UpcomingBadge extends StatelessWidget {
-  const _UpcomingBadge();
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge.upcoming() : _airingSoon = false;
+  const _StatusBadge.airingSoon() : _airingSoon = true;
+
+  final bool _airingSoon;
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
@@ -985,7 +1023,7 @@ class _UpcomingBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        context.l10n.upcoming,
+        _airingSoon ? l10n.airingSoon : l10n.upcoming,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: colorScheme.onTertiaryContainer,
               fontWeight: FontWeight.w600,

@@ -299,8 +299,8 @@ class AppServices {
     );
   }
 
-  /// Adds every non-upcoming episode of a season to the catalogue.
-  /// Upcoming episodes (`episode.isUpcoming`) are skipped.
+  /// Adds every catalogue-addable episode of a season to the catalogue.
+  /// Upcoming and airing-soon episodes (no resolvable runtime) are skipped.
   /// Returns how many episodes were newly added.
   Future<int> addSeasonToCatalogue({
     required TvShow show,
@@ -313,11 +313,16 @@ class AppServices {
       final now = DateTime.now();
       final toAdd = <WatchRecord>[];
       for (final episode in episodes) {
-        if (episode.isUpcoming) continue;
+        if (!episode.isCatalogueAddable(
+          fallbackRuntimeMinutes: fallbackRuntimeMinutes,
+        )) {
+          continue;
+        }
         if (isWatched(mediaId: show.id, episodeId: episode.id)) continue;
 
-        final duration = episode.runtimeMinutes ?? fallbackRuntimeMinutes ?? 0;
-        if (duration <= 0) continue;
+        final duration = episode.resolvedRuntimeMinutes(
+          fallbackRuntimeMinutes: fallbackRuntimeMinutes,
+        );
 
         toAdd.add(
           WatchRecord(
@@ -410,7 +415,7 @@ class AppServices {
   }
 
   /// Records a watched episode. Ensures the series is in the catalogue.
-  /// Returns the new record, or null if already watched or duration is invalid.
+  /// Returns the new record, or null if already watched or not catalogue-addable.
   Future<WatchRecord?> markEpisodeWatched({
     required TvShow show,
     required EpisodeModel episode,
@@ -418,8 +423,15 @@ class AppServices {
   }) async {
     if (isWatched(mediaId: show.id, episodeId: episode.id)) return null;
 
-    final duration = episode.runtimeMinutes ?? fallbackRuntimeMinutes ?? 0;
-    if (duration <= 0) return null;
+    if (!episode.isCatalogueAddable(
+      fallbackRuntimeMinutes: fallbackRuntimeMinutes,
+    )) {
+      return null;
+    }
+
+    final duration = episode.resolvedRuntimeMinutes(
+      fallbackRuntimeMinutes: fallbackRuntimeMinutes,
+    );
 
     return _withDeferredFlush(() async {
       if (!isInCatalogue(show.id)) {

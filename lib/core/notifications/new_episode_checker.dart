@@ -131,10 +131,19 @@ class NewEpisodeChecker {
       forceRefresh: forceRefresh,
     );
 
+    final fallbackRuntime = details?.averageEpisodeRuntimeMinutes;
     if (nextEpisode == null ||
-        !isAvailableImmediateNextEpisode(nextEpisode, watchHistory)) {
+        !isAvailableImmediateNextEpisode(
+          nextEpisode,
+          watchHistory,
+          fallbackRuntimeMinutes: fallbackRuntime,
+        )) {
       return null;
     }
+
+    final resolvedRuntime = nextEpisode.resolvedRuntimeMinutes(
+      fallbackRuntimeMinutes: fallbackRuntime,
+    );
 
     return NewEpisodeAlert(
       showId: show.id,
@@ -145,6 +154,7 @@ class NewEpisodeChecker {
       episodeNumber: nextEpisode.episodeNumber,
       episodeName: nextEpisode.displayTitle,
       airDate: nextEpisode.airDate,
+      runtimeMinutes: resolvedRuntime,
       detectedAt: checkedAt,
     );
   }

@@ -42,6 +42,32 @@ class EpisodeModel {
     return isAirDateUpcoming(airDate!);
   }
 
+  /// Duration used for catalogue add (episode runtime or show-level fallback).
+  int resolvedRuntimeMinutes({int? fallbackRuntimeMinutes}) =>
+      runtimeMinutes ?? fallbackRuntimeMinutes ?? 0;
+
+  /// Whether a positive duration can be resolved for catalogue / watch time.
+  bool hasCatalogueRuntime({int? fallbackRuntimeMinutes}) =>
+      resolvedRuntimeMinutes(fallbackRuntimeMinutes: fallbackRuntimeMinutes) >
+      0;
+
+  /// Catalogue-addable: not future-dated, and duration resolvable.
+  /// Undated episodes with runtime stay addable.
+  bool isCatalogueAddable({int? fallbackRuntimeMinutes, DateTime? now}) {
+    return isCatalogueAddableFields(
+      airDate: airDate,
+      runtimeMinutes: runtimeMinutes,
+      fallbackRuntimeMinutes: fallbackRuntimeMinutes,
+      now: now,
+    );
+  }
+
+  /// Visible in the list, not upcoming, but cannot be added (missing runtime).
+  bool isAiringSoon({int? fallbackRuntimeMinutes, DateTime? now}) {
+    if (isAirDateUpcomingField(airDate, now: now)) return false;
+    return !hasCatalogueRuntime(fallbackRuntimeMinutes: fallbackRuntimeMinutes);
+  }
+
   static DateTime? parseAirDate(String? raw) {
     if (raw == null || raw.isEmpty) return null;
     return DateTime.tryParse(raw);
@@ -60,6 +86,13 @@ class EpisodeModel {
     );
   }
 
+  /// True when [airDate] is present and strictly after today.
+  /// Missing dates are not treated as upcoming.
+  static bool isAirDateUpcomingField(DateTime? airDate, {DateTime? now}) {
+    if (airDate == null) return false;
+    return isAirDateUpcoming(airDate, now: now);
+  }
+
   /// True when [date] falls on the same local calendar day as [now].
   static bool isSameCalendarDay(DateTime date, {DateTime? now}) {
     final today = now ?? DateTime.now();
@@ -72,6 +105,18 @@ class EpisodeModel {
   static bool isAiredToday(DateTime? airDate, {DateTime? now}) {
     if (airDate == null) return false;
     return isSameCalendarDay(airDate, now: now);
+  }
+
+  /// Catalogue-addable from alert / loose fields (same rules as [isCatalogueAddable]).
+  static bool isCatalogueAddableFields({
+    required DateTime? airDate,
+    required int? runtimeMinutes,
+    int? fallbackRuntimeMinutes,
+    DateTime? now,
+  }) {
+    if (isAirDateUpcomingField(airDate, now: now)) return false;
+    final duration = runtimeMinutes ?? fallbackRuntimeMinutes ?? 0;
+    return duration > 0;
   }
 
   /// Compares [a] vs [b] by season then episode number.

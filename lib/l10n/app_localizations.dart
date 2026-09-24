@@ -400,6 +400,12 @@ abstract class AppLocalizations {
   /// **'This episode hasn\'t aired yet'**
   String get episodeHasNotAiredYet;
 
+  /// No description provided for @episodeAiringSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'This episode isn\'t ready to add yet'**
+  String get episodeAiringSoon;
+
   /// No description provided for @episodeRuntimeNotAvailable.
   ///
   /// In en, this message translates to:
@@ -573,6 +579,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Upcoming · {date}'**
   String upcomingWithDate(String date);
+
+  /// No description provided for @airingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Airing soon'**
+  String get airingSoon;
+
+  /// No description provided for @airingSoonWithDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Airing soon · {date}'**
+  String airingSoonWithDate(String date);
 
   /// No description provided for @badgeNew.
   ///

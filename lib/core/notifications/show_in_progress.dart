@@ -3,14 +3,17 @@ import '../../data/models/episode_model.dart';
 import '../../data/models/watch_record.dart';
 import 'episode_signature.dart';
 
-/// Whether [episode] is an available immediate-next: aired and not yet
-/// registered in watch history. Callers must already ensure [episode] is the
-/// immediate next S/E after the last registered episode.
+/// Whether [episode] is an available immediate-next: catalogue-addable and not
+/// yet registered in watch history. Callers must already ensure [episode] is
+/// the immediate next S/E after the last registered episode.
 bool isAvailableImmediateNextEpisode(
   EpisodeModel episode,
-  List<WatchRecord> watchHistory,
-) {
-  return episode.hasAired &&
+  List<WatchRecord> watchHistory, {
+  int? fallbackRuntimeMinutes,
+}) {
+  return episode.isCatalogueAddable(
+        fallbackRuntimeMinutes: fallbackRuntimeMinutes,
+      ) &&
       !isEpisodeRegisteredInCatalogue(episode, watchHistory);
 }
 

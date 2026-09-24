@@ -11,6 +11,8 @@ class NewEpisodeAlert {
   final int episodeNumber;
   final String episodeName;
   final DateTime? airDate;
+  /// Resolved catalogue runtime (episode or show-average fallback) at detection.
+  final int? runtimeMinutes;
   final DateTime detectedAt;
 
   const NewEpisodeAlert({
@@ -22,6 +24,7 @@ class NewEpisodeAlert {
     required this.episodeNumber,
     required this.episodeName,
     this.airDate,
+    this.runtimeMinutes,
     required this.detectedAt,
   });
 
@@ -35,6 +38,7 @@ class NewEpisodeAlert {
       episodeNumber: json['episode_number'] as int? ?? 0,
       episodeName: json['episode_name'] as String? ?? '',
       airDate: EpisodeModel.parseAirDate(json['air_date'] as String?),
+      runtimeMinutes: json['runtime_minutes'] as int?,
       detectedAt: DateTime.parse(json['detected_at'] as String),
     );
   }
@@ -48,6 +52,7 @@ class NewEpisodeAlert {
         'episode_number': episodeNumber,
         'episode_name': episodeName,
         'air_date': airDate?.toIso8601String(),
+        'runtime_minutes': runtimeMinutes,
         'detected_at': detectedAt.toIso8601String(),
       };
 
@@ -62,6 +67,12 @@ class NewEpisodeAlert {
 
   /// True when this alert's TMDB air date is today's local calendar day.
   bool get showsNewBadge => EpisodeModel.isAiredToday(airDate);
+
+  /// Whether this alert is catalogue-addable (same bar as add-to-catalogue).
+  bool get isCatalogueAddable => EpisodeModel.isCatalogueAddableFields(
+        airDate: airDate,
+        runtimeMinutes: runtimeMinutes,
+      );
 
   @override
   bool operator ==(Object other) =>

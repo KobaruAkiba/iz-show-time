@@ -170,6 +170,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get episodeHasNotAiredYet => 'This episode hasn\'t aired yet';
 
   @override
+  String get episodeAiringSoon => 'This episode isn\'t ready to add yet';
+
+  @override
   String get episodeRuntimeNotAvailable => 'Episode runtime unavailable';
 
   @override
@@ -260,6 +263,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String upcomingWithDate(String date) {
     return 'Upcoming · $date';
+  }
+
+  @override
+  String get airingSoon => 'Airing soon';
+
+  @override
+  String airingSoonWithDate(String date) {
+    return 'Airing soon · $date';
   }
 
   @override

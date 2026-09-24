@@ -75,6 +75,7 @@
   "runtimeNotAvailableForFilm": "Runtime unavailable for this film",
   "alreadyMarkedAsWatched": "Already marked as watched",
   "episodeHasNotAiredYet": "This episode hasn't aired yet",
+  "episodeAiringSoon": "This episode isn't ready to add yet",
   "episodeRuntimeNotAvailable": "Episode runtime unavailable",
   "cacheClearedSuccessfully": "Cache cleared",
   "allDataClearedSuccessfully": "All data cleared",
@@ -116,6 +117,13 @@
   "upcoming": "Upcoming",
   "upcomingWithDate": "Upcoming · {date}",
   "@upcomingWithDate": {
+    "placeholders": {
+      "date": {"type": "String"}
+    }
+  },
+  "airingSoon": "Airing soon",
+  "airingSoonWithDate": "Airing soon · {date}",
+  "@airingSoonWithDate": {
     "placeholders": {
       "date": {"type": "String"}
     }
