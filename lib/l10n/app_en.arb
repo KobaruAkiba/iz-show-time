@@ -33,7 +33,7 @@
   "filterAll": "All",
   "filterFilms": "Films",
   "filterTv": "Shows",
-  "sortDefault": "Default order",
+  "sortDefault": "Recently added",
   "sortTitleAsc": "Title (A → Z)",
   "sortTitleDesc": "Title (Z → A)",
   "sortRatingDesc": "Rating (high → low)",

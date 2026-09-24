@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/utils/catalogue_activity.dart';
 import '../../data/models/catalogue_item.dart';
 import '../../l10n/l10n.dart';
 
@@ -48,6 +49,7 @@ List<CatalogueItem> applyMediaFilters(
   Iterable<CatalogueItem> items, {
   required MediaFilter mediaFilter,
   required MediaSortOption sortOption,
+  Map<int, DateTime> lastCatalogueActivityByMediaId = const {},
 }) {
   final results = <CatalogueItem>[];
   switch (mediaFilter) {
@@ -61,7 +63,14 @@ List<CatalogueItem> applyMediaFilters(
 
   switch (sortOption) {
     case MediaSortOption.none:
-      break;
+      // Default = recently added (last catalogue activity via watchedAt).
+      results.sort(
+        (a, b) => compareCatalogueByLastActivity(
+          a,
+          b,
+          lastCatalogueActivityByMediaId,
+        ),
+      );
     case MediaSortOption.titleAsc:
       results.sort(
         (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),

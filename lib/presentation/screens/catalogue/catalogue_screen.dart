@@ -9,6 +9,7 @@ import '../../widgets/lazy_paged_list_view.dart';
 import '../../../data/models/catalogue_item.dart';
 import '../../../core/notifications/show_in_progress.dart';
 import '../../../core/services/app_services.dart';
+import '../../../core/utils/catalogue_activity.dart';
 import '../../../l10n/l10n.dart';
 
 /// Screen displaying the user's catalogue of films and shows
@@ -106,6 +107,9 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
       filtered,
       mediaFilter: effectiveMediaFilter,
       sortOption: _sortOption,
+      lastCatalogueActivityByMediaId: lastCatalogueActivityByMediaId(
+        _appServices.watchHistory,
+      ),
     );
   }
 

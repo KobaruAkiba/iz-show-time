@@ -5,6 +5,7 @@ import '../../data/models/watch_record.dart';
 import '../../data/repositories/user_data_store.dart';
 import '../../data/services/tmdb_service.dart';
 import '../network/api_error.dart';
+import '../utils/catalogue_activity.dart';
 import 'episode_signature.dart';
 import 'show_in_progress.dart';
 
@@ -89,11 +90,9 @@ class NewEpisodeChecker {
       allAlerts = checkedAlerts;
     }
 
+    final lastActivity = lastCatalogueActivityByMediaId(watchHistory);
     allAlerts.sort(
-      (a, b) => compareEpisodeSignatures(
-        (seasonNumber: b.seasonNumber, episodeNumber: b.episodeNumber),
-        (seasonNumber: a.seasonNumber, episodeNumber: a.episodeNumber),
-      ),
+      (a, b) => compareContinueWatchingAlerts(a, b, lastActivity),
     );
 
     if (persistAlerts) {

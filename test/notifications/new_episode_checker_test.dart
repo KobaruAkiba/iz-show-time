@@ -170,6 +170,39 @@ class StubTmdbService extends TmdbService {
   }
 }
 
+/// Per-show episode stubs for multi-show sort tests.
+class MultiShowStubTmdbService extends TmdbService {
+  MultiShowStubTmdbService({required this.byShowId})
+      : super(cacheManager: null);
+
+  final Map<
+      int,
+      ({
+        int seasonCount,
+        Map<int, List<EpisodeModel>> episodesBySeason,
+      })> byShowId;
+
+  @override
+  Future<MediaDetails?> getMediaDetails(CatalogueItem item) async {
+    final data = byShowId[item.id]!;
+    return MediaDetails(
+      title: item.title,
+      numberOfSeasons: data.seasonCount,
+      isFilm: false,
+      averageEpisodeRuntimeMinutes: 45,
+    );
+  }
+
+  @override
+  Future<List<EpisodeModel>> getSeasonEpisodes({
+    required int tvId,
+    required int seasonNumber,
+    bool forceRefresh = false,
+  }) async {
+    return byShowId[tvId]?.episodesBySeason[seasonNumber] ?? const [];
+  }
+}
+
 void main() {
   group('NewEpisodeChecker', () {
     late FakeEpisodeCheckStore store;
@@ -714,6 +747,121 @@ void main() {
 
       expect(result.newlyDetected, isEmpty);
       expect(result.allAlerts, isEmpty);
+    });
+
+    test('orders alerts by airDate then last catalogue activity', () async {
+      const olderAir = TvShow(id: 1, title: 'Older Air');
+      const newerAir = TvShow(id: 2, title: 'Newer Air');
+      const sameAirRecentAdd = TvShow(id: 3, title: 'Same Air Recent');
+      const sameAirOlderAdd = TvShow(id: 4, title: 'Same Air Older');
+
+      final watchHistory = [
+        WatchRecord(
+          mediaId: 1,
+          isFilm: false,
+          episodeId: 10,
+          seasonNumber: 1,
+          episodeNumber: 1,
+          durationMinutes: 45,
+          watchedAt: DateTime(2026, 1, 1),
+        ),
+        WatchRecord(
+          mediaId: 2,
+          isFilm: false,
+          episodeId: 20,
+          seasonNumber: 1,
+          episodeNumber: 1,
+          durationMinutes: 45,
+          watchedAt: DateTime(2026, 1, 1),
+        ),
+        WatchRecord(
+          mediaId: 3,
+          isFilm: false,
+          episodeId: 30,
+          seasonNumber: 1,
+          episodeNumber: 1,
+          durationMinutes: 45,
+          watchedAt: DateTime(2026, 3, 1),
+        ),
+        WatchRecord(
+          mediaId: 4,
+          isFilm: false,
+          episodeId: 40,
+          seasonNumber: 1,
+          episodeNumber: 1,
+          durationMinutes: 45,
+          watchedAt: DateTime(2026, 2, 1),
+        ),
+      ];
+
+      EpisodeModel ep({
+        required int id,
+        required int season,
+        required int number,
+        required String airDate,
+      }) {
+        return EpisodeModel.fromJson({
+          'id': id,
+          'season_number': season,
+          'episode_number': number,
+          'name': 'E$number',
+          'air_date': airDate,
+          'runtime': 45,
+        });
+      }
+
+      final tmdb = MultiShowStubTmdbService(
+        byShowId: {
+          1: (
+            seasonCount: 1,
+            episodesBySeason: {
+              1: [
+                ep(id: 10, season: 1, number: 1, airDate: '2026-01-01'),
+                ep(id: 11, season: 1, number: 2, airDate: '2026-01-10'),
+              ],
+            },
+          ),
+          2: (
+            seasonCount: 1,
+            episodesBySeason: {
+              1: [
+                ep(id: 20, season: 1, number: 1, airDate: '2026-01-01'),
+                ep(id: 21, season: 1, number: 2, airDate: '2026-02-10'),
+              ],
+            },
+          ),
+          3: (
+            seasonCount: 1,
+            episodesBySeason: {
+              1: [
+                ep(id: 30, season: 1, number: 1, airDate: '2026-01-01'),
+                ep(id: 31, season: 1, number: 2, airDate: '2026-01-20'),
+              ],
+            },
+          ),
+          4: (
+            seasonCount: 1,
+            episodesBySeason: {
+              1: [
+                ep(id: 40, season: 1, number: 1, airDate: '2026-01-01'),
+                ep(id: 41, season: 1, number: 2, airDate: '2026-01-20'),
+              ],
+            },
+          ),
+        },
+      );
+
+      final checker = NewEpisodeChecker(
+        tmdbService: tmdb,
+        userDataStore: store,
+      );
+
+      final result = await checker.checkShows(
+        shows: [olderAir, newerAir, sameAirRecentAdd, sameAirOlderAdd],
+        watchHistory: watchHistory,
+      );
+
+      expect(result.allAlerts.map((a) => a.showId).toList(), [2, 3, 4, 1]);
     });
   });
 }

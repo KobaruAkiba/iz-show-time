@@ -14,6 +14,7 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/network/network_feedback.dart';
 import '../../../core/services/app_services.dart';
+import '../../../core/utils/catalogue_activity.dart';
 import '../../../l10n/l10n.dart';
 
 /// Search screen for finding films and shows via TMDB
@@ -415,6 +416,9 @@ class _SearchScreenState extends State<SearchScreen> {
       _results,
       mediaFilter: _mediaFilter,
       sortOption: _sortOption,
+      lastCatalogueActivityByMediaId: lastCatalogueActivityByMediaId(
+        _appServices.watchHistory,
+      ),
     );
   }
 

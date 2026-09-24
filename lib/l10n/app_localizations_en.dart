@@ -77,7 +77,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get filterTv => 'Shows';
 
   @override
-  String get sortDefault => 'Default order';
+  String get sortDefault => 'Recently added';
 
   @override
   String get sortTitleAsc => 'Title (A → Z)';

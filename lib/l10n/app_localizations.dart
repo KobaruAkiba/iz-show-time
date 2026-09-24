@@ -229,7 +229,7 @@ abstract class AppLocalizations {
   /// No description provided for @sortDefault.
   ///
   /// In en, this message translates to:
-  /// **'Default order'**
+  /// **'Recently added'**
   String get sortDefault;
 
   /// No description provided for @sortTitleAsc.
