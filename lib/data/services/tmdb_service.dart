@@ -17,10 +17,13 @@ class TmdbService {
   final CacheManager _cache;
   final Map<String, Future<dynamic>> _inflight = {};
 
-  Future<List<CatalogueItem>> getTrendingAll() async {
+  Future<List<CatalogueItem>> getTrendingAll({
+    bool forceRefresh = false,
+  }) async {
     final results = await _fetchResults(
       'trending/all/day',
       ttlMinutes: AppConstants.tvCacheTTL,
+      bypassCache: forceRefresh,
     );
     return results
         .map(catalogueItemFromSearchJson)

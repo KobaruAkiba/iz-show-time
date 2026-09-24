@@ -15,6 +15,7 @@ import '../../../core/network/api_error.dart';
 import '../../../core/services/app_services.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/refresh_cooldown.dart';
 import '../../../l10n/l10n.dart';
 
 /// Main home screen showing trending content carousel
@@ -40,6 +41,9 @@ class _HomeScreenState extends State<HomeScreen> {
   int _visibleNewEpisodes = AppConstants.listPageSize;
 
   final _appServices = AppServices();
+  final _homeRefreshCooldown = RefreshCooldown(
+    duration: AppConstants.homeRefreshCooldown,
+  );
 
   @override
   void initState() {
@@ -98,6 +102,39 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// Pull-to-refresh for Trending Now + Continue Watching.
+  /// Cooldown / in-flight pulls exit immediately and keep prior results.
+  Future<void> _onPullToRefresh() async {
+    if (!_homeRefreshCooldown.tryBegin()) return;
+
+    try {
+      await Future.wait([
+        _refreshTrendingKeepResults(),
+        _appServices.refreshNewEpisodeAlertsFromNetwork(),
+      ]);
+    } finally {
+      _homeRefreshCooldown.end();
+    }
+  }
+
+  Future<void> _refreshTrendingKeepResults() async {
+    try {
+      final combined = await _appServices.tmdbService.getTrendingAll(
+        forceRefresh: true,
+      );
+      combined.sort((a, b) => b.voteAverage.compareTo(a.voteAverage));
+
+      if (!mounted) return;
+      setState(() {
+        _trendingItems
+          ..clear()
+          ..addAll(combined.take(12));
+      });
+    } catch (_) {
+      // Keep previous trending results; spinner is the only UI feedback.
+    }
+  }
+
   @override
   void didUpdateWidget(covariant HomeScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -144,42 +181,46 @@ class _HomeScreenState extends State<HomeScreen> {
               )
             else
               Expanded(
-                child: NotificationListener<ScrollNotification>(
-                  onNotification: (notification) {
-                    if (notification.metrics.axis == Axis.vertical) {
-                      if (notification is ScrollStartNotification &&
-                          notification.dragDetails != null &&
-                          !_parentScrolling) {
-                        setState(() => _parentScrolling = true);
-                      } else if (notification is ScrollEndNotification &&
-                          _parentScrolling) {
-                        setState(() => _parentScrolling = false);
-                      }
-                    }
-
-                    final alerts = _appServices.newEpisodeAlerts;
-                    return handleLazyParentScroll(
-                      notification: notification,
-                      totalCount: alerts.length,
-                      visibleCount: _visibleNewEpisodes,
-                      onRevealMore: (next) {
-                        if (next != _visibleNewEpisodes) {
-                          setState(() => _visibleNewEpisodes = next);
+                child: RefreshIndicator(
+                  onRefresh: _onPullToRefresh,
+                  child: NotificationListener<ScrollNotification>(
+                    onNotification: (notification) {
+                      if (notification.metrics.axis == Axis.vertical) {
+                        if (notification is ScrollStartNotification &&
+                            notification.dragDetails != null &&
+                            !_parentScrolling) {
+                          setState(() => _parentScrolling = true);
+                        } else if (notification is ScrollEndNotification &&
+                            _parentScrolling) {
+                          setState(() => _parentScrolling = false);
                         }
-                      },
-                    );
-                  },
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildTrendingSection(),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: Divider(),
-                        ),
-                        _buildNewEpisodesSection(),
-                      ],
+                      }
+
+                      final alerts = _appServices.newEpisodeAlerts;
+                      return handleLazyParentScroll(
+                        notification: notification,
+                        totalCount: alerts.length,
+                        visibleCount: _visibleNewEpisodes,
+                        onRevealMore: (next) {
+                          if (next != _visibleNewEpisodes) {
+                            setState(() => _visibleNewEpisodes = next);
+                          }
+                        },
+                      );
+                    },
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildTrendingSection(),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: Divider(),
+                          ),
+                          _buildNewEpisodesSection(),
+                        ],
+                      ),
                     ),
                   ),
                 ),

@@ -29,6 +29,9 @@ class AppConstants {
   /// Delay after typing stops before calling the search API.
   static const int searchDebounceDelayMs = 1000;
 
+  /// Minimum gap between Home pull-to-refresh network calls.
+  static const Duration homeRefreshCooldown = Duration(seconds: 2);
+
   /// Public PayPal.Me donation link (not a secret — safe to ship in the app).
   static const String paypalDonateUrl = 'https://paypal.me/MirkoCorba';
 
