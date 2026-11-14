@@ -321,7 +321,7 @@ String? _parseCertification(
   Map<String, dynamic> json, {
   required bool isFilm,
 }) {
-  final preferred = ApiConstants.watchProviderRegion;
+  const preferred = ApiConstants.watchProviderRegion;
 
   if (isFilm) {
     final releaseDates = json['release_dates'] as Map<String, dynamic>?;
