@@ -48,6 +48,17 @@ class _MainNavigatorState extends State<MainNavigator> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
 
+    // Back from a secondary tab returns to Home instead of closing the app.
+    return PopScope(
+      canPop: _currentTab == MainTab.home,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _selectTab(MainTab.home.index);
+      },
+      child: _buildScaffold(l10n),
+    );
+  }
+
+  Widget _buildScaffold(AppLocalizations l10n) {
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
