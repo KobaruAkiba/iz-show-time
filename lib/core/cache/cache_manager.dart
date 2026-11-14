@@ -45,7 +45,7 @@ class CacheManager {
       if (value is List) return List<dynamic>.from(value) as T;
       if (value is Map) return Map<String, dynamic>.from(value) as T;
     } catch (_) {
-      // Stored under a different shape than the one requested.
+      // Cached value does not match the requested type: treat as a miss.
     }
     return null;
   }
@@ -61,7 +61,7 @@ class CacheManager {
     }
   }
 
-  /// Snapshot of the keys: reading entries reorders the underlying map.
+  /// A copy, safe to iterate: reading an entry reorders the underlying map.
   Iterable<String> get keys => List<String>.of(_memoryCache.keys);
 
   void dispose() {

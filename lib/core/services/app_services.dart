@@ -751,9 +751,8 @@ class AppServices {
 
   /// Current alerts with only [showId]'s entry replaced by [checked].
   ///
-  /// [checked] was merged with the alerts as they were when the check started;
-  /// another show's refresh may have committed since, so only this show's
-  /// result is taken from it.
+  /// [checked] is based on the alerts at check start: other shows' refreshes
+  /// may have committed since, so their entries in it are stale.
   List<NewEpisodeAlert> _mergeShowAlerts(
     int showId,
     List<NewEpisodeAlert> checked,
