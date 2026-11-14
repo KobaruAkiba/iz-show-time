@@ -176,20 +176,7 @@ class DioClient {
             return ApiResult.success(response.data as T);
           }
 
-          if (response.statusCode == 429) {
-            rateLimitAttempts++;
-            if (rateLimitAttempts > AppConstants.tmdbMaxRateLimitRetries) {
-              return ApiResult.error(ApiErrorType.rateLimit);
-            }
-            await Future.delayed(
-              _rateLimitDelay(
-                attempt: rateLimitAttempts,
-                headers: response.headers.map,
-              ),
-            );
-            continue;
-          }
-
+          // Only other 2xx codes get here: Dio throws on the rest (429 included).
           return ApiResult.error(
             _errorTypeForStatus(response.statusCode),
             message:
@@ -212,6 +199,9 @@ class DioClient {
           return ApiResult.error(_errorTypeForDio(e));
         }
       }
+    } on TypeError {
+      // Unexpected payload shape, not a connection problem.
+      return ApiResult.error(ApiErrorType.invalidResponse);
     } catch (_) {
       return ApiResult.error(
         ApiErrorType.networkError,
