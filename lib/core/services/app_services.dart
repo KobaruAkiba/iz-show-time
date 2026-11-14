@@ -62,6 +62,9 @@ class AppServices {
   /// A counter, not a flag: operations can overlap.
   int _deferFlushDepth = 0;
 
+  static const Duration _airingStatesSyncInterval = Duration(minutes: 15);
+  DateTime? _lastAiringStatesSyncAt;
+
   /// Bumped when a watch-driven (per-show) Continue Watching refresh commits.
   /// Full network scans started earlier discard their result if this changed
   /// mid-flight, so they cannot restore a just-watched episode alert.
@@ -178,7 +181,15 @@ class AppServices {
   }
 
   /// Refreshes airing metadata for every catalogue TV show (uses TMDB cache).
+  ///
+  /// Called on every Catalogue tab activation, so it is throttled.
   Future<void> syncTvShowAiringStates() async {
+    final now = DateTime.now();
+    final last = _lastAiringStatesSyncAt;
+    if (last != null && now.difference(last) < _airingStatesSyncInterval) {
+      return;
+    }
+    _lastAiringStatesSyncAt = now;
     await NetworkFeedback.runSilent(() async {
       for (final show in List<TvShow>.from(tvShows)) {
         try {
@@ -969,6 +980,7 @@ class AppServices {
     _newEpisodeAlerts.clear();
     newEpisodeAlertsListenable.value = const [];
     _watchDrivenAlertEpoch = 0;
+    _lastAiringStatesSyncAt = null;
     await userDataStore.clearAll();
     // clearAll removes the purge stamp; re-record so the next launch is not forced.
     try {

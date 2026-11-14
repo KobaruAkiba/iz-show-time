@@ -1,10 +1,25 @@
-import 'dart:convert';
+import 'dart:collection';
 
-/// Singleton cache manager for storing and retrieving cached data
+class _CacheEntry {
+  const _CacheEntry(this.value, this.expiresAt);
+
+  final Object? value;
+  final DateTime expiresAt;
+}
+
+/// Singleton in-memory cache with per-entry TTL and a size cap.
+///
+/// Values are kept as stored (no JSON round trip): callers must treat what
+/// they read as immutable.
 class CacheManager {
   static final CacheManager _instance = CacheManager._internal();
 
-  final Map<String, String> _memoryCache = {};
+  /// Entries beyond this are evicted, least recently used first.
+  static const int maxEntries = 300;
+
+  // Insertion order doubles as recency order: reads re-insert the entry.
+  final LinkedHashMap<String, _CacheEntry> _memoryCache =
+      LinkedHashMap<String, _CacheEntry>();
 
   CacheManager._internal();
 
@@ -18,66 +33,36 @@ class CacheManager {
     _memoryCache.remove(key);
   }
 
-  Map<String, dynamic> getStatistics() => {
-        'movies_box_size': 0,
-        'episodes_box_size': 0,
-        'memory_cache_entries': _memoryCache.length,
-      };
-
   T? get<T>(String key) {
-    final rawValue = _memoryCache[key];
-    if (rawValue == null) return null;
+    final entry = _memoryCache.remove(key);
+    if (entry == null) return null;
+    if (DateTime.now().isAfter(entry.expiresAt)) return null;
+    _memoryCache[key] = entry;
 
+    final value = entry.value;
+    if (value is T) return value;
     try {
-      final decoded = jsonDecode(rawValue);
-      if (decoded is Map<String, dynamic> && decoded.containsKey('value')) {
-        final expiresAtStr = decoded['expiresAt'] as String?;
-        if (expiresAtStr != null) {
-          final expiresAt = DateTime.parse(expiresAtStr);
-          if (DateTime.now().isAfter(expiresAt)) {
-            _memoryCache.remove(key);
-            return null;
-          }
-        }
-        final value = decoded['value'];
-        if (value is T) return value;
-        if (value is List) {
-          return List<dynamic>.from(value) as T;
-        }
-        if (value is Map) {
-          try {
-            return Map<String, dynamic>.from(value) as T;
-          } catch (_) {
-            return null;
-          }
-        }
-        try {
-          return value as T?;
-        } catch (_) {
-          return null;
-        }
-      }
-      try {
-        return decoded as T?;
-      } catch (_) {
-        return null;
-      }
+      if (value is List) return List<dynamic>.from(value) as T;
+      if (value is Map) return Map<String, dynamic>.from(value) as T;
     } catch (_) {
-      return null;
+      // Stored under a different shape than the one requested.
     }
+    return null;
   }
 
   void put<T>(String key, dynamic value, {int ttlMinutes = 60}) {
-    final expiresAtTime = ttlMinutes <= 0
+    final expiresAt = ttlMinutes <= 0
         ? DateTime.now().subtract(const Duration(seconds: 1))
         : DateTime.now().add(Duration(minutes: ttlMinutes));
-    _memoryCache[key] = jsonEncode({
-      'value': value,
-      'expiresAt': expiresAtTime.toIso8601String(),
-    });
+    _memoryCache.remove(key);
+    _memoryCache[key] = _CacheEntry(value, expiresAt);
+    while (_memoryCache.length > maxEntries) {
+      _memoryCache.remove(_memoryCache.keys.first);
+    }
   }
 
-  Iterable<String> get keys => _memoryCache.keys;
+  /// Snapshot of the keys: reading entries reorders the underlying map.
+  Iterable<String> get keys => List<String>.of(_memoryCache.keys);
 
   void dispose() {
     _memoryCache.clear();
