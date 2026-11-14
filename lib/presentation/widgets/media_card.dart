@@ -45,7 +45,13 @@ class MediaCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final posterUrl = ApiConstants.posterUrl(item.posterPath);
+    // 72 dp thumbnail: a smaller TMDB size, decoded at display size.
+    final posterUrl = ApiConstants.posterUrl(
+      item.posterPath,
+      size: ApiConstants.w342Image,
+    );
+    final posterCacheWidth =
+        (72 * MediaQuery.devicePixelRatioOf(context)).round();
     final badgeLabel = _posterBadgeLabel(l10n);
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -80,6 +86,7 @@ class MediaCard extends StatelessWidget {
                             ? Image.network(
                                 posterUrl,
                                 fit: BoxFit.cover,
+                                cacheWidth: posterCacheWidth,
                                 errorBuilder: (context, error, stackTrace) =>
                                     _placeholder(context),
                               )

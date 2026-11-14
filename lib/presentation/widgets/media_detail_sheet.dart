@@ -348,7 +348,11 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     final l10n = context.l10n;
     final details = _details;
     final posterPath = details?.posterPath ?? widget.item.posterPath;
-    final posterUrl = ApiConstants.posterUrl(posterPath);
+    final posterUrl = ApiConstants.posterUrl(
+      posterPath,
+      size: ApiConstants.w342Image,
+    );
+    final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
     final isFilm = widget.item is Film;
     final inCatalogue = _appServices.isInCatalogue(widget.item);
     final isFavorite = _appServices.isFavorite(widget.item);
@@ -401,6 +405,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                             ? Image.network(
                                 posterUrl,
                                 fit: BoxFit.cover,
+                                cacheWidth: (100 * devicePixelRatio).round(),
                                 errorBuilder: (_, __, ___) =>
                                     _posterFallback(context),
                               )
@@ -684,6 +689,8 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                   ? Image.network(
                       profileUrl,
                       fit: BoxFit.cover,
+                      cacheWidth:
+                          (88 * MediaQuery.devicePixelRatioOf(context)).round(),
                       errorBuilder: (_, __, ___) =>
                           _castAvatarFallback(context),
                     )
