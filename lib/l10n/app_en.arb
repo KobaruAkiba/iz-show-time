@@ -355,6 +355,8 @@
   "errorAccessDenied": "Access denied. Check your API key.",
   "errorInvalidResponse": "Got an unexpected response. Try again.",
   "errorGeneric": "Something went wrong",
+  "startupErrorTitle": "The app could not start",
+  "startupErrorBody": "Your data could not be opened. Try again; if the problem persists, close and reopen the app.",
   "errorNoConnection": "You're offline. Check Wi‑Fi or mobile data, then try again.",
   "errorTimeout": "Request timed out. Check your network and try again.",
   "errorUnreachable": "Couldn't reach the server. Check your connection and try again.",

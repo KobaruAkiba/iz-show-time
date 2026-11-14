@@ -665,6 +665,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorGeneric => 'Something went wrong';
 
   @override
+  String get startupErrorTitle => 'The app could not start';
+
+  @override
+  String get startupErrorBody =>
+      'Your data could not be opened. Try again; if the problem persists, close and reopen the app.';
+
+  @override
   String get errorNoConnection =>
       'You\'re offline. Check Wi‑Fi or mobile data, then try again.';
 

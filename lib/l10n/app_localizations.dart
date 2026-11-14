@@ -1228,6 +1228,18 @@ abstract class AppLocalizations {
   /// **'Something went wrong'**
   String get errorGeneric;
 
+  /// No description provided for @startupErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The app could not start'**
+  String get startupErrorTitle;
+
+  /// No description provided for @startupErrorBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your data could not be opened. Try again; if the problem persists, close and reopen the app.'**
+  String get startupErrorBody;
+
   /// No description provided for @errorNoConnection.
   ///
   /// In en, this message translates to:
