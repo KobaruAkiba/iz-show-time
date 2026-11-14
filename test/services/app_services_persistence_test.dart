@@ -285,6 +285,42 @@ class DelayedStubTmdbService extends StubTmdbService {
   }
 }
 
+/// Per-show episodes; shows listed in [slowShowIds] answer after a delay.
+class PerShowStubTmdbService extends TmdbService {
+  PerShowStubTmdbService({
+    required this.episodesByShowId,
+    this.slowShowIds = const {},
+  }) : super(cacheManager: null);
+
+  final Map<int, List<EpisodeModel>> episodesByShowId;
+  final Set<int> slowShowIds;
+
+  @override
+  Future<TvShowSummary?> getTvShowSummary(
+    int tvId, {
+    bool forceRefresh = false,
+  }) async {
+    return const TvShowSummary(numberOfSeasons: 1);
+  }
+
+  @override
+  Future<MediaDetails?> getMediaDetails(CatalogueItem item) async {
+    return MediaDetails(title: item.title, numberOfSeasons: 1, isFilm: false);
+  }
+
+  @override
+  Future<List<EpisodeModel>> getSeasonEpisodes({
+    required int tvId,
+    required int seasonNumber,
+    bool forceRefresh = false,
+  }) async {
+    if (slowShowIds.contains(tvId)) {
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+    }
+    return episodesByShowId[tvId] ?? const [];
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -402,6 +438,50 @@ void main() {
         expect(appServices.newEpisodeAlerts, isEmpty);
         expect(store.lastEpisodeCheckAt, DateTime(2026, 5, 3));
       });
+    });
+
+    test('overlapping refreshes of two shows keep both next episodes',
+        () async {
+      await appServices.clearAllData();
+      List<EpisodeModel> episodes(int showId) => [
+            for (var number = 1; number <= 3; number++)
+              EpisodeModel.fromJson({
+                'id': showId * 10 + number,
+                'season_number': 1,
+                'episode_number': number,
+                'name': 'E$number',
+                'air_date': '2020-01-0$number',
+                'runtime': 40,
+              }),
+          ];
+      const fast = TvShow(id: 801, title: 'Fast Show');
+      const slow = TvShow(id: 802, title: 'Slow Show');
+      final previousTmdb = appServices.tmdbService;
+      addTearDown(() => appServices.tmdbService = previousTmdb);
+      appServices.tmdbService = PerShowStubTmdbService(
+        episodesByShowId: {801: episodes(801), 802: episodes(802)},
+        slowShowIds: {802},
+      );
+
+      await appServices.markEpisodeWatched(
+        show: fast,
+        episode: episodes(801)[0],
+      );
+      await appServices.markEpisodeWatched(
+        show: slow,
+        episode: episodes(802)[0],
+      );
+
+      // The slow show's refresh starts first and commits last.
+      await Future.wait([
+        appServices.markEpisodeWatched(show: slow, episode: episodes(802)[1]),
+        appServices.markEpisodeWatched(show: fast, episode: episodes(801)[1]),
+      ]);
+
+      expect(
+        appServices.newEpisodeAlerts.map((alert) => alert.episodeId).toSet(),
+        {8013, 8023},
+      );
     });
 
     test('a double tap records a film or an episode only once', () async {

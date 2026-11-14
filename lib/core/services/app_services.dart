@@ -10,6 +10,7 @@ import '../network/api_error.dart';
 import '../network/network_feedback.dart';
 import '../notifications/new_episode_checker.dart';
 import '../theme/app_theme.dart';
+import '../utils/catalogue_activity.dart';
 import '../../data/repositories/hive_user_data_store.dart';
 import '../../data/repositories/user_data_store.dart';
 import '../../data/services/tmdb_service.dart';
@@ -720,7 +721,11 @@ class AppServices {
         final staleFullRefresh = !watchDriven &&
             watchEpochAtStart != _watchDrivenAlertEpoch;
         if (staleFullRefresh) return;
-        updateNewEpisodeAlerts(result.allAlerts);
+        updateNewEpisodeAlerts(
+          forShowId == null
+              ? result.allAlerts
+              : _mergeShowAlerts(forShowId, result.allAlerts),
+        );
         await _persistNewEpisodeAlerts();
         if (watchDriven) {
           _watchDrivenAlertEpoch++;
@@ -731,6 +736,22 @@ class AppServices {
         );
       }
     });
+  }
+
+  /// Current alerts with only [showId]'s entry replaced by [checked].
+  ///
+  /// [checked] was merged with the alerts as they were when the check started;
+  /// another show's refresh may have committed since, so only this show's
+  /// result is taken from it.
+  List<NewEpisodeAlert> _mergeShowAlerts(
+    int showId,
+    List<NewEpisodeAlert> checked,
+  ) {
+    final lastActivity = lastCatalogueActivityByMediaId(_watchHistory);
+    return [
+      ..._newEpisodeAlerts.where((alert) => alert.showId != showId),
+      ...checked.where((alert) => alert.showId == showId),
+    ]..sort((a, b) => compareContinueWatchingAlerts(a, b, lastActivity));
   }
 
   /// Foreground network refresh of followed-show alerts (no system notify).
