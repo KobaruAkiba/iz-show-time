@@ -72,7 +72,8 @@ class FakeUserDataStore implements UserDataStore {
   @override
   Future<void> saveCatalogueItem(CatalogueItem item) async {
     savedCatalogueItems.add(item);
-    final index = catalogue.indexWhere((entry) => entry.id == item.id);
+    final index =
+        catalogue.indexWhere((entry) => entry.mediaKey == item.mediaKey);
     if (index >= 0) {
       catalogue[index] = item;
     } else {
@@ -81,9 +82,9 @@ class FakeUserDataStore implements UserDataStore {
   }
 
   @override
-  Future<void> removeCatalogueItem(int mediaId) async {
-    removedCatalogueIds.add(mediaId);
-    catalogue.removeWhere((item) => item.id == mediaId);
+  Future<void> removeCatalogueItem(CatalogueItem item) async {
+    removedCatalogueIds.add(item.id);
+    catalogue.removeWhere((entry) => entry.mediaKey == item.mediaKey);
   }
 
   @override
@@ -294,7 +295,7 @@ void main() {
       await appServices.addToCatalogue(film);
       store.savedCatalogueItems.clear();
 
-      await appServices.removeFromCatalogue(film.id);
+      await appServices.removeFromCatalogue(film);
 
       expect(store.removedCatalogueIds, [film.id]);
     });
@@ -304,31 +305,72 @@ void main() {
       await appServices.addToCatalogue(film);
       store.savedCatalogueItems.clear();
 
-      expect(appServices.isFavorite(film.id), isFalse);
+      expect(appServices.isFavorite(film), isFalse);
 
-      await appServices.toggleFavorite(film.id);
+      await appServices.toggleFavorite(film);
 
-      expect(appServices.isFavorite(film.id), isTrue);
+      expect(appServices.isFavorite(film), isTrue);
       expect(store.savedCatalogueItems, hasLength(1));
       expect(store.savedCatalogueItems.single.isFavorite, isTrue);
       expect(store.savedCatalogueItems.single.tags, contains(kFavoriteTag));
 
-      await appServices.toggleFavorite(film.id);
-      expect(appServices.isFavorite(film.id), isFalse);
+      await appServices.toggleFavorite(film);
+      expect(appServices.isFavorite(film), isFalse);
 
-      await appServices.toggleFavorite(film.id);
+      await appServices.toggleFavorite(film);
       store.removedCatalogueIds.clear();
-      await appServices.removeFromCatalogue(film.id);
+      await appServices.removeFromCatalogue(film);
 
-      expect(appServices.isFavorite(film.id), isFalse);
+      expect(appServices.isFavorite(film), isFalse);
       expect(store.removedCatalogueIds, [film.id]);
     });
 
     test('toggleFavorite is no-op when item is not in catalogue', () async {
-      await appServices.toggleFavorite(404);
+      const missing = Film(id: 404, title: 'Missing Film');
+
+      await appServices.toggleFavorite(missing);
 
       expect(store.savedCatalogueItems, isEmpty);
-      expect(appServices.isFavorite(404), isFalse);
+      expect(appServices.isFavorite(missing), isFalse);
+    });
+
+    test('film and TV show sharing a TMDB id stay independent', () async {
+      await appServices.initialize(userDataStore: store);
+      const show = TvShow(id: 1402, title: 'Same Id Show');
+      const film = Film(id: 1402, title: 'Same Id Film');
+      final episodeRecord = WatchRecord(
+        mediaId: show.id,
+        isFilm: false,
+        episodeId: 9001,
+        seasonNumber: 1,
+        episodeNumber: 1,
+        durationMinutes: 45,
+        watchedAt: DateTime(2026, 1, 1),
+      );
+      store.catalogue.add(show.withFollowed(true));
+      store.history.add(episodeRecord);
+      await appServices.initialize(userDataStore: store);
+
+      expect(appServices.isInCatalogue(show), isTrue);
+      expect(appServices.isInCatalogue(film), isFalse);
+      expect(appServices.isFavorite(film), isFalse);
+
+      await appServices.markFilmWatched(film: film, durationMinutes: 117);
+      await appServices.toggleFavorite(film);
+
+      expect(appServices.catalogue, hasLength(2));
+      expect(appServices.isFavorite(film), isTrue);
+      expect(appServices.isFavorite(show), isFalse);
+
+      await appServices.removeFromCatalogue(film);
+
+      expect(appServices.isInCatalogue(film), isFalse);
+      expect(appServices.isInCatalogue(show), isTrue);
+      expect(appServices.isFollowed(show.id), isTrue);
+      expect(appServices.watchedEpisodesCountFor(show.id), 1);
+      expect(store.history.map((record) => record.watchKey),
+          [episodeRecord.watchKey]);
+      expect(store.catalogue.single, isA<TvShow>());
     });
 
     test('addToCatalogue marks new TV shows as followed by default', () async {
@@ -729,7 +771,7 @@ void main() {
       );
 
       expect(addedCount, 2);
-      expect(appServices.isInCatalogue(show.id), isTrue);
+      expect(appServices.isInCatalogue(show), isTrue);
       expect(appServices.tvShows, hasLength(1));
       expect(
         appServices.isWatched(mediaId: show.id, episodeId: aired.id),
@@ -808,7 +850,7 @@ void main() {
       );
 
       expect(addedCount, 20);
-      expect(appServices.isInCatalogue(show.id), isTrue);
+      expect(appServices.isInCatalogue(show), isTrue);
       expect(store.savedWatchRecords, hasLength(20));
       expect(store.saveWatchRecordsCalls, 1);
       expect(store.flushCount, 1);
@@ -831,7 +873,7 @@ void main() {
       );
 
       expect(addedCount, 0);
-      expect(appServices.isInCatalogue(show.id), isFalse);
+      expect(appServices.isInCatalogue(show), isFalse);
       expect(store.savedCatalogueItems, isEmpty);
     });
 
@@ -960,7 +1002,7 @@ void main() {
         'runtime': 45,
       });
 
-      expect(appServices.isInCatalogue(show.id), isFalse);
+      expect(appServices.isInCatalogue(show), isFalse);
 
       final record = await appServices.addEpisodeToCatalogue(
         show: show,
@@ -968,7 +1010,7 @@ void main() {
       );
 
       expect(record, isNotNull);
-      expect(appServices.isInCatalogue(show.id), isTrue);
+      expect(appServices.isInCatalogue(show), isTrue);
       expect(appServices.tvShows.single.id, show.id);
       expect(store.savedCatalogueItems.single.id, show.id);
       expect(
@@ -993,7 +1035,7 @@ void main() {
       );
 
       expect(record, isNull);
-      expect(appServices.isInCatalogue(show.id), isFalse);
+      expect(appServices.isInCatalogue(show), isFalse);
       expect(store.savedCatalogueItems, isEmpty);
     });
   });
@@ -1149,7 +1191,10 @@ void main() {
       await appServices.clearCacheData();
 
       expect(appServices.cacheManager.get<dynamic>('tmdb:x'), isNull);
-      expect(appServices.isInCatalogue(1), isTrue);
+      expect(
+        appServices.isInCatalogue(const Film(id: 1, title: 'Kept')),
+        isTrue,
+      );
       expect(store.lastTmdbCachePurgeAt!.isAfter(before), isTrue);
     });
   });

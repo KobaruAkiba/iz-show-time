@@ -16,7 +16,7 @@ abstract class UserDataStore {
 
   Future<void> saveCatalogueItem(CatalogueItem item);
 
-  Future<void> removeCatalogueItem(int mediaId);
+  Future<void> removeCatalogueItem(CatalogueItem item);
 
   Future<List<WatchRecord>> loadWatchHistory();
 

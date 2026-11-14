@@ -49,7 +49,7 @@ List<CatalogueItem> applyMediaFilters(
   Iterable<CatalogueItem> items, {
   required MediaFilter mediaFilter,
   required MediaSortOption sortOption,
-  Map<int, DateTime> lastCatalogueActivityByMediaId = const {},
+  Map<String, DateTime> lastCatalogueActivityByMediaId = const {},
 }) {
   final results = <CatalogueItem>[];
   switch (mediaFilter) {

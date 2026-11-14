@@ -80,7 +80,7 @@ void main() {
       );
       expect(loadedCatalogue.firstWhere((item) => item.id == 550).overview,
           isNull);
-      final rawFilm = store.catalogueBox.get(550) as String;
+      final rawFilm = store.catalogueBox.get(film.mediaKey) as String;
       expect(rawFilm.contains('overview'), isFalse);
       final rawWatch = store.watchHistoryBox.get(filmRecord.watchKey) as String;
       expect(rawWatch.contains('media_title'), isFalse);
@@ -188,7 +188,7 @@ void main() {
 
       await store.saveCatalogueItem(film);
       await store.saveWatchRecord(record);
-      await store.removeCatalogueItem(film.id);
+      await store.removeCatalogueItem(film);
       await store.removeWatchRecord(record.watchKey);
       await store.flush();
 
@@ -226,8 +226,65 @@ void main() {
       const film = Film(id: 7, title: 'Encoded Film');
       await store.saveCatalogueItem(film);
 
-      final raw = store.catalogueBox.get(film.id);
+      final raw = store.catalogueBox.get(film.mediaKey);
       expect(raw, isA<String>());
+    });
+
+    test('keeps a film and a TV show that share a TMDB id', () async {
+      const film = Film(id: 1402, title: 'Same Id Film');
+      const show = TvShow(id: 1402, title: 'Same Id Show');
+
+      await store.saveCatalogueItem(show);
+      await store.saveCatalogueItem(film);
+
+      expect(await store.loadCatalogue(), hasLength(2));
+
+      await store.removeCatalogueItem(film);
+
+      final remaining = await store.loadCatalogue();
+      expect(remaining.single, isA<TvShow>());
+    });
+
+    test('migrates bare-id catalogue keys to media keys (schema v3)',
+        () async {
+      await store.catalogueBox.put(
+        1402,
+        jsonEncode({'type': 'tv', 'id': 1402, 'name': 'Legacy Show'}),
+      );
+      await store.catalogueBox.put(
+        550,
+        jsonEncode({'type': 'film', 'id': 550, 'title': 'Legacy Film'}),
+      );
+      await store.metaBox.put(StorageConstants.schemaVersionKey, 2);
+      await store.flush();
+      await store.close();
+
+      store = HiveUserDataStore();
+      await store.open();
+
+      expect(store.catalogueBox.keys.toSet(), {'t_1402', 'm_550'});
+      expect(
+        store.metaBox.get(StorageConstants.schemaVersionKey),
+        StorageConstants.storageSchemaVersion,
+      );
+      final loaded = await store.loadCatalogue();
+      expect(loaded.map((item) => item.title).toSet(),
+          {'Legacy Show', 'Legacy Film'});
+    });
+
+    test('imports a version 1 backup keyed by bare id', () async {
+      await store.importBackupData({
+        'format': 'iz_show_time_backup',
+        'version': 1,
+        'catalogue': {
+          '550': jsonEncode({'type': 'film', 'id': 550, 'title': 'Old Film'}),
+        },
+        'watchHistory': <String, dynamic>{},
+        'meta': <String, dynamic>{},
+      });
+
+      expect(store.catalogueBox.keys.toList(), ['m_550']);
+      expect((await store.loadCatalogue()).single.title, 'Old Film');
     });
 
     test('exports and imports portable backup payloads', () async {
@@ -316,7 +373,7 @@ void main() {
       store = HiveUserDataStore();
       await store.open();
 
-      final catalogueRaw = store.catalogueBox.get(1) as String;
+      final catalogueRaw = store.catalogueBox.get('m_1') as String;
       expect(catalogueRaw.contains('overview'), isFalse);
       final watchRaw = store.watchHistoryBox.get('film_1') as String;
       expect(watchRaw.contains('media_title'), isFalse);

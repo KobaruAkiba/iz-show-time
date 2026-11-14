@@ -351,14 +351,14 @@ class _SearchScreenState extends State<SearchScreen> {
             onRefresh: () => _performSearch(_lastQuery),
             itemBuilder: (context, index) {
               final item = results[index];
-              final inCatalogue = _appServices.isInCatalogue(item.id);
+              final inCatalogue = _appServices.isInCatalogue(item);
               return Padding(
                 key: ValueKey(_mediaSeenKey(item)),
                 padding: const EdgeInsets.only(bottom: 8),
                 child: MediaCard(
                   item: item,
                   isBookmarked: inCatalogue,
-                  isFavorite: inCatalogue && _appServices.isFavorite(item.id),
+                  isFavorite: inCatalogue && _appServices.isFavorite(item),
                   onTap: () => _openDetails(item),
                   onToggleFavorite:
                       inCatalogue ? () => _toggleFavorite(item) : null,
@@ -427,14 +427,14 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _toggleFavorite(CatalogueItem item) async {
-    await _appServices.toggleFavorite(item.id);
+    await _appServices.toggleFavorite(item);
     if (!mounted) return;
     setState(() {});
   }
 
   Future<void> _toggleItem(CatalogueItem item) async {
     final l10n = context.l10n;
-    final wasInCatalogue = _appServices.isInCatalogue(item.id);
+    final wasInCatalogue = _appServices.isInCatalogue(item);
     if (wasInCatalogue) {
       final confirmed = await confirmRemoveFromCatalogue(context, item);
       if (!confirmed || !mounted) return;

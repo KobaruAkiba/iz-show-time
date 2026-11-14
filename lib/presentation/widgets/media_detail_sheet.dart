@@ -75,7 +75,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
 
       if (fetched != null &&
           widget.item is TvShow &&
-          _appServices.isInCatalogue(widget.item.id)) {
+          _appServices.isInCatalogue(widget.item)) {
         await _appServices.applyTvShowAiringDetails(widget.item.id, fetched);
       }
 
@@ -147,7 +147,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
       final confirmed = await confirmRemoveFromCatalogue(context, film);
       if (!confirmed || !mounted) return;
 
-      await _appServices.removeFromCatalogue(film.id);
+      await _appServices.removeFromCatalogue(film);
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -186,7 +186,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
   }
 
   Future<void> _toggleFavorite() async {
-    await _appServices.toggleFavorite(widget.item.id);
+    await _appServices.toggleFavorite(widget.item);
     if (!mounted) return;
     _notifyWatchTimeChanged();
   }
@@ -215,7 +215,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
         final confirmed = await confirmRemoveFromCatalogue(context, show);
         if (!confirmed || !mounted) return;
 
-        await _appServices.removeFromCatalogue(show.id);
+        await _appServices.removeFromCatalogue(show);
         if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -294,7 +294,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
         final confirmed = await confirmRemoveFromCatalogue(context, show);
         if (!confirmed || !mounted) return;
 
-        await _appServices.removeFromCatalogue(show.id);
+        await _appServices.removeFromCatalogue(show);
         if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -347,8 +347,8 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     final posterPath = details?.posterPath ?? widget.item.posterPath;
     final posterUrl = ApiConstants.posterUrl(posterPath);
     final isFilm = widget.item is Film;
-    final inCatalogue = _appServices.isInCatalogue(widget.item.id);
-    final isFavorite = _appServices.isFavorite(widget.item.id);
+    final inCatalogue = _appServices.isInCatalogue(widget.item);
+    final isFavorite = _appServices.isFavorite(widget.item);
     final isFollowed = !isFilm && _appServices.isFollowed(widget.item.id);
     final filmWatched =
         isFilm && _appServices.isWatched(mediaId: widget.item.id);

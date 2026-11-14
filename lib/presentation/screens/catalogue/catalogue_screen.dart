@@ -184,7 +184,7 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
   }
 
   Future<void> _toggleFavorite(CatalogueItem item) async {
-    await _appServices.toggleFavorite(item.id);
+    await _appServices.toggleFavorite(item);
     if (!mounted) return;
     _refresh();
   }
@@ -349,7 +349,7 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
               final confirmed =
                   await confirmRemoveFromCatalogue(context, item);
               if (!confirmed || !mounted) return;
-              await _appServices.removeFromCatalogue(item.id);
+              await _appServices.removeFromCatalogue(item);
               if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(

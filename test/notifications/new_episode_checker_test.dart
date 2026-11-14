@@ -23,7 +23,7 @@ class FakeEpisodeCheckStore implements UserDataStore {
   Future<void> saveCatalogueItem(CatalogueItem item) async {}
 
   @override
-  Future<void> removeCatalogueItem(int mediaId) async {}
+  Future<void> removeCatalogueItem(CatalogueItem item) async {}
 
   @override
   Future<List<WatchRecord>> loadWatchHistory() async => [];

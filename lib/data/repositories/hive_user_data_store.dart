@@ -16,7 +16,8 @@ import 'user_data_store.dart';
 /// O(items × fsync).
 class HiveUserDataStore implements UserDataStore {
   static const String _backupFormat = 'iz_show_time_backup';
-  static const int _backupVersion = 1;
+  /// v2: catalogue keyed by media key; older app versions must reject it.
+  static const int _backupVersion = 2;
   static const Set<String> _backupMetaKeys = {
     StorageConstants.newEpisodeAlertsKey,
     StorageConstants.lastEpisodeCheckKey,
@@ -81,6 +82,8 @@ class HiveUserDataStore implements UserDataStore {
 
     if (catalogue.isNotEmpty) {
       await catalogueBox.putAll(catalogue);
+      // Version 1 backups key the catalogue by bare TMDB id.
+      await _migrateCatalogueKeysV3();
     }
     if (watchHistory.isNotEmpty) {
       await watchHistoryBox.putAll(watchHistory);
@@ -102,6 +105,9 @@ class HiveUserDataStore implements UserDataStore {
 
     if (version < 2) {
       await _migrateCompactPayloadsV2();
+    }
+    if (version < 3) {
+      await _migrateCatalogueKeysV3();
     }
 
     if (version != StorageConstants.storageSchemaVersion) {
@@ -151,6 +157,39 @@ class HiveUserDataStore implements UserDataStore {
     }
   }
 
+  /// Moves catalogue entries from the bare TMDB id to
+  /// [CatalogueItemExtension.mediaKey]. Safe to run more than once.
+  Future<void> _migrateCatalogueKeysV3() async {
+    final rekeyed = <String, dynamic>{};
+    final legacyKeys = <dynamic>[];
+    for (final key in catalogueBox.keys.toList(growable: false)) {
+      try {
+        final raw = catalogueBox.get(key);
+        final json = _decodeStoredMap(raw);
+        if (json == null) continue;
+        final item = catalogueItemFromStorageJson(json);
+        if (item == null) continue;
+        final mediaKey = item.mediaKey;
+        if (key == mediaKey) continue;
+        legacyKeys.add(key);
+        // An entry already stored under the new key is the newer one.
+        if (!catalogueBox.containsKey(mediaKey)) {
+          rekeyed.putIfAbsent(mediaKey, () => raw);
+        }
+      } catch (error, stackTrace) {
+        debugPrint(
+          'Skipping catalogue key migration for $key: $error\n$stackTrace',
+        );
+      }
+    }
+    if (rekeyed.isNotEmpty) {
+      await catalogueBox.putAll(rekeyed);
+    }
+    if (legacyKeys.isNotEmpty) {
+      await catalogueBox.deleteAll(legacyKeys);
+    }
+  }
+
   @override
   Future<List<CatalogueItem>> loadCatalogue() async {
     await open();
@@ -177,15 +216,15 @@ class HiveUserDataStore implements UserDataStore {
     await open();
     await _putEncodedMap(
       catalogueBox,
-      item.id,
+      item.mediaKey,
       catalogueItemToStorageJson(item),
     );
   }
 
   @override
-  Future<void> removeCatalogueItem(int mediaId) async {
+  Future<void> removeCatalogueItem(CatalogueItem item) async {
     await open();
-    await catalogueBox.delete(mediaId);
+    await catalogueBox.delete(item.mediaKey);
   }
 
   @override

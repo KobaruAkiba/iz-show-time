@@ -2,18 +2,20 @@ import '../../data/models/catalogue_item.dart';
 import '../../data/models/new_episode_alert.dart';
 import '../../data/models/watch_record.dart';
 
-/// Latest [WatchRecord.watchedAt] per media id (film or any episode of a show).
+/// Latest [WatchRecord.watchedAt] per media key (film or any episode of a
+/// show), see [mediaKeyOf].
 ///
 /// In this app [WatchRecord.watchedAt] is set when an item is added to the
 /// catalogue, so the map is "last catalogue activity" per title.
-Map<int, DateTime> lastCatalogueActivityByMediaId(
+Map<String, DateTime> lastCatalogueActivityByMediaId(
   Iterable<WatchRecord> history,
 ) {
-  final latest = <int, DateTime>{};
+  final latest = <String, DateTime>{};
   for (final record in history) {
-    final previous = latest[record.mediaId];
+    final key = record.mediaKey;
+    final previous = latest[key];
     if (previous == null || record.watchedAt.isAfter(previous)) {
-      latest[record.mediaId] = record.watchedAt;
+      latest[key] = record.watchedAt;
     }
   }
   return latest;
@@ -31,14 +33,14 @@ int compareNullableDateDesc(DateTime? a, DateTime? b) {
 int compareContinueWatchingAlerts(
   NewEpisodeAlert a,
   NewEpisodeAlert b,
-  Map<int, DateTime> lastActivityByMediaId,
+  Map<String, DateTime> lastActivityByMediaId,
 ) {
   final byAir = compareNullableDateDesc(a.airDate, b.airDate);
   if (byAir != 0) return byAir;
 
   final byActivity = compareNullableDateDesc(
-    lastActivityByMediaId[a.showId],
-    lastActivityByMediaId[b.showId],
+    lastActivityByMediaId[mediaKeyOf(isFilm: false, id: a.showId)],
+    lastActivityByMediaId[mediaKeyOf(isFilm: false, id: b.showId)],
   );
   if (byActivity != 0) return byActivity;
 
@@ -49,11 +51,11 @@ int compareContinueWatchingAlerts(
 int compareCatalogueByLastActivity(
   CatalogueItem a,
   CatalogueItem b,
-  Map<int, DateTime> lastActivityByMediaId,
+  Map<String, DateTime> lastActivityByMediaId,
 ) {
   final byActivity = compareNullableDateDesc(
-    lastActivityByMediaId[a.id],
-    lastActivityByMediaId[b.id],
+    lastActivityByMediaId[a.mediaKey],
+    lastActivityByMediaId[b.mediaKey],
   );
   if (byActivity != 0) return byActivity;
 
