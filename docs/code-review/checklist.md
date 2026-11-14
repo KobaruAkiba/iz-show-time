@@ -9,16 +9,16 @@ I numeri di riga del report si riferiscono al commit `009503b`: nei file modific
 
 ## Stato in breve
 
-- **Rilievi (27)**: 18 fatti, 7 parziali, 2 da fare.
+- **Rilievi (27)**: 20 fatti, 5 parziali, 2 da fare.
 - **Miglioramenti consigliati (8)**: 0 fatti, 2 parziali, 6 da fare.
 - **Verifiche automatiche al 2026-11-14**:
   - `flutter analyze --no-pub`: nessuna segnalazione.
-  - `flutter test --no-pub`: 160 passati, 0 falliti.
-  - `flutter build apk --debug`: riuscito.
+  - `flutter test --no-pub`: 165 passati, 0 falliti.
+  - `flutter build apk --debug`: riuscito con il nuovo `applicationId`.
 
 ## Prossimi passi consigliati
 
-1. **A4**: decidere `applicationId` per chiudere il rilievo. Parti da `android/app/build.gradle.kts`.
+1. **A4**: azioni manuali dello sviluppatore, cioè keystore di upload, `android/key.properties` e secret del repository (vedi le caselle aperte sotto A4).
 2. **Verifica su dispositivo reale** delle modifiche d'interfaccia e del controllo in background (vedi "Verifiche ancora da fare").
 3. **M7**: caricare le stagioni all'espansione. Parti da `lib/presentation/widgets/media_detail_sheet.dart`.
 4. **M11**: cache su disco delle immagini.
@@ -33,16 +33,18 @@ I numeri di riga del report si riferiscono al commit `009503b`: nei file modific
 - [x] **A2** Hive aperto da due isolate sugli stessi file. Commit `57f262b`.
   - Fatto: il background legge uno snapshot in sola lettura (`HiveUserDataStore.readSnapshot()`) e scrive nel box dedicato `episode_check_outbox`; l'app importa il risultato all'avvio e al ritorno in primo piano (`AppServices.importBackgroundCheckResult()`).
   - Da verificare su dispositivo reale con due isolate (vedi "Verifiche ancora da fare").
-- [ ] **A3** Controllo nuovi episodi troppo costoso. **Parziale**, commit `40cfd9d`.
-  - Fatto: chiamata leggera `TmdbService.getTvShowSummary`; salto delle richieste di stagione quando non è uscito nulla; 4 serie in parallelo.
-  - Resta: salvataggio incrementale dei risultati del controllo in background (rilevante per il limite di tempo dei task iOS, non misurato). Parti da `lib/core/notifications/new_episode_checker.dart`.
-- [ ] **A4** Configurazione release Android non pubblicabile. **Parziale**, commit `e5aca46`.
-  - Fatto: firma release da `android/key.properties`, con ripiego sulla chiave debug e avviso.
-  - Resta, partendo da `android/app/build.gradle.kts`:
-    1. decidere `applicationId` e `namespace`: oggi `com.example.iz_show_time_tracker`; l'alternativa è `com.izshowtime.tracker` come iOS, ma cambia l'identità dell'app installata;
-    2. spostare di conseguenza `MainActivity.kt`;
-    3. creare keystore e `key.properties`;
-    4. aggiungere il job CI Android.
+- [x] **A3** Controllo nuovi episodi troppo costoso. Commit `40cfd9d`, `ad7f2cf`.
+  - Fatto (`40cfd9d`): chiamata leggera `TmdbService.getTvShowSummary`; salto delle richieste di stagione quando non è uscito nulla; 4 serie in parallelo.
+  - Fatto (`ad7f2cf`): il controllo in background salva nel box `episode_check_outbox` dopo ogni blocco di 8 serie (`AppConstants.episodeCheckBlockSize`) e aggiorna la notifica di sistema a ogni blocco; le serie non raggiunte mantengono l'avviso precedente; l'esecuzione successiva riparte dalla serie dopo l'ultima controllata (`resumeAfterShowId`), così non restano sempre escluse le stesse.
+  - Da verificare su dispositivo: tempi reali dei task iOS (vedi "Verifiche ancora da fare").
+- [x] **A4** Configurazione release Android non pubblicabile. Fatto per la parte di codice, commit `e5aca46`, `4a6619a`, `2c8e484`.
+  - Fatto (`e5aca46`): firma release da `android/key.properties`, con ripiego sulla chiave debug e avviso.
+  - Fatto (`4a6619a`): `applicationId` e `namespace` sono `com.izshowtime.tracker` e `MainActivity.kt` è nel nuovo package. L'app è un'installazione diversa da quelle `com.example.iz_show_time_tracker`.
+  - Fatto (`2c8e484`): workflow `.github/workflows/android-release.yml`, che sui tag `v*` e a mano costruisce un App Bundle firmato e lo allega alla run. L'upload su Google Play resta manuale.
+  - Azioni manuali dello sviluppatore:
+    - [ ] creare il keystore di upload;
+    - [ ] creare `android/key.properties` in locale, con le chiavi `storeFile`, `storePassword`, `keyAlias`, `keyPassword`;
+    - [ ] aggiungere al repository i secret `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`, oltre a `TMDB_API_KEY` (già usato dal workflow iOS).
 
 ## Medio
 
@@ -115,7 +117,7 @@ Sezione 3 del report, stesso ordine di priorità.
 - [ ] **5** Dipendenze: hive, flutter_lints, share_plus, font in bundle.
 - [ ] **6** UX: azione rapida "segna visto", skeleton, stati di attesa, lingua e regione dal locale.
 - [ ] **7** Test mancanti. **Parziale**.
-  - Fatto: test per collisione di id film/serie, migrazione v3, restore con dati non validi, doppio tap, gara tra refresh, cache, `NetworkFeedback`, runtime 0, `getTvSeasons` (da 130 a 160 test).
+  - Fatto: test per collisione di id film/serie, migrazione v3, restore con dati non validi, doppio tap, gara tra refresh, cache, `NetworkFeedback`, runtime 0, `getTvSeasons` (da 130 a 165 test).
   - Resta: test di `DioClient` (429, dedupe) e widget test delle schermate.
 - [ ] **8** Crash reporting.
 
@@ -127,3 +129,4 @@ Sezione 3 del report, stesso ordine di priorità.
 - [ ] Tutte le voci della sezione "Non verificato" del report, ancora valide.
 - [ ] Modifiche d'interfaccia di M6, B8, B9, B10 e M11 non verificate a schermo.
 - [ ] Primo run del workflow CI su GitHub.
+- [ ] Primo run del workflow Android Release su GitHub.
