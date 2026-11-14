@@ -1,6 +1,8 @@
 # Miscellaneous
 *.class
 *.lock
+# The app lockfile is versioned so CI and release builds resolve the same deps.
+!/pubspec.lock
 *.log
 *.pyc
 *.swp
