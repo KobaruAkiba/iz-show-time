@@ -44,7 +44,13 @@ class EpisodeModel {
 
   /// Duration used for catalogue add (episode runtime or show-level fallback).
   int resolvedRuntimeMinutes({int? fallbackRuntimeMinutes}) =>
-      runtimeMinutes ?? fallbackRuntimeMinutes ?? 0;
+      _resolveRuntime(runtimeMinutes, fallbackRuntimeMinutes);
+
+  /// A runtime of 0 from TMDB means "unknown", same as a missing one.
+  static int _resolveRuntime(int? runtime, int? fallback) {
+    if (runtime != null && runtime > 0) return runtime;
+    return fallback ?? 0;
+  }
 
   /// Whether a positive duration can be resolved for catalogue / watch time.
   bool hasCatalogueRuntime({int? fallbackRuntimeMinutes}) =>
@@ -115,8 +121,7 @@ class EpisodeModel {
     DateTime? now,
   }) {
     if (isAirDateUpcomingField(airDate, now: now)) return false;
-    final duration = runtimeMinutes ?? fallbackRuntimeMinutes ?? 0;
-    return duration > 0;
+    return _resolveRuntime(runtimeMinutes, fallbackRuntimeMinutes) > 0;
   }
 
   /// Average of positive runtimes in [episodes], optionally skipping one id.
