@@ -14,6 +14,10 @@ class AppConstants {
   /// Max shows checked in parallel by the new-episode check.
   static const int episodeCheckConcurrency = 4;
 
+  /// Shows checked between two saves of the background episode check: a run
+  /// cut short by the OS keeps what the completed blocks found.
+  static const int episodeCheckBlockSize = 8;
+
   /// Retries after the first HTTP 429 before returning [ApiErrorType.rateLimit].
   static const int tmdbMaxRateLimitRetries = 5;
 

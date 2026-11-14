@@ -17,6 +17,7 @@ class UserDataSnapshot {
   final List<NewEpisodeAlert> newEpisodeAlerts;
   final bool appInForeground;
   final Set<int> notifiedEpisodeIds;
+  final DateTime? lastEpisodeCheckAt;
 
   const UserDataSnapshot({
     required this.catalogue,
@@ -24,6 +25,7 @@ class UserDataSnapshot {
     required this.newEpisodeAlerts,
     required this.appInForeground,
     required this.notifiedEpisodeIds,
+    this.lastEpisodeCheckAt,
   });
 }
 
@@ -92,6 +94,7 @@ class HiveUserDataStore implements UserDataStore {
         newEpisodeAlerts: await store.loadNewEpisodeAlerts(),
         appInForeground: await store.loadAppInForeground(),
         notifiedEpisodeIds: await store.loadNotifiedEpisodeIds(),
+        lastEpisodeCheckAt: await store.loadLastEpisodeCheckAt(),
       );
     } finally {
       await store.close();

@@ -24,6 +24,7 @@ class BackgroundCheckOutbox {
   static const String _alertsKey = 'alerts';
   static const String _checkedAtKey = 'checked_at';
   static const String _notifiedEpisodeIdsKey = 'notified_episode_ids';
+  static const String _resumeAfterShowIdKey = 'resume_after_show_id';
 
   final Box _box;
 
@@ -44,15 +45,27 @@ class BackgroundCheckOutbox {
     };
   }
 
+  /// Result of the previous run, if any.
+  BackgroundCheckResult? get result => _parseResult(_box);
+
+  /// Last show checked by the previous run: the next one resumes after it,
+  /// so an interrupted run does not always leave the same shows unchecked.
+  int? get resumeAfterShowId {
+    final raw = _box.get(_resumeAfterShowIdKey);
+    return raw is int ? raw : null;
+  }
+
   Future<void> save({
     required List<NewEpisodeAlert> alerts,
     required DateTime checkedAt,
     required Set<int> notifiedEpisodeIds,
+    int? resumeAfterShowId,
   }) async {
     await _box.putAll({
       _alertsKey: jsonEncode(alerts.map((alert) => alert.toJson()).toList()),
       _checkedAtKey: checkedAt.toIso8601String(),
       _notifiedEpisodeIdsKey: jsonEncode(notifiedEpisodeIds.toList()..sort()),
+      if (resumeAfterShowId != null) _resumeAfterShowIdKey: resumeAfterShowId,
     });
     await _box.flush();
   }
@@ -68,23 +81,27 @@ class BackgroundCheckOutbox {
     // No crash recovery: it would truncate a file this isolate does not own.
     final box = await Hive.openBox(boxName, crashRecovery: false);
     try {
-      final rawAlerts = box.get(_alertsKey);
-      final rawCheckedAt = box.get(_checkedAtKey);
-      if (rawAlerts is! String || rawCheckedAt is! String) return null;
-      final checkedAt = DateTime.tryParse(rawCheckedAt);
-      final decoded = jsonDecode(rawAlerts);
-      if (checkedAt == null || decoded is! List) return null;
-      return BackgroundCheckResult(
-        checkedAt: checkedAt,
-        alerts: [
-          for (final entry in decoded)
-            if (entry is Map)
-              NewEpisodeAlert.fromJson(Map<String, dynamic>.from(entry)),
-        ],
-      );
+      return _parseResult(box);
     } finally {
       await box.close();
     }
+  }
+
+  static BackgroundCheckResult? _parseResult(Box box) {
+    final rawAlerts = box.get(_alertsKey);
+    final rawCheckedAt = box.get(_checkedAtKey);
+    if (rawAlerts is! String || rawCheckedAt is! String) return null;
+    final checkedAt = DateTime.tryParse(rawCheckedAt);
+    final decoded = jsonDecode(rawAlerts);
+    if (checkedAt == null || decoded is! List) return null;
+    return BackgroundCheckResult(
+      checkedAt: checkedAt,
+      alerts: [
+        for (final entry in decoded)
+          if (entry is Map)
+            NewEpisodeAlert.fromJson(Map<String, dynamic>.from(entry)),
+      ],
+    );
   }
 
   /// Drops the stored result (clear all data / backup restore).
