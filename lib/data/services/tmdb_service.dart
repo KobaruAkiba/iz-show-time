@@ -233,12 +233,9 @@ class TmdbService {
     required List<CatalogueItem> items,
   }) {
     if (item == null || !item.title.toLowerCase().contains(query)) return;
-    if (!seenKeys.add(_mediaSeenKey(item))) return;
+    if (!seenKeys.add(item.mediaKey)) return;
     items.add(item);
   }
-
-  String _mediaSeenKey(CatalogueItem item) =>
-      '${item.isFilm ? 'm' : 't'}-${item.id}';
 
   Future<List<EpisodeModel>> getSeasonEpisodes({
     required int tvId,

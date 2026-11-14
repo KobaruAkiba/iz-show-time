@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/routing/app_router.dart';
 import '../../l10n/l10n.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/search/search_screen.dart';
@@ -73,21 +72,7 @@ class _MainNavigatorState extends State<MainNavigator> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected: (index) {
-          final args = ModalRoute.of(context)?.settings.arguments
-              as Map<String, dynamic>?;
-          if (args != null && args['query'] != null && index == 1) {
-            _selectTab(1);
-            Navigator.of(context).push(
-              MaterialPageRoute<String>(
-                builder: (context) =>
-                    SearchScreen(initialQuery: args['query'].toString()),
-              ),
-            );
-          } else {
-            _selectTab(index);
-          }
-        },
+        onDestinationSelected: _selectTab,
         destinations: [
           NavigationDestination(
             icon: const Icon(Icons.home_outlined),
@@ -110,76 +95,6 @@ class _MainNavigatorState extends State<MainNavigator> {
             label: l10n.navSettings,
           ),
         ],
-      ),
-    );
-  }
-
-  void navigateTo(int index) {
-    _selectTab(index);
-
-    if (index == 1 && Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-    }
-  }
-
-  Future<void> navigateToWithArgs(int index, Map<String, dynamic> args) async {
-    final query = args['query']?.toString() ?? '';
-
-    if (index == 1 && query.isNotEmpty) {
-      await Navigator.of(context).push(
-        MaterialPageRoute<String>(
-          builder: (context) => SearchScreen(initialQuery: query),
-        ),
-      );
-    } else {
-      _selectTab(index);
-    }
-  }
-
-  void popCurrentRoute() {
-    if (Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-    }
-  }
-
-  void showOnScreen(String message, {int? index}) {
-    final scheme = Theme.of(context).colorScheme;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        content: Text(
-          message,
-          style: TextStyle(
-            color: scheme.onInverseSurface,
-            fontWeight: FontWeight.w600,
-            fontSize: 15,
-          ),
-        ),
-        backgroundColor: scheme.inverseSurface,
-      ),
-    );
-  }
-}
-
-extension NavigatorExtension on BuildContext {
-  void navigateToSettings() {
-    Navigator.pushNamed(this, AppRouter.settingsRoute);
-  }
-
-  void showSnackBar(String message) {
-    final scheme = Theme.of(this).colorScheme;
-    ScaffoldMessenger.of(this).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        content: Text(
-          message,
-          style: TextStyle(
-            color: scheme.onInverseSurface,
-            fontWeight: FontWeight.w600,
-            fontSize: 15,
-          ),
-        ),
-        backgroundColor: scheme.inverseSurface,
       ),
     );
   }

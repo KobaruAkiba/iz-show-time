@@ -146,12 +146,9 @@ class _SearchScreenState extends State<SearchScreen> {
     _remoteTotalPages = 0;
   }
 
-  String _mediaSeenKey(CatalogueItem item) =>
-      '${item.isFilm ? 'm' : 't'}-${item.id}';
-
   void _appendUnique(Iterable<CatalogueItem> items) {
     for (final item in items) {
-      if (_seenKeys.add(_mediaSeenKey(item))) {
+      if (_seenKeys.add(item.mediaKey)) {
         _results.add(item);
       }
     }
@@ -353,7 +350,7 @@ class _SearchScreenState extends State<SearchScreen> {
               final item = results[index];
               final inCatalogue = _appServices.isInCatalogue(item);
               return Padding(
-                key: ValueKey(_mediaSeenKey(item)),
+                key: ValueKey(item.mediaKey),
                 padding: const EdgeInsets.only(bottom: 8),
                 child: MediaCard(
                   item: item,

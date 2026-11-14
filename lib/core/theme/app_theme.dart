@@ -201,12 +201,6 @@ class AppTheme {
     );
   }
 
-  // Extended color palette (brand reference hex strings)
-  static const String primaryColor = '#8A6500';
-  static const String accentColor = '#FEB40E';
-  static const String warningColor = '#FB7185';
-  static const String successColor = '#34D399';
-
   /// Parses a persisted theme preference. Unknown / missing → [ThemeMode.system].
   static ThemeMode themeModeFromStorage(String? raw) {
     switch (raw) {

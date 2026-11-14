@@ -246,17 +246,6 @@ class DioClient {
     return delay;
   }
 
-  Map<String, String> get headers => _dio.options.headers.cast<String, String>();
-
-  void setBaseUrl(String url) {
-    _dio.options.baseUrl = url;
-  }
-
-  factory DioClient.reset() {
-    _instance = null;
-    return instance;
-  }
-
   static Future<void> init({String apiKey = ''}) async {
     _apiKey = apiKey;
     instance;

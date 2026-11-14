@@ -1,8 +1,5 @@
 import 'package:flutter/foundation.dart';
 
-/// Media type enum for API requests
-enum MediaType { movie, tvShow }
-
 /// API Configuration and Endpoints for TMDB integration
 class ApiConstants {
   static const String _remoteBaseUrl = 'https://api.themoviedb.org/3/';
@@ -54,10 +51,4 @@ class AppApiKey {
   }
 
   static void configure(String key) => _key = key;
-
-  static void setDevKey(String key) {
-    if (kDebugMode) _key = key;
-  }
-
-  static void setProdKey(String key) => _key = key;
 }
