@@ -466,20 +466,13 @@ class TmdbService {
       return await existing;
     }
 
-    final completer = Completer<T>();
-    _inflight[key] = completer.future;
+    // Share the fetch future itself: a separate completer would raise an
+    // unhandled async error whenever a failed request has no other waiter.
+    final future = fetch();
+    _inflight[key] = future;
 
     try {
-      final result = await fetch();
-      if (!completer.isCompleted) {
-        completer.complete(result);
-      }
-      return result;
-    } catch (e, stackTrace) {
-      if (!completer.isCompleted) {
-        completer.completeError(e, stackTrace);
-      }
-      rethrow;
+      return await future;
     } finally {
       _inflight.remove(key);
     }
