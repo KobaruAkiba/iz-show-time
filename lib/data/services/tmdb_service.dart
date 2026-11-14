@@ -349,7 +349,8 @@ class TmdbService {
     }
 
     return _dedupe(cacheKey, () async {
-      final cachedAfterWait = _cache.get<List<dynamic>>(cacheKey);
+      final cachedAfterWait =
+          bypassCache ? null : _cache.get<List<dynamic>>(cacheKey);
       if (cachedAfterWait != null) {
         final meta = _cache.get<Map<String, dynamic>>(metaCacheKey);
         return (
