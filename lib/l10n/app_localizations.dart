@@ -370,6 +370,12 @@ abstract class AppLocalizations {
   /// **'Remove \"{title}\" from your catalogue?\n\nAll watched episodes will be deleted.'**
   String confirmRemoveShowBody(String title);
 
+  /// No description provided for @addToCatalogue.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to catalogue'**
+  String get addToCatalogue;
+
   /// No description provided for @addedToCatalogue.
   ///
   /// In en, this message translates to:

@@ -187,6 +187,9 @@ class MediaCard extends StatelessWidget {
                   size: 24,
                 ),
                 color: colorScheme.onSurface.withValues(alpha: 0.6),
+                tooltip: isBookmarked
+                    ? l10n.removeFromCatalogue
+                    : l10n.addToCatalogue,
                 onPressed: onAddRemove,
               ),
             ],

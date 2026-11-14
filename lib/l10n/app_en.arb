@@ -70,6 +70,7 @@
     }
   },
 
+  "addToCatalogue": "Add to catalogue",
   "addedToCatalogue": "Added to catalogue",
   "removedFromCatalogue": "Removed from catalogue",
   "runtimeNotAvailableForFilm": "Runtime unavailable for this film",

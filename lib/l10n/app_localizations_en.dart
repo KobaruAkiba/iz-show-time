@@ -155,6 +155,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get addToCatalogue => 'Add to catalogue';
+
+  @override
   String get addedToCatalogue => 'Added to catalogue';
 
   @override

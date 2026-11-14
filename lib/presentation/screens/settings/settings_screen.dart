@@ -60,13 +60,21 @@ class SettingsScreen extends StatelessWidget {
                     onTap: () => _showClearCacheDialog(context),
                   ),
                   ListTile(
-                    leading: Icon(Icons.delete_outline, color: Colors.red[500]),
+                    leading: Icon(
+                      Icons.delete_outline,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                     title: Text(
                       l10n.settingsClearAllTitle,
-                      style: TextStyle(color: Colors.red[700]),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
                     ),
                     subtitle: Text(l10n.settingsClearAllSubtitle),
-                    trailing: Icon(Icons.chevron_right, color: Colors.red[400]),
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                     onTap: () => _showClearDataDialog(context),
                   ),
                   const Divider(),
@@ -144,7 +152,7 @@ class SettingsScreen extends StatelessWidget {
   Widget _buildTmdbAttribution(BuildContext context) {
     final l10n = context.l10n;
     final bodyStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: Colors.grey[700],
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
         );
 
     return Padding(
@@ -207,7 +215,7 @@ class SettingsScreen extends StatelessWidget {
   Widget _buildSupportMeSection(BuildContext context) {
     final l10n = context.l10n;
     final bodyStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: Colors.grey[700],
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
         );
 
     return Column(
@@ -570,7 +578,10 @@ class SettingsScreen extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        icon: Icon(Icons.warning_amber_rounded, color: Colors.red[700]),
+        icon: Icon(
+          Icons.warning_amber_rounded,
+          color: Theme.of(dialogContext).colorScheme.error,
+        ),
         title: Text(l10n.settingsClearAllTitle),
         content: Text(l10n.settingsClearAllBody),
         actions: [
@@ -580,8 +591,8 @@ class SettingsScreen extends StatelessWidget {
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: Colors.red[700],
-              foregroundColor: Colors.white,
+              backgroundColor: Theme.of(dialogContext).colorScheme.error,
+              foregroundColor: Theme.of(dialogContext).colorScheme.onError,
             ),
             onPressed: () async {
               await AppServices().clearAllData();
