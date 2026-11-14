@@ -31,6 +31,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   /// Includes vertical inset (14+24) so active poster glow is not clipped.
   static const _carouselHeight = 438.0;
+  static const _trendingErrorHeight = 320.0;
 
   bool _isLoading = true;
   ApiErrorType? _errorType;
@@ -126,6 +127,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (!mounted) return;
       setState(() {
+        _errorType = null;
+        _errorMessage = null;
         _trendingItems
           ..clear()
           ..addAll(combined.take(12));
@@ -170,14 +173,6 @@ class _HomeScreenState extends State<HomeScreen> {
             if (_isLoading)
               const Expanded(
                 child: ConnectionAwareLoading(),
-              )
-            else if (_errorMessage != null)
-              Expanded(
-                child: ConnectionErrorView(
-                  errorType: _errorType,
-                  message: _errorMessage,
-                  onRetry: _loadTrending,
-                ),
               )
             else
               Expanded(
@@ -233,6 +228,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildTrendingSection() {
     final l10n = context.l10n;
+
+    // Trending failed: keep the rest of Home (local Continue Watching) usable.
+    if (_errorMessage != null && _trendingItems.isEmpty) {
+      return SizedBox(
+        height: _trendingErrorHeight,
+        child: ConnectionErrorView(
+          errorType: _errorType,
+          message: _errorMessage,
+          onRetry: _loadTrending,
+        ),
+      );
+    }
 
     if (_trendingItems.isEmpty) {
       return Padding(
