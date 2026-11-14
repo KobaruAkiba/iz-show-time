@@ -77,6 +77,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
           widget.item is TvShow &&
           _appServices.isInCatalogue(widget.item)) {
         await _appServices.applyTvShowAiringDetails(widget.item.id, fetched);
+        if (!mounted) return;
       }
 
       if (widget.item is TvShow && (_details?.numberOfSeasons ?? 0) > 0) {
@@ -135,6 +136,8 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
   }
 
   void _notifyWatchTimeChanged() {
+    // Callers reach this after awaits: the sheet may be closed by then.
+    if (!mounted) return;
     widget.onWatchTimeChanged?.call();
     setState(() {});
   }
