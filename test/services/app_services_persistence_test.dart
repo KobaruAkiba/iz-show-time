@@ -864,7 +864,8 @@ void main() {
       expect(store.flushCount, 1);
     });
 
-    test('skips airing-soon episodes without resolvable runtime', () async {
+    test('uses the season average for an aired episode without runtime',
+        () async {
       const show = TvShow(id: 71, title: 'Airing Soon Show');
       final ready = EpisodeModel.fromJson({
         'id': 211,
@@ -889,15 +890,38 @@ void main() {
         episodes: [ready, airingSoon],
       );
 
-      expect(addedCount, 1);
+      expect(addedCount, 2);
       expect(
         appServices.isWatched(mediaId: show.id, episodeId: ready.id),
         isTrue,
       );
-      expect(
-        appServices.isWatched(mediaId: show.id, episodeId: airingSoon.id),
-        isFalse,
+      final fallbackRecord = appServices.watchedEpisodesFor(show.id).firstWhere(
+            (record) => record.episodeId == airingSoon.id,
+          );
+      expect(fallbackRecord.durationMinutes, 42);
+    });
+
+    test('skips airing-soon episodes when no runtime can be resolved',
+        () async {
+      const show = TvShow(id: 72, title: 'No Runtime Show');
+      final episodes = [
+        for (var number = 1; number <= 2; number++)
+          EpisodeModel.fromJson({
+            'id': 220 + number,
+            'season_number': 1,
+            'episode_number': number,
+            'name': 'No Runtime $number',
+            'air_date': '2020-01-0$number',
+          }),
+      ];
+
+      final addedCount = await appServices.addSeasonToCatalogue(
+        show: show,
+        episodes: episodes,
       );
+
+      expect(addedCount, 0);
+      expect(appServices.isInCatalogue(show), isFalse);
     });
 
     test('persists a season in one batch write and one flush', () async {
