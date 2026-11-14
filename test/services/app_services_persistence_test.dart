@@ -404,6 +404,34 @@ void main() {
       });
     });
 
+    test('a double tap records a film or an episode only once', () async {
+      await appServices.initialize(userDataStore: store);
+      const film = Film(id: 610, title: 'Double Tap Film');
+      const show = TvShow(id: 611, title: 'Double Tap Show');
+      final episode = EpisodeModel.fromJson({
+        'id': 6111,
+        'season_number': 1,
+        'episode_number': 1,
+        'name': 'Pilot',
+        'air_date': '2020-01-01',
+        'runtime': 30,
+      });
+
+      final filmResults = await Future.wait([
+        appServices.markFilmWatched(film: film, durationMinutes: 100),
+        appServices.markFilmWatched(film: film, durationMinutes: 100),
+      ]);
+      final episodeResults = await Future.wait([
+        appServices.markEpisodeWatched(show: show, episode: episode),
+        appServices.markEpisodeWatched(show: show, episode: episode),
+      ]);
+
+      expect(filmResults.whereType<WatchRecord>(), hasLength(1));
+      expect(episodeResults.whereType<WatchRecord>(), hasLength(1));
+      expect(appServices.watchHistory, hasLength(2));
+      expect(appServices.totalWatchTimeMinutes, 130);
+    });
+
     test('film and TV show sharing a TMDB id stay independent', () async {
       await appServices.initialize(userDataStore: store);
       const show = TvShow(id: 1402, title: 'Same Id Show');

@@ -56,9 +56,10 @@ class AppServices {
   final ValueNotifier<ThemeMode> themeModeListenable =
       ValueNotifier<ThemeMode>(ThemeMode.system);
 
-  /// When true, disk [UserDataStore.flush] is deferred until the outer
-  /// mutating operation completes (enables one fsync per user action).
-  bool _deferFlush = false;
+  /// While positive, disk [UserDataStore.flush] is deferred until every
+  /// mutating operation in flight completes (one fsync per user action).
+  /// A counter, not a flag: operations can overlap.
+  int _deferFlushDepth = 0;
 
   /// Bumped when a watch-driven (per-show) Continue Watching refresh commits.
   /// Full network scans started earlier discard their result if this changed
@@ -356,6 +357,12 @@ class AppServices {
 
       if (!isInCatalogue(show)) {
         await addToCatalogue(show);
+        // A second tap may have registered episodes during the await.
+        toAdd.removeWhere(
+          (record) =>
+              isWatched(mediaId: show.id, episodeId: record.episodeId),
+        );
+        if (toAdd.isEmpty) return 0;
       }
 
       for (final record in toAdd) {
@@ -415,6 +422,8 @@ class AppServices {
     return _withDeferredFlush(() async {
       if (!isInCatalogue(film)) {
         await addToCatalogue(film);
+        // A second tap may have recorded the film during the await.
+        if (isWatched(mediaId: film.id)) return null;
       }
 
       final record = WatchRecord(
@@ -451,6 +460,8 @@ class AppServices {
     return _withDeferredFlush(() async {
       if (!isInCatalogue(show)) {
         await addToCatalogue(show);
+        // A second tap may have recorded the episode during the await.
+        if (isWatched(mediaId: show.id, episodeId: episode.id)) return null;
       }
 
       final record = WatchRecord(
@@ -837,21 +848,19 @@ class AppServices {
   }
 
   Future<T> _withDeferredFlush<T>(Future<T> Function() action) async {
-    final wasDeferring = _deferFlush;
-    _deferFlush = true;
+    _deferFlushDepth++;
     try {
-      final result = await action();
-      return result;
+      return await action();
     } finally {
-      _deferFlush = wasDeferring;
-      if (!_deferFlush) {
+      _deferFlushDepth--;
+      if (_deferFlushDepth == 0) {
         await _flushUserData();
       }
     }
   }
 
   Future<void> _maybeFlush() async {
-    if (!_deferFlush) {
+    if (_deferFlushDepth == 0) {
       await _flushUserData();
     }
   }
