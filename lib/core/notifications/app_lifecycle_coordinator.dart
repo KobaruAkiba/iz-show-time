@@ -25,7 +25,7 @@ class AppLifecycleCoordinator with WidgetsBindingObserver {
     unawaited(_persistForegroundState(_isOpenState(state)));
 
     if (state == AppLifecycleState.resumed) {
-      _appServices.reloadNewEpisodeAlertsFromStore();
+      unawaited(_appServices.importBackgroundCheckResult());
     }
   }
 

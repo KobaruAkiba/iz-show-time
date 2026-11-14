@@ -13,8 +13,10 @@ void backgroundCallbackDispatcher() {
         case BackgroundTaskConstants.episodeCheckTaskName:
         case BackgroundTaskConstants.episodeCheckUniqueName:
         case Workmanager.iOSBackgroundTask:
-          final appServices = await BackgroundBootstrap.initializeAppServices();
-          await EpisodeCheckService.runNativeBackgroundCheck(appServices);
+          final tmdbService = await BackgroundBootstrap.initialize();
+          await EpisodeCheckService.runNativeBackgroundCheck(
+            tmdbService: tmdbService,
+          );
           return true;
         default:
           return false;

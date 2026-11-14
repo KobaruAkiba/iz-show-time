@@ -1,68 +1,84 @@
+import '../../data/models/catalogue_item.dart';
+import '../../data/repositories/background_check_outbox.dart';
+import '../../data/repositories/hive_user_data_store.dart';
+import '../../data/services/tmdb_service.dart';
 import '../network/network_feedback.dart';
-import '../services/app_services.dart';
 import 'episode_notification_policy.dart';
 import 'new_episode_checker.dart';
 import 'notification_service.dart';
 
-/// Runs catalogue episode checks and optionally raises system notifications.
+/// Runs the periodic episode check from the background isolate.
 class EpisodeCheckService {
   EpisodeCheckService._();
 
-  static Future<NewEpisodeCheckResult> checkCatalogue({
-    required AppServices appServices,
+  /// Native periodic task: refreshes alerts and raises a system notification
+  /// when the app is not in foreground. Eligible episodes aired today, were
+  /// not notified yet, and are not already in the catalogue.
+  ///
+  /// The UI isolate owns the user-data boxes: this only reads a snapshot of
+  /// them and writes its result to [BackgroundCheckOutbox].
+  static Future<void> runNativeBackgroundCheck({
+    required TmdbService tmdbService,
   }) async {
-    return NetworkFeedback.runSilent(() async {
-      final checker = NewEpisodeChecker(
-        tmdbService: appServices.tmdbService,
-        userDataStore: appServices.userDataStore,
-      );
+    final snapshot = await HiveUserDataStore.readSnapshot();
+    if (snapshot == null) return;
 
-      // All followed shows: Continue Watching includes catch-up on Ended
-      // series when a later season's episodes have already aired.
-      return checker.checkShows(
-        shows: appServices.followedTvShows,
-        watchHistory: appServices.watchHistory,
+    final followedShows = [
+      for (final item in snapshot.catalogue)
+        if (item is TvShow && item.isFollowed) item,
+    ];
+    final checkedAt = DateTime.now();
+
+    // All followed shows: Continue Watching includes catch-up on Ended
+    // series when a later season's episodes have already aired.
+    final result = await NetworkFeedback.runSilent(
+      () => NewEpisodeChecker(tmdbService: tmdbService).checkShows(
+        shows: followedShows,
+        watchHistory: snapshot.watchHistory,
         forceRefresh: true,
+        existingAlerts: snapshot.newEpisodeAlerts,
+        persistAlerts: false,
+      ),
+    );
+
+    final outbox = await BackgroundCheckOutbox.openForWriting();
+    try {
+      // Fallback: versions without the outbox kept these ids in the UI-owned
+      // meta box.
+      var notified = outbox.notifiedEpisodeIds ?? snapshot.notifiedEpisodeIds;
+
+      if (!snapshot.appInForeground) {
+        final eligible = alertsEligibleForSystemNotification(
+          alerts: result.allAlerts,
+          alreadyNotifiedEpisodeIds: notified,
+          catalogueEpisodeIds: {
+            for (final record in snapshot.watchHistory)
+              if (!record.isFilm && record.episodeId != null)
+                record.episodeId!,
+          },
+        );
+        if (eligible.isNotEmpty) {
+          await NotificationService().showNewEpisodesNotification(
+            count: eligible.length,
+          );
+          // Drop IDs that are no longer in the current alert snapshot.
+          final activeIds = {
+            for (final alert in result.allAlerts) alert.episodeId,
+          };
+          notified = {
+            ...notified,
+            for (final alert in eligible) alert.episodeId,
+          }..removeWhere((id) => !activeIds.contains(id));
+        }
+      }
+
+      await outbox.save(
+        alerts: result.allAlerts,
+        checkedAt: checkedAt,
+        notifiedEpisodeIds: notified,
       );
-    });
-  }
-
-  /// Native periodic task: always refreshes alerts; OS notify only when the app
-  /// is not in foreground (option B). Eligible episodes aired today, were not
-  /// notified yet, and are not already in the catalogue.
-  static Future<void> runNativeBackgroundCheck(AppServices appServices) async {
-    final result = await checkCatalogue(appServices: appServices);
-    appServices.updateNewEpisodeAlerts(result.allAlerts);
-
-    final appIsOpen = await appServices.userDataStore.loadAppInForeground();
-    if (appIsOpen) return;
-
-    final alreadyNotified =
-        await appServices.userDataStore.loadNotifiedEpisodeIds();
-    final catalogueEpisodeIds = {
-      for (final record in appServices.watchHistory)
-        if (!record.isFilm && record.episodeId != null) record.episodeId!,
-    };
-    final eligible = alertsEligibleForSystemNotification(
-      alerts: result.allAlerts,
-      alreadyNotifiedEpisodeIds: alreadyNotified,
-      catalogueEpisodeIds: catalogueEpisodeIds,
-    );
-    if (eligible.isEmpty) return;
-
-    await NotificationService().showNewEpisodesNotification(
-      count: eligible.length,
-    );
-
-    final updatedNotified = {
-      ...alreadyNotified,
-      for (final alert in eligible) alert.episodeId,
-    };
-    // Drop IDs that are no longer in the current alert snapshot.
-    final activeIds = {for (final alert in result.allAlerts) alert.episodeId};
-    updatedNotified.removeWhere((id) => !activeIds.contains(id));
-
-    await appServices.userDataStore.saveNotifiedEpisodeIds(updatedNotified);
-    await appServices.userDataStore.flush();
+    } finally {
+      await outbox.close();
+    }
   }
 }

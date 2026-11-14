@@ -7,7 +7,25 @@ import '../../core/constants/storage_constants.dart';
 import '../models/catalogue_item.dart';
 import '../models/new_episode_alert.dart';
 import '../models/watch_record.dart';
+import 'background_check_outbox.dart';
 import 'user_data_store.dart';
+
+/// Point-in-time copy of the user data, see [HiveUserDataStore.readSnapshot].
+class UserDataSnapshot {
+  final List<CatalogueItem> catalogue;
+  final List<WatchRecord> watchHistory;
+  final List<NewEpisodeAlert> newEpisodeAlerts;
+  final bool appInForeground;
+  final Set<int> notifiedEpisodeIds;
+
+  const UserDataSnapshot({
+    required this.catalogue,
+    required this.watchHistory,
+    required this.newEpisodeAlerts,
+    required this.appInForeground,
+    required this.notifiedEpisodeIds,
+  });
+}
 
 /// Hive-backed persistence for catalogue and watch history.
 ///
@@ -26,6 +44,13 @@ class HiveUserDataStore implements UserDataStore {
     StorageConstants.themeModeKey,
   };
 
+  HiveUserDataStore() : _readOnly = false;
+
+  HiveUserDataStore._readOnly() : _readOnly = true;
+
+  /// Read-only instances never migrate, never recover and never write.
+  final bool _readOnly;
+
   Box? _catalogueBox;
   Box? _watchHistoryBox;
   Box? _metaBox;
@@ -37,13 +62,40 @@ class HiveUserDataStore implements UserDataStore {
   @override
   Future<void> open() async {
     final wasClosed = _metaBox == null;
-    _catalogueBox ??= await Hive.openBox(StorageConstants.catalogueBoxName);
-    _watchHistoryBox ??=
-        await Hive.openBox(StorageConstants.watchHistoryBoxName);
-    _metaBox ??= await Hive.openBox(StorageConstants.metaBoxName);
+    _catalogueBox ??= await _openBox(StorageConstants.catalogueBoxName);
+    _watchHistoryBox ??= await _openBox(StorageConstants.watchHistoryBoxName);
+    _metaBox ??= await _openBox(StorageConstants.metaBoxName);
 
-    if (!wasClosed) return;
+    if (!wasClosed || _readOnly) return;
     await _ensureSchema();
+  }
+
+  // Crash recovery truncates the file: only the owning isolate may do it.
+  Future<Box> _openBox(String name) =>
+      Hive.openBox(name, crashRecovery: !_readOnly);
+
+  /// Reads user data from an isolate that does not own the boxes.
+  ///
+  /// Hive 2 boxes are single-isolate: the UI isolate owns them, so this opens
+  /// them without crash recovery or migrations and closes them right away.
+  /// Returns null when the schema still has to be migrated by the UI isolate;
+  /// throws when a file is caught mid-write.
+  static Future<UserDataSnapshot?> readSnapshot() async {
+    final store = HiveUserDataStore._readOnly();
+    try {
+      await store.open();
+      final version = store.metaBox.get(StorageConstants.schemaVersionKey);
+      if (version != StorageConstants.storageSchemaVersion) return null;
+      return UserDataSnapshot(
+        catalogue: await store.loadCatalogue(),
+        watchHistory: await store.loadWatchHistory(),
+        newEpisodeAlerts: await store.loadNewEpisodeAlerts(),
+        appInForeground: await store.loadAppInForeground(),
+        notifiedEpisodeIds: await store.loadNotifiedEpisodeIds(),
+      );
+    } finally {
+      await store.close();
+    }
   }
 
   @override
@@ -79,6 +131,7 @@ class HiveUserDataStore implements UserDataStore {
     await catalogueBox.clear();
     await watchHistoryBox.clear();
     await metaBox.clear();
+    await _deleteBackgroundCheckResult();
 
     if (catalogue.isNotEmpty) {
       await catalogueBox.putAll(catalogue);
@@ -376,6 +429,21 @@ class HiveUserDataStore implements UserDataStore {
   }
 
   @override
+  Future<BackgroundCheckResult?> loadBackgroundCheckResult() =>
+      BackgroundCheckOutbox.read();
+
+  /// A stale background result must not outlive the data it was built from.
+  Future<void> _deleteBackgroundCheckResult() async {
+    try {
+      await BackgroundCheckOutbox.delete();
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Failed to delete background check result: $error\n$stackTrace',
+      );
+    }
+  }
+
+  @override
   Future<bool> loadNotificationPermissionPrePromptShown() async {
     await open();
     final raw = metaBox.get(
@@ -447,6 +515,7 @@ class HiveUserDataStore implements UserDataStore {
       StorageConstants.notificationPermissionPrePromptShownKey,
     );
     await metaBox.delete(StorageConstants.lastTmdbCachePurgeKey);
+    await _deleteBackgroundCheckResult();
     await metaBox.put(
       StorageConstants.schemaVersionKey,
       StorageConstants.storageSchemaVersion,

@@ -11,6 +11,15 @@ class AppBootstrap {
   AppBootstrap._();
 
   static Future<AppServices> initializeServices() async {
+    await initializePlatform();
+
+    final appServices = AppServices();
+    await appServices.initialize();
+    return appServices;
+  }
+
+  /// Hive path and TMDB client, without opening any user data.
+  static Future<void> initializePlatform() async {
     WidgetsFlutterBinding.ensureInitialized();
 
     try {
@@ -23,9 +32,5 @@ class AppBootstrap {
     final apiKey = resolveTmdbApiKey();
     AppApiKey.configure(apiKey);
     await DioClient.init(apiKey: apiKey);
-
-    final appServices = AppServices();
-    await appServices.initialize();
-    return appServices;
   }
 }

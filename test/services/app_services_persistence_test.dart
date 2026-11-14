@@ -7,6 +7,7 @@ import 'package:iz_show_time_tracker/data/models/episode_model.dart';
 import 'package:iz_show_time_tracker/data/models/media_details.dart';
 import 'package:iz_show_time_tracker/data/models/new_episode_alert.dart';
 import 'package:iz_show_time_tracker/data/models/watch_record.dart';
+import 'package:iz_show_time_tracker/data/repositories/background_check_outbox.dart';
 import 'package:iz_show_time_tracker/data/repositories/user_data_store.dart';
 import 'package:iz_show_time_tracker/data/services/tmdb_service.dart';
 
@@ -163,6 +164,12 @@ class FakeUserDataStore implements UserDataStore {
   Future<void> saveNotifiedEpisodeIds(Set<int> episodeIds) async {
     notifiedEpisodeIds = Set<int>.from(episodeIds);
   }
+
+  BackgroundCheckResult? backgroundCheckResult;
+
+  @override
+  Future<BackgroundCheckResult?> loadBackgroundCheckResult() async =>
+      backgroundCheckResult;
 
   bool notificationPermissionPrePromptShown = false;
 
@@ -332,6 +339,60 @@ void main() {
 
       expect(store.savedCatalogueItems, isEmpty);
       expect(appServices.isFavorite(missing), isFalse);
+    });
+
+    group('importBackgroundCheckResult', () {
+      const show = TvShow(id: 77, title: 'Followed Show');
+
+      NewEpisodeAlert alert({required int showId, required int episodeId}) {
+        return NewEpisodeAlert(
+          showId: showId,
+          showTitle: 'Show $showId',
+          episodeId: episodeId,
+          seasonNumber: 1,
+          episodeNumber: 2,
+          episodeName: 'Episode',
+          detectedAt: DateTime(2026, 5, 2),
+        );
+      }
+
+      setUp(() async {
+        store.catalogue.add(show.withFollowed(true));
+        await appServices.initialize(userDataStore: store);
+      });
+
+      test('adopts a newer result, dropping unfollowed shows', () async {
+        store.lastEpisodeCheckAt = DateTime(2026, 5, 1);
+        store.backgroundCheckResult = BackgroundCheckResult(
+          checkedAt: DateTime(2026, 5, 2),
+          alerts: [
+            alert(showId: show.id, episodeId: 701),
+            alert(showId: 999, episodeId: 9991),
+          ],
+        );
+
+        await appServices.importBackgroundCheckResult();
+
+        expect(
+          appServices.newEpisodeAlerts.map((entry) => entry.episodeId),
+          [701],
+        );
+        expect(store.alerts.map((entry) => entry.episodeId), [701]);
+        expect(store.lastEpisodeCheckAt, DateTime(2026, 5, 2));
+      });
+
+      test('ignores a result older than the last local check', () async {
+        store.lastEpisodeCheckAt = DateTime(2026, 5, 3);
+        store.backgroundCheckResult = BackgroundCheckResult(
+          checkedAt: DateTime(2026, 5, 2),
+          alerts: [alert(showId: show.id, episodeId: 701)],
+        );
+
+        await appServices.importBackgroundCheckResult();
+
+        expect(appServices.newEpisodeAlerts, isEmpty);
+        expect(store.lastEpisodeCheckAt, DateTime(2026, 5, 3));
+      });
     });
 
     test('film and TV show sharing a TMDB id stay independent', () async {

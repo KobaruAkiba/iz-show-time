@@ -7,6 +7,7 @@ import 'package:iz_show_time_tracker/core/constants/storage_constants.dart';
 import 'package:iz_show_time_tracker/data/models/catalogue_item.dart';
 import 'package:iz_show_time_tracker/data/models/new_episode_alert.dart';
 import 'package:iz_show_time_tracker/data/models/watch_record.dart';
+import 'package:iz_show_time_tracker/data/repositories/background_check_outbox.dart';
 import 'package:iz_show_time_tracker/data/repositories/hive_user_data_store.dart';
 
 void main() {
@@ -270,6 +271,74 @@ void main() {
       final loaded = await store.loadCatalogue();
       expect(loaded.map((item) => item.title).toSet(),
           {'Legacy Show', 'Legacy Film'});
+    });
+
+    test('readSnapshot copies user data without owning the boxes', () async {
+      const show = TvShow(id: 9, title: 'Snapshot Show', tags: [kFollowedTag]);
+      await store.saveCatalogueItem(show);
+      await store.saveAppInForeground(true);
+      await store.saveNotifiedEpisodeIds({5, 6});
+      await store.flush();
+      await store.close();
+
+      final snapshot = await HiveUserDataStore.readSnapshot();
+
+      expect(snapshot, isNotNull);
+      expect(snapshot!.catalogue.single.title, 'Snapshot Show');
+      expect(snapshot.appInForeground, isTrue);
+      expect(snapshot.notifiedEpisodeIds, {5, 6});
+      expect(Hive.isBoxOpen(StorageConstants.catalogueBoxName), isFalse);
+    });
+
+    test('readSnapshot leaves an outdated schema to the owner', () async {
+      await store.catalogueBox.put(
+        3,
+        jsonEncode({'type': 'film', 'id': 3, 'title': 'Legacy'}),
+      );
+      await store.metaBox.put(StorageConstants.schemaVersionKey, 2);
+      await store.flush();
+      await store.close();
+
+      expect(await HiveUserDataStore.readSnapshot(), isNull);
+
+      await store.open();
+      expect(store.catalogueBox.keys.toList(), ['m_3']);
+    });
+
+    test('background check outbox round-trips and is cleared with the data',
+        () async {
+      expect(await store.loadBackgroundCheckResult(), isNull);
+
+      final outbox = await BackgroundCheckOutbox.openForWriting();
+      expect(outbox.notifiedEpisodeIds, isNull);
+      await outbox.save(
+        alerts: [
+          NewEpisodeAlert(
+            showId: 42,
+            showTitle: 'Sample Show',
+            episodeId: 901,
+            seasonNumber: 3,
+            episodeNumber: 9,
+            episodeName: 'New One',
+            detectedAt: DateTime(2026, 5, 2, 8),
+          ),
+        ],
+        checkedAt: DateTime(2026, 5, 2, 9),
+        notifiedEpisodeIds: {901},
+      );
+      await outbox.close();
+
+      final result = await store.loadBackgroundCheckResult();
+      expect(result!.checkedAt, DateTime(2026, 5, 2, 9));
+      expect(result.alerts.single.episodeId, 901);
+      expect(Hive.isBoxOpen(BackgroundCheckOutbox.boxName), isFalse);
+
+      final reopened = await BackgroundCheckOutbox.openForWriting();
+      expect(reopened.notifiedEpisodeIds, {901});
+      await reopened.close();
+
+      await store.clearAll();
+      expect(await store.loadBackgroundCheckResult(), isNull);
     });
 
     test('imports a version 1 backup keyed by bare id', () async {

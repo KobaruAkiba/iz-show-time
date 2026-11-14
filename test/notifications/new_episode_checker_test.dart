@@ -5,6 +5,7 @@ import 'package:iz_show_time_tracker/data/models/episode_model.dart';
 import 'package:iz_show_time_tracker/data/models/media_details.dart';
 import 'package:iz_show_time_tracker/data/models/new_episode_alert.dart';
 import 'package:iz_show_time_tracker/data/models/watch_record.dart';
+import 'package:iz_show_time_tracker/data/repositories/background_check_outbox.dart';
 import 'package:iz_show_time_tracker/data/repositories/user_data_store.dart';
 import 'package:iz_show_time_tracker/data/services/tmdb_service.dart';
 
@@ -78,6 +79,9 @@ class FakeEpisodeCheckStore implements UserDataStore {
   Future<void> saveNotifiedEpisodeIds(Set<int> episodeIds) async {
     notifiedEpisodeIds = Set<int>.from(episodeIds);
   }
+
+  @override
+  Future<BackgroundCheckResult?> loadBackgroundCheckResult() async => null;
 
   bool notificationPermissionPrePromptShown = false;
 

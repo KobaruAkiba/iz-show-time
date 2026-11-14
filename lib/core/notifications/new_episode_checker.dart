@@ -25,12 +25,14 @@ class NewEpisodeCheckResult {
 class NewEpisodeChecker {
   NewEpisodeChecker({
     required TmdbService tmdbService,
-    required UserDataStore userDataStore,
+    UserDataStore? userDataStore,
   })  : _tmdbService = tmdbService,
         _userDataStore = userDataStore;
 
   final TmdbService _tmdbService;
-  final UserDataStore _userDataStore;
+
+  /// Null when the caller owns persistence (background isolate).
+  final UserDataStore? _userDataStore;
 
   /// Checks [shows] and optionally persists alerts.
   ///
@@ -48,10 +50,12 @@ class NewEpisodeChecker {
     List<NewEpisodeAlert>? existingAlerts,
     bool persistAlerts = true,
   }) async {
-    await _userDataStore.open();
+    final store = _userDataStore;
+    await store?.open();
 
-    final priorAlerts =
-        existingAlerts ?? await _userDataStore.loadNewEpisodeAlerts();
+    final priorAlerts = existingAlerts ??
+        await store?.loadNewEpisodeAlerts() ??
+        const <NewEpisodeAlert>[];
     final existingByEpisodeId = {
       for (final alert in priorAlerts) alert.episodeId: alert,
     };
@@ -99,9 +103,9 @@ class NewEpisodeChecker {
       (a, b) => compareContinueWatchingAlerts(a, b, lastActivity),
     );
 
-    if (persistAlerts) {
-      await _userDataStore.saveNewEpisodeAlerts(allAlerts);
-      await _userDataStore.saveLastEpisodeCheckAt(now);
+    if (persistAlerts && store != null) {
+      await store.saveNewEpisodeAlerts(allAlerts);
+      await store.saveLastEpisodeCheckAt(now);
     }
 
     return NewEpisodeCheckResult(

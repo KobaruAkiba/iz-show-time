@@ -566,6 +566,7 @@ class AppServices {
       themeModeListenable.value = ThemeMode.system;
     }
 
+    await importBackgroundCheckResult();
     await _purgeTmdbCachesIfStale();
 
     tmdbService;
@@ -632,13 +633,28 @@ class AppServices {
     _watchDrivenAlertEpoch++;
   }
 
-  Future<void> reloadNewEpisodeAlertsFromStore() async {
+  /// Adopts the alerts left by the background check when they are newer than
+  /// the last check done by this isolate.
+  Future<void> importBackgroundCheckResult() async {
     try {
-      final alerts = await userDataStore.loadNewEpisodeAlerts();
-      updateNewEpisodeAlerts(alerts);
+      final store = userDataStore;
+      final result = await store.loadBackgroundCheckResult();
+      if (result == null) return;
+      final lastCheck = await store.loadLastEpisodeCheckAt();
+      if (lastCheck != null && !result.checkedAt.isAfter(lastCheck)) return;
+
+      // The background snapshot may predate an unfollow or a removal.
+      final followedIds = {for (final show in followedTvShows) show.id};
+      updateNewEpisodeAlerts([
+        for (final alert in result.alerts)
+          if (followedIds.contains(alert.showId)) alert,
+      ]);
+      await store.saveNewEpisodeAlerts(_newEpisodeAlerts);
+      await store.saveLastEpisodeCheckAt(result.checkedAt);
+      await _maybeFlush();
     } catch (error, stackTrace) {
       debugPrint(
-        'Failed to reload new episode alerts: $error\n$stackTrace',
+        'Failed to import background check result: $error\n$stackTrace',
       );
     }
   }

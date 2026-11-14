@@ -28,6 +28,7 @@ class NotificationService {
   Future<void> initialize({
     UserDataStore? userDataStore,
     GlobalKey<NavigatorState>? navigatorKey,
+    bool requestPermissions = true,
   }) async {
     if (_initialized) return;
 
@@ -52,6 +53,7 @@ class NotificationService {
 
     await _plugin.initialize(settings: initSettings);
     _initialized = true;
+    if (!requestPermissions) return;
     // Do not await permission prompts before/during early startup.
     unawaited(
       _requestPermissions(
