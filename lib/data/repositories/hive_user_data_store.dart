@@ -127,29 +127,79 @@ class HiveUserDataStore implements UserDataStore {
     final catalogue = _decodeBackupSection(data['catalogue']);
     final watchHistory = _decodeBackupSection(data['watchHistory']);
     final meta = _decodeBackupSection(data['meta']);
+    // Reject the file before touching current data.
+    _validateBackupEntries(catalogue, watchHistory);
 
+    final previous = (
+      catalogue: Map<dynamic, dynamic>.of(catalogueBox.toMap()),
+      watchHistory: Map<dynamic, dynamic>.of(watchHistoryBox.toMap()),
+      meta: Map<dynamic, dynamic>.of(metaBox.toMap()),
+    );
+
+    try {
+      await _replaceBoxContents(
+        catalogue: catalogue,
+        watchHistory: watchHistory,
+        meta: _filteredBackupMetaEntries(meta),
+      );
+      // Version 1 backups key the catalogue by bare TMDB id.
+      await _migrateCatalogueKeysV3();
+      await metaBox.put(
+        StorageConstants.schemaVersionKey,
+        StorageConstants.storageSchemaVersion,
+      );
+    } catch (_) {
+      await _replaceBoxContents(
+        catalogue: previous.catalogue,
+        watchHistory: previous.watchHistory,
+        meta: previous.meta,
+      );
+      await flush();
+      rethrow;
+    }
+
+    await _deleteBackgroundCheckResult();
+    await flush();
+  }
+
+  Future<void> _replaceBoxContents({
+    required Map<dynamic, dynamic> catalogue,
+    required Map<dynamic, dynamic> watchHistory,
+    required Map<dynamic, dynamic> meta,
+  }) async {
     await catalogueBox.clear();
     await watchHistoryBox.clear();
     await metaBox.clear();
-    await _deleteBackgroundCheckResult();
+    if (catalogue.isNotEmpty) await catalogueBox.putAll(catalogue);
+    if (watchHistory.isNotEmpty) await watchHistoryBox.putAll(watchHistory);
+    if (meta.isNotEmpty) await metaBox.putAll(meta);
+  }
 
-    if (catalogue.isNotEmpty) {
-      await catalogueBox.putAll(catalogue);
-      // Version 1 backups key the catalogue by bare TMDB id.
-      await _migrateCatalogueKeysV3();
+  /// Throws [FormatException] when any entry would be dropped on load.
+  void _validateBackupEntries(
+    Map<dynamic, dynamic> catalogue,
+    Map<dynamic, dynamic> watchHistory,
+  ) {
+    try {
+      for (final raw in catalogue.values) {
+        final json = _decodeStoredMap(raw);
+        if (json == null || catalogueItemFromStorageJson(json) == null) {
+          throw const FormatException('Invalid catalogue entry');
+        }
+      }
+      for (final raw in watchHistory.values) {
+        final json = _decodeStoredMap(raw);
+        if (json == null) {
+          throw const FormatException('Invalid watch history entry');
+        }
+        WatchRecord.fromJson(json);
+      }
+    } on FormatException {
+      rethrow;
+    } catch (_) {
+      // Type errors from the model factories: wrong field types.
+      throw const FormatException('Invalid backup entry');
     }
-    if (watchHistory.isNotEmpty) {
-      await watchHistoryBox.putAll(watchHistory);
-    }
-    if (meta.isNotEmpty) {
-      await metaBox.putAll(_filteredBackupMetaEntries(meta));
-    }
-
-    await metaBox.put(
-      StorageConstants.schemaVersionKey,
-      StorageConstants.storageSchemaVersion,
-    );
-    await flush();
   }
 
   Future<void> _ensureSchema() async {

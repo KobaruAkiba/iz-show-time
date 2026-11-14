@@ -341,6 +341,43 @@ void main() {
       expect(await store.loadBackgroundCheckResult(), isNull);
     });
 
+    test('rejects a backup with unreadable entries and keeps current data',
+        () async {
+      await store.saveCatalogueItem(const Film(id: 5, title: 'Kept Film'));
+      await store.saveThemeMode('dark');
+
+      Future<void> importWith({
+        required Map<String, dynamic> catalogue,
+        required Map<String, dynamic> watchHistory,
+      }) {
+        return store.importBackupData({
+          'format': 'iz_show_time_backup',
+          'version': 2,
+          'catalogue': catalogue,
+          'watchHistory': watchHistory,
+          'meta': <String, dynamic>{},
+        });
+      }
+
+      await expectLater(
+        importWith(
+          catalogue: {'m_1': jsonEncode({'type': 'person', 'id': 1})},
+          watchHistory: {},
+        ),
+        throwsFormatException,
+      );
+      await expectLater(
+        importWith(
+          catalogue: {},
+          watchHistory: {'film_1': jsonEncode({'media_id': 'not a number'})},
+        ),
+        throwsFormatException,
+      );
+
+      expect((await store.loadCatalogue()).single.title, 'Kept Film');
+      expect(await store.loadThemeMode(), 'dark');
+    });
+
     test('imports a version 1 backup keyed by bare id', () async {
       await store.importBackupData({
         'format': 'iz_show_time_backup',
