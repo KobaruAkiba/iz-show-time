@@ -1,9 +1,11 @@
 import '../../data/models/catalogue_item.dart';
 import '../../data/models/episode_model.dart';
 import '../../data/models/new_episode_alert.dart';
+import '../../data/models/tv_show_summary.dart';
 import '../../data/models/watch_record.dart';
 import '../../data/repositories/user_data_store.dart';
 import '../../data/services/tmdb_service.dart';
+import '../constants/app_constants.dart';
 import '../network/api_error.dart';
 import '../utils/catalogue_activity.dart';
 import 'episode_signature.dart';
@@ -62,30 +64,41 @@ class NewEpisodeChecker {
     final priorByShowId = {
       for (final alert in priorAlerts) alert.showId: alert,
     };
-    final newlyDetected = <NewEpisodeAlert>[];
-    final checkedAlerts = <NewEpisodeAlert>[];
     final now = DateTime.now();
 
-    for (final show in shows) {
+    Future<NewEpisodeAlert?> checkShow(TvShow show) async {
       try {
-        final nextAlert = await _findImmediateNextAlert(
+        return await _findImmediateNextAlert(
           show: show,
           watchHistory: watchHistory,
           checkedAt: now,
           forceRefresh: forceRefresh,
           priorAlert: priorByShowId[show.id],
         );
-        if (nextAlert == null) continue;
-
-        checkedAlerts.add(nextAlert);
-        if (!existingByEpisodeId.containsKey(nextAlert.episodeId)) {
-          newlyDetected.add(nextAlert);
-        }
       } on ApiException {
         // Skip this show on network/API failure; other shows still process.
-        continue;
+        return null;
       }
     }
+
+    // Bounded parallelism; results keep the order of [shows].
+    final nextAlerts = <NewEpisodeAlert?>[];
+    const concurrency = AppConstants.episodeCheckConcurrency;
+    for (var start = 0; start < shows.length; start += concurrency) {
+      final end = (start + concurrency).clamp(0, shows.length);
+      nextAlerts.addAll(
+        await Future.wait([
+          for (var index = start; index < end; index++)
+            checkShow(shows[index]),
+        ]),
+      );
+    }
+
+    final checkedAlerts = nextAlerts.whereType<NewEpisodeAlert>().toList();
+    final newlyDetected = [
+      for (final alert in checkedAlerts)
+        if (!existingByEpisodeId.containsKey(alert.episodeId)) alert,
+    ];
 
     final List<NewEpisodeAlert> allAlerts;
     if (mergeWithExisting) {
@@ -126,11 +139,17 @@ class NewEpisodeChecker {
 
     // Continue Watching is catch-up (next aired S/E), not "still airing" —
     // Ended/Canceled shows must still surface when a later season is available.
-    final details = await _tmdbService.getMediaDetails(show);
+    final details = await _tmdbService.getTvShowSummary(
+      show.id,
+      forceRefresh: forceRefresh,
+    );
     // If details are missing, still probe at least the next season after progress.
     final seasonCount = details?.numberOfSeasons ??
         (lastRegistered.seasonNumber + 1);
     if (seasonCount <= 0) return null;
+    if (_isCaughtUp(details, lastRegistered, seasonCount, checkedAt)) {
+      return null;
+    }
 
     final next = await _findImmediateNextEpisode(
       tvId: show.id,
@@ -172,6 +191,33 @@ class NewEpisodeChecker {
       runtimeMinutes: resolvedRuntime,
       detectedAt: checkedAt,
     );
+  }
+
+  /// True when TMDB already says nothing aired after [lastRegistered], so the
+  /// season requests can be skipped.
+  ///
+  /// Only decided inside the last season: a later season is always probed,
+  /// as its first episode may surface without an air date.
+  static bool _isCaughtUp(
+    TvShowSummary? summary,
+    EpisodeSignature lastRegistered,
+    int seasonCount,
+    DateTime now,
+  ) {
+    final lastAired = summary?.lastAiredEpisode;
+    // Specials (season 0) say nothing about regular-season progress.
+    if (summary == null || lastAired == null || lastAired.seasonNumber < 1) {
+      return false;
+    }
+    if (lastRegistered.seasonNumber < seasonCount) return false;
+    if (compareEpisodeSignatures(lastAired, lastRegistered) > 0) return false;
+
+    final nextRaw = summary.nextEpisodeAirDate;
+    if (nextRaw == null) return true;
+    final nextDate = EpisodeModel.parseAirDate(nextRaw);
+    if (nextDate == null) return false;
+    // An episode airing today may not be in `last_episode_to_air` yet.
+    return EpisodeModel.isAirDateUpcoming(nextDate, now: now);
   }
 
   /// Prefers a non-empty TMDB path; treats blank strings as missing.

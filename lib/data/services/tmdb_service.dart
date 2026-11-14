@@ -8,6 +8,7 @@ import '../models/catalogue_item.dart';
 import '../models/episode_model.dart';
 import '../models/media_details.dart';
 import '../models/season_model.dart';
+import '../models/tv_show_summary.dart';
 
 /// Unified TMDB API service with caching and JSON parsing
 class TmdbService {
@@ -47,6 +48,22 @@ class TmdbService {
     );
     if (data == null) return null;
     return MediaDetails.fromTmdbJson(data, isFilm: isFilm);
+  }
+
+  /// Base `tv/{id}` payload without appended sections.
+  ///
+  /// Much smaller than [getMediaDetails]; used by the new-episode check.
+  Future<TvShowSummary?> getTvShowSummary(
+    int tvId, {
+    bool forceRefresh = false,
+  }) async {
+    final data = await _fetchSingle(
+      'tv/$tvId',
+      ttlMinutes: AppConstants.episodeCacheTTL,
+      bypassCache: forceRefresh,
+    );
+    if (data == null) return null;
+    return TvShowSummary.fromTmdbJson(data);
   }
 
   /// Searches TMDB multi endpoint. Pass [page] to fetch subsequent pages.

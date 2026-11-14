@@ -6,6 +6,7 @@ import 'package:iz_show_time_tracker/data/models/catalogue_item.dart';
 import 'package:iz_show_time_tracker/data/models/episode_model.dart';
 import 'package:iz_show_time_tracker/data/models/media_details.dart';
 import 'package:iz_show_time_tracker/data/models/new_episode_alert.dart';
+import 'package:iz_show_time_tracker/data/models/tv_show_summary.dart';
 import 'package:iz_show_time_tracker/data/models/watch_record.dart';
 import 'package:iz_show_time_tracker/data/repositories/background_check_outbox.dart';
 import 'package:iz_show_time_tracker/data/repositories/user_data_store.dart';
@@ -226,6 +227,14 @@ class StubTmdbService extends TmdbService {
 
   final int seasonCount;
   final Map<int, List<EpisodeModel>> episodesBySeason;
+
+  @override
+  Future<TvShowSummary?> getTvShowSummary(
+    int tvId, {
+    bool forceRefresh = false,
+  }) async {
+    return TvShowSummary(numberOfSeasons: seasonCount);
+  }
 
   @override
   Future<MediaDetails?> getMediaDetails(CatalogueItem item) async {
