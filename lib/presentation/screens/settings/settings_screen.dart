@@ -450,9 +450,13 @@ class SettingsScreen extends StatelessWidget {
     await tempFile.writeAsBytes(bytes, flush: true);
 
     try {
-      final result = await Share.shareXFiles(
-        [XFile(tempFile.path, mimeType: 'application/json', name: fileName)],
-        text: l10n.settingsBackupShareSubtitle,
+      final result = await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile(tempFile.path, mimeType: 'application/json', name: fileName),
+          ],
+          text: l10n.settingsBackupShareSubtitle,
+        ),
       );
       return result.status == ShareResultStatus.success;
     } finally {
