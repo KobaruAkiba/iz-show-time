@@ -10,39 +10,45 @@ import 'network_feedback.dart';
 
 export 'api_error.dart';
 
-/// API Result wrapper for consistent error handling
-class ApiResult<T> {
-  final bool isSuccess;
-  final T? data;
+/// Outcome of an HTTP call: either [ApiSuccess] or [ApiFailure].
+///
+/// Sealed so callers switch over both cases; a success carries no error.
+sealed class ApiResult<T> {
+  const ApiResult();
+
+  const factory ApiResult.success(T data) = ApiSuccess<T>;
+
+  factory ApiResult.error(ApiErrorType type, {String? message}) =>
+      ApiFailure<T>(type, message ?? apiErrorMessage(type));
+
+  bool get isSuccess => this is ApiSuccess<T>;
+
+  T? get data => switch (this) {
+        ApiSuccess<T>(:final data) => data,
+        ApiFailure<T>() => null,
+      };
+
+  ApiErrorType? get error => switch (this) {
+        ApiSuccess<T>() => null,
+        ApiFailure<T>(:final error) => error,
+      };
+}
+
+final class ApiSuccess<T> extends ApiResult<T> {
+  const ApiSuccess(this.data);
+
+  @override
+  final T data;
+}
+
+final class ApiFailure<T> extends ApiResult<T> {
+  const ApiFailure(this.error, this.message);
+
+  @override
   final ApiErrorType error;
+
+  /// Technical detail for logs; UI copy comes from [apiErrorMessage].
   final String message;
-
-  ApiResult({
-    required this.isSuccess,
-    this.data,
-    required this.error,
-    required this.message,
-  });
-
-  factory ApiResult.success(T data) => ApiResult(
-        isSuccess: true,
-        data: data,
-        error: ApiErrorType.networkError,
-        message: 'Success',
-      );
-
-  factory ApiResult.error(ApiErrorType type, {String? message}) => ApiResult(
-        isSuccess: false,
-        data: null,
-        error: type,
-        message: message ?? apiErrorMessage(type),
-      );
-
-  /// Throws [ApiException] when this result is not a success.
-  T getOrThrow() {
-    if (isSuccess && data != null) return data as T;
-    throw ApiException(error, message);
-  }
 }
 
 /// Main HTTP client for TMDB API
@@ -146,9 +152,27 @@ class DioClient {
     ));
   }
 
+  /// Waits between retries of timeouts and connection errors.
+  @visibleForTesting
+  static List<Duration> connectionRetryDelays =
+      AppConstants.connectionRetryDelays;
+
+  static bool _isTransient(DioException e) {
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+      case DioExceptionType.connectionError:
+        return true;
+      default:
+        return false;
+    }
+  }
+
   Future<ApiResult<T>> get<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
+    CancelToken? cancelToken,
   }) async {
     var reportedSlow = false;
     final slowTimer = Timer(AppConstants.slowConnectionThreshold, () {
@@ -158,12 +182,14 @@ class DioClient {
 
     try {
       var rateLimitAttempts = 0;
+      var connectionAttempts = 0;
       while (true) {
         try {
           final response = await _dio.get<dynamic>(
             path,
             queryParameters: queryParameters,
             options: Options(),
+            cancelToken: cancelToken,
           );
 
           if (response.statusCode == 200) {
@@ -183,6 +209,18 @@ class DioClient {
                 'HTTP ${response.statusCode}: ${response.data ?? 'no body'}',
           );
         } on DioException catch (e) {
+          if (e.type == DioExceptionType.cancel) {
+            return ApiResult.error(ApiErrorType.cancelled);
+          }
+          // A brief drop (tunnel, network switch) should not surface as an
+          // error: retry a couple of times first.
+          if (_isTransient(e) &&
+              connectionAttempts < connectionRetryDelays.length) {
+            await Future<void>.delayed(
+              connectionRetryDelays[connectionAttempts++],
+            );
+            continue;
+          }
           if (e.response?.statusCode == 429) {
             rateLimitAttempts++;
             if (rateLimitAttempts > AppConstants.tmdbMaxRateLimitRetries) {

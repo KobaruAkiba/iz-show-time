@@ -15,6 +15,13 @@ class AppConstants {
   /// cut short by the OS keeps what the completed blocks found.
   static const int episodeCheckBlockSize = 8;
 
+  /// Waits before retrying a request that timed out or could not connect.
+  /// Short, so going offline is still reported within a couple of seconds.
+  static const List<Duration> connectionRetryDelays = [
+    Duration(milliseconds: 400),
+    Duration(milliseconds: 1200),
+  ];
+
   /// Retries after the first HTTP 429 before returning [ApiErrorType.rateLimit].
   static const int tmdbMaxRateLimitRetries = 5;
 

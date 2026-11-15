@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart' show CancelToken;
+
 import '../../core/network/dio_client.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/api_constants.dart';
@@ -77,6 +79,7 @@ class TmdbService {
       })> searchMulti({
     required String query,
     int page = 1,
+    CancelToken? cancelToken,
   }) async {
     if (query.trim().isEmpty) {
       return (
@@ -94,6 +97,7 @@ class TmdbService {
         'page': '$safePage',
       },
       ttlMinutes: AppConstants.searchCacheTTL,
+      cancelToken: cancelToken,
     );
 
     return (
@@ -292,6 +296,7 @@ class TmdbService {
     int? ttlMinutes,
     String resultsKey = 'results',
     bool bypassCache = false,
+    CancelToken? cancelToken,
   }) async {
     final params = _baseParams(extraParams);
     final cacheKey = _buildCacheKey(path, params);
@@ -330,19 +335,13 @@ class TmdbService {
       }
 
       try {
-        final result = await DioClient.instance.get<Map<String, dynamic>>(
-          path,
-          queryParameters: params,
+        final payload = _unwrap(
+          await DioClient.instance.get<Map<String, dynamic>>(
+            path,
+            queryParameters: params,
+            cancelToken: cancelToken,
+          ),
         );
-
-        if (!result.isSuccess || result.data == null) {
-          throw ApiException(
-            result.error,
-            apiErrorMessage(result.error),
-          );
-        }
-
-        final payload = result.data!;
         final rawResults = payload[resultsKey] as List<dynamic>? ?? [];
         final list = rawResults.whereType<Map<String, dynamic>>().toList();
         final page = (payload['page'] as num?)?.toInt() ?? 1;
@@ -396,25 +395,20 @@ class TmdbService {
       }
 
       try {
-        final result = await DioClient.instance.get<Map<String, dynamic>>(
-          path,
-          queryParameters: params,
+        final data = _unwrap(
+          await DioClient.instance.get<Map<String, dynamic>>(
+            path,
+            queryParameters: params,
+          ),
         );
-
-        if (!result.isSuccess || result.data == null) {
-          throw ApiException(
-            result.error,
-            apiErrorMessage(result.error),
-          );
-        }
 
         _cache.put(
           cacheKey,
-          result.data,
+          data,
           ttlMinutes: ttlMinutes ?? AppConstants.defaultCacheTTLMinutes,
         );
 
-        return result.data;
+        return data;
       } on ApiException {
         rethrow;
       } catch (e, stackTrace) {
@@ -427,6 +421,15 @@ class TmdbService {
         );
       }
     });
+  }
+
+  /// Payload of a successful call; failures become [ApiException].
+  Map<String, dynamic> _unwrap(ApiResult<Map<String, dynamic>> result) {
+    return switch (result) {
+      ApiSuccess(:final data) => data,
+      ApiFailure(:final error) =>
+        throw ApiException(error, apiErrorMessage(error)),
+    };
   }
 
   Future<T> _dedupe<T>(String key, Future<T> Function() fetch) async {

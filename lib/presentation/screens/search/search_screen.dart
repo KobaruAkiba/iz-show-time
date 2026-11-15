@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart' show CancelToken;
 import 'package:flutter/material.dart';
 import '../../widgets/media_card.dart';
 import '../../widgets/media_detail_sheet.dart';
@@ -35,6 +36,8 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   late TextEditingController _controller;
   Timer? _debounceTimer;
+  CancelToken? _searchCancel;
+  String? _searchCancelQuery;
   bool _hasSearched = false;
   bool _isLoading = false;
   bool _isLoadingMore = false;
@@ -69,8 +72,23 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
+  /// Token for the query in flight. A new query cancels the previous
+  /// request; repeating the same one keeps it, so the request is shared.
+  CancelToken _searchTokenFor(String query) {
+    final current = _searchCancel;
+    if (current != null &&
+        !current.isCancelled &&
+        _searchCancelQuery == query) {
+      return current;
+    }
+    current?.cancel();
+    _searchCancelQuery = query;
+    return _searchCancel = CancelToken();
+  }
+
   @override
   void dispose() {
+    _searchCancel?.cancel();
     _debounceTimer?.cancel();
     _controller.dispose();
     super.dispose();
@@ -115,6 +133,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _resetToIdle({required bool clearController}) {
+    _searchCancel?.cancel();
     setState(() {
       _hasSearched = false;
       _isLoading = false;
@@ -168,12 +187,14 @@ class _SearchScreenState extends State<SearchScreen> {
       _resetResultBuffers();
     });
 
+    final cancelToken = _searchTokenFor(trimmedQuery);
     try {
       _appendUnique(_appServices.searchLocal(trimmedQuery));
 
       final remoteResults = await _appServices.tmdbService.searchMulti(
         query: trimmedQuery,
         page: 1,
+        cancelToken: cancelToken,
       );
 
       if (!mounted || _lastQuery != trimmedQuery) return;
@@ -186,6 +207,7 @@ class _SearchScreenState extends State<SearchScreen> {
         _isLoading = false;
       });
     } on ApiException catch (e) {
+      if (e.type == ApiErrorType.cancelled) return;
       if (!mounted || _lastQuery != trimmedQuery) return;
       setState(() {
         _isLoading = false;
@@ -214,6 +236,7 @@ class _SearchScreenState extends State<SearchScreen> {
       final remoteResults = await _appServices.tmdbService.searchMulti(
         query: query,
         page: nextPage,
+        cancelToken: _searchTokenFor(query),
       );
 
       if (!mounted || _lastQuery != query) return;
@@ -226,6 +249,7 @@ class _SearchScreenState extends State<SearchScreen> {
         _isLoadingMore = false;
       });
     } on ApiException catch (e) {
+      if (e.type == ApiErrorType.cancelled) return;
       if (!mounted || _lastQuery != query) return;
       setState(() => _isLoadingMore = false);
       NetworkFeedback.showError(e.type, message: e.message);

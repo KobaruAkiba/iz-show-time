@@ -74,7 +74,7 @@ abstract final class NetworkFeedback {
     String? message,
     VoidCallback? onRetry,
   }) {
-    if (isSilent) return;
+    if (isSilent || type == ApiErrorType.cancelled) return;
 
     final messenger = messengerKey.currentState;
     if (messenger == null) return;

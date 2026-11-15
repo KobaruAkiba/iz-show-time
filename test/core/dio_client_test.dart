@@ -39,6 +39,12 @@ ResponseBody _json(Object? body, {int status = 200, String? retryAfter}) {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  // No waiting between connection retries in tests.
+  setUp(() => DioClient.connectionRetryDelays = const [
+        Duration.zero,
+        Duration.zero,
+      ]);
+
   _ScriptedAdapter script(List<ResponseBody Function()> responses) {
     final adapter = _ScriptedAdapter(responses);
     DioClient.httpClientAdapter = adapter;
@@ -89,18 +95,43 @@ void main() {
       expect(result.error, ApiErrorType.invalidResponse);
     });
 
-    test('reports a failed connection as a network error', () async {
-      script([
-        () => throw DioException.connectionError(
-              requestOptions: RequestOptions(path: 'tv/1'),
-              reason: 'offline',
-            ),
-      ]);
+    Never offline() => throw DioException.connectionError(
+          requestOptions: RequestOptions(path: 'tv/1'),
+          reason: 'offline',
+        );
+
+    test('retries a failed connection before reporting a network error',
+        () async {
+      final adapter = script([offline, offline, offline]);
 
       final result = await get();
 
       expect(result.isSuccess, isFalse);
       expect(result.error, ApiErrorType.networkError);
+      expect(adapter.requestCount, 3);
+    });
+
+    test('recovers when a retry gets through', () async {
+      final adapter = script([offline, () => _json({'id': 1})]);
+
+      final result = await get();
+
+      expect(result.data, {'id': 1});
+      expect(adapter.requestCount, 2);
+    });
+
+    test('reports a cancelled request as cancelled, without retrying',
+        () async {
+      final adapter = script([() => _json({'id': 1})]);
+      final cancelToken = CancelToken()..cancel();
+
+      final result = await DioClient.instance.get<Map<String, dynamic>>(
+        'tv/1',
+        cancelToken: cancelToken,
+      );
+
+      expect(result.error, ApiErrorType.cancelled);
+      expect(adapter.requestCount, 0);
     });
   });
 }
