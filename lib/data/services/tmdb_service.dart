@@ -432,7 +432,7 @@ class TmdbService {
   Future<T> _dedupe<T>(String key, Future<T> Function() fetch) async {
     final existing = _inflight[key];
     if (existing != null) {
-      return await existing;
+      return await existing as T;
     }
 
     // Share the fetch future itself: a separate completer would raise an

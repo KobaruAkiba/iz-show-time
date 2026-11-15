@@ -160,7 +160,7 @@ class DioClient {
       var rateLimitAttempts = 0;
       while (true) {
         try {
-          final response = await _dio.get(
+          final response = await _dio.get<dynamic>(
             path,
             queryParameters: queryParameters,
             options: Options(),
@@ -188,7 +188,7 @@ class DioClient {
             if (rateLimitAttempts > AppConstants.tmdbMaxRateLimitRetries) {
               return ApiResult.error(ApiErrorType.rateLimit);
             }
-            await Future.delayed(
+            await Future<void>.delayed(
               _rateLimitDelay(
                 attempt: rateLimitAttempts,
                 headers: e.response?.headers.map,

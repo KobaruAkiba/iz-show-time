@@ -194,7 +194,7 @@ void main() {
               },
             ],
           },
-          'similar': {'results': []},
+          'similar': {'results': <dynamic>[]},
           'alternative_titles': {
             'results': [
               {'title': 'Il Trono di Spade'},
@@ -202,7 +202,7 @@ void main() {
           },
           'reviews': {
             'total_results': 5,
-            'results': [],
+            'results': <dynamic>[],
           },
           'episode_groups': {
             'results': [

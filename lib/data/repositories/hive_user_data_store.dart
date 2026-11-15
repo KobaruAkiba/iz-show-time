@@ -53,13 +53,13 @@ class HiveUserDataStore implements UserDataStore {
   /// Read-only instances never migrate, never recover and never write.
   final bool _readOnly;
 
-  Box? _catalogueBox;
-  Box? _watchHistoryBox;
-  Box? _metaBox;
+  Box<dynamic>? _catalogueBox;
+  Box<dynamic>? _watchHistoryBox;
+  Box<dynamic>? _metaBox;
 
-  Box get catalogueBox => _catalogueBox!;
-  Box get watchHistoryBox => _watchHistoryBox!;
-  Box get metaBox => _metaBox!;
+  Box<dynamic> get catalogueBox => _catalogueBox!;
+  Box<dynamic> get watchHistoryBox => _watchHistoryBox!;
+  Box<dynamic> get metaBox => _metaBox!;
 
   @override
   Future<void> open() async {
@@ -73,8 +73,8 @@ class HiveUserDataStore implements UserDataStore {
   }
 
   // Crash recovery truncates the file: only the owning isolate may do it.
-  Future<Box> _openBox(String name) =>
-      Hive.openBox(name, crashRecovery: !_readOnly);
+  Future<Box<dynamic>> _openBox(String name) =>
+      Hive.openBox<dynamic>(name, crashRecovery: !_readOnly);
 
   /// Reads user data from an isolate that does not own the boxes.
   ///
@@ -628,7 +628,7 @@ class HiveUserDataStore implements UserDataStore {
   }
 
   Future<void> _putEncodedMap(
-    Box box,
+    Box<dynamic> box,
     Object key,
     Map<String, dynamic> json,
   ) async {

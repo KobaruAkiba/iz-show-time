@@ -26,11 +26,11 @@ class BackgroundCheckOutbox {
   static const String _notifiedEpisodeIdsKey = 'notified_episode_ids';
   static const String _resumeAfterShowIdKey = 'resume_after_show_id';
 
-  final Box _box;
+  final Box<dynamic> _box;
 
   /// Background isolate only.
   static Future<BackgroundCheckOutbox> openForWriting() async {
-    return BackgroundCheckOutbox._(await Hive.openBox(boxName));
+    return BackgroundCheckOutbox._(await Hive.openBox<dynamic>(boxName));
   }
 
   /// Episode ids already notified, or null when never stored here.
@@ -79,7 +79,7 @@ class BackgroundCheckOutbox {
   static Future<BackgroundCheckResult?> read() async {
     if (!await Hive.boxExists(boxName)) return null;
     // No crash recovery: it would truncate a file this isolate does not own.
-    final box = await Hive.openBox(boxName, crashRecovery: false);
+    final box = await Hive.openBox<dynamic>(boxName, crashRecovery: false);
     try {
       return _parseResult(box);
     } finally {
@@ -87,7 +87,7 @@ class BackgroundCheckOutbox {
     }
   }
 
-  static BackgroundCheckResult? _parseResult(Box box) {
+  static BackgroundCheckResult? _parseResult(Box<dynamic> box) {
     final rawAlerts = box.get(_alertsKey);
     final rawCheckedAt = box.get(_checkedAtKey);
     if (rawAlerts is! String || rawCheckedAt is! String) return null;

@@ -1356,11 +1356,11 @@ void main() {
           );
       store.lastTmdbCachePurgeAt = stale;
       appServices.cacheManager.put('tmdb:stale', {'ok': true}, ttlMinutes: 60);
-      expect(appServices.cacheManager.get<Map>('tmdb:stale'), isNotNull);
+      expect(appServices.cacheManager.get<Map<String, dynamic>>('tmdb:stale'), isNotNull);
 
       await appServices.initialize(userDataStore: store);
 
-      expect(appServices.cacheManager.get<Map>('tmdb:stale'), isNull);
+      expect(appServices.cacheManager.get<Map<String, dynamic>>('tmdb:stale'), isNull);
       expect(store.lastTmdbCachePurgeAt!.isAfter(stale), isTrue);
       expect(appServices.catalogue, isEmpty);
     });
@@ -1372,7 +1372,7 @@ void main() {
 
       await appServices.initialize(userDataStore: store);
 
-      expect(appServices.cacheManager.get<Map>('tmdb:fresh'), isNotNull);
+      expect(appServices.cacheManager.get<Map<String, dynamic>>('tmdb:fresh'), isNotNull);
       expect(store.lastTmdbCachePurgeAt, recent);
     });
 

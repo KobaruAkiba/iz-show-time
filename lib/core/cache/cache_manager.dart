@@ -50,7 +50,7 @@ class CacheManager {
     return null;
   }
 
-  void put<T>(String key, dynamic value, {int ttlMinutes = 60}) {
+  void put(String key, Object? value, {int ttlMinutes = 60}) {
     final expiresAt = ttlMinutes <= 0
         ? DateTime.now().subtract(const Duration(seconds: 1))
         : DateTime.now().add(Duration(minutes: ttlMinutes));
