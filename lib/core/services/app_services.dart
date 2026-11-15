@@ -12,6 +12,7 @@ import '../network/network_feedback.dart';
 import '../notifications/new_episode_checker.dart';
 import '../theme/app_theme.dart';
 import '../utils/catalogue_activity.dart';
+import 'catalogue_index.dart';
 import 'watch_history_index.dart';
 import '../../data/repositories/hive_user_data_store.dart';
 import '../../data/repositories/user_data_store.dart';
@@ -56,9 +57,7 @@ class AppServices {
   /// Set at startup so this class does not depend on the image plugin.
   Future<void> Function()? imageDiskCachePurge;
 
-  final List<CatalogueItem> _catalogue = [];
-  /// Indexed by [CatalogueItemExtension.mediaKey]: film and TV ids overlap.
-  final Map<String, CatalogueItem> _catalogueByKey = {};
+  final CatalogueIndex _catalogue = CatalogueIndex();
   final WatchHistoryIndex _history = WatchHistoryIndex();
   final List<NewEpisodeAlert> _newEpisodeAlerts = [];
   final ValueNotifier<List<NewEpisodeAlert>> newEpisodeAlertsListenable =
@@ -81,7 +80,7 @@ class AppServices {
 
   ThemeMode get themeMode => themeModeListenable.value;
 
-  List<CatalogueItem> get catalogue => List.unmodifiable(_catalogue);
+  List<CatalogueItem> get catalogue => _catalogue.items;
   List<WatchRecord> get watchHistory => _history.records;
   List<NewEpisodeAlert> get newEpisodeAlerts =>
       List.unmodifiable(_newEpisodeAlerts);
@@ -92,30 +91,19 @@ class AppServices {
 
   int get episodesWatchedCount => _history.episodeCount;
 
-  List<Film> get films => _catalogue.whereType<Film>().toList(growable: false);
+  List<Film> get films => _catalogue.films;
 
-  List<TvShow> get tvShows =>
-      _catalogue.whereType<TvShow>().toList(growable: false);
+  List<TvShow> get tvShows => _catalogue.tvShows;
 
   /// TV shows marked as followed; only these feed New Episodes / notifications.
-  List<TvShow> get followedTvShows =>
-      tvShows.where((show) => show.isFollowed).toList(growable: false);
+  List<TvShow> get followedTvShows => _catalogue.followedTvShows;
 
-  bool isInCatalogue(CatalogueItem item) =>
-      _catalogueByKey.containsKey(item.mediaKey);
+  bool isInCatalogue(CatalogueItem item) => _catalogue.contains(item);
 
   bool isFavorite(CatalogueItem item) =>
-      _catalogueByKey[item.mediaKey]?.isFavorite ?? false;
+      _catalogue.find(item)?.isFavorite ?? false;
 
-  bool isFollowed(int id) => _tvShowById(id)?.isFollowed ?? false;
-
-  TvShow? _tvShowById(int id) {
-    final item = _catalogueByKey[mediaKeyOf(isFilm: false, id: id)];
-    return item is TvShow ? item : null;
-  }
-
-  int _tvShowIndex(int id) =>
-      _catalogue.indexWhere((item) => item is TvShow && item.id == id);
+  bool isFollowed(int id) => _catalogue.tvShowById(id)?.isFollowed ?? false;
 
   Future<void> addToCatalogue(CatalogueItem item) async {
     if (isInCatalogue(item)) return;
@@ -126,7 +114,6 @@ class AppServices {
       localItem = localItem.withFollowed(true);
     }
     _catalogue.add(localItem);
-    _catalogueByKey[localItem.mediaKey] = localItem;
     await _persistCatalogueItem(localItem);
     if (localItem is TvShow) {
       unawaited(syncTvShowAiringState(localItem.id));
@@ -139,11 +126,8 @@ class AppServices {
     String? status,
     String? nextEpisodeAirDate,
   }) async {
-    final index = _tvShowIndex(id);
-    if (index < 0) return;
-
-    final item = _catalogue[index];
-    if (item is! TvShow) return;
+    final item = _catalogue.tvShowById(id);
+    if (item == null) return;
 
     final nextStatus = _nonEmptyTrimmed(status);
     final nextDate = _nonEmptyTrimmed(nextEpisodeAirDate);
@@ -157,8 +141,7 @@ class AppServices {
       clearStatus: nextStatus == null,
       clearNextEpisodeAirDate: nextDate == null,
     );
-    _catalogue[index] = updated;
-    _catalogueByKey[updated.mediaKey] = updated;
+    _catalogue.add(updated);
     await _persistCatalogueItem(updated);
   }
 
@@ -176,7 +159,7 @@ class AppServices {
   /// Refreshes TMDB status / next-episode date for one catalogue TV show.
   Future<void> syncTvShowAiringState(int id) async {
     await NetworkFeedback.runSilent(() async {
-      final item = _tvShowById(id);
+      final item = _catalogue.tvShowById(id);
       if (item == null) return;
       try {
         final details = await tmdbService.getMediaDetails(item);
@@ -213,9 +196,7 @@ class AppServices {
 
   Future<void> removeFromCatalogue(CatalogueItem item) async {
     await _withDeferredFlush(() async {
-      final key = item.mediaKey;
-      _catalogue.removeWhere((entry) => entry.mediaKey == key);
-      _catalogueByKey.remove(key);
+      _catalogue.remove(item);
       await _persistCatalogueRemoval(item);
       await _removeWatchHistoryForMedia(item);
       if (item.isTvShow) {
@@ -226,14 +207,11 @@ class AppServices {
 
   /// Toggles the favorite flag on a catalogue item. No-op if not in catalogue.
   Future<void> toggleFavorite(CatalogueItem item) async {
-    final key = item.mediaKey;
-    final index = _catalogue.indexWhere((entry) => entry.mediaKey == key);
-    if (index < 0) return;
+    final current = _catalogue.find(item);
+    if (current == null) return;
 
-    final updated =
-        _catalogue[index].withFavorite(!_catalogue[index].isFavorite);
-    _catalogue[index] = updated;
-    _catalogueByKey[updated.mediaKey] = updated;
+    final updated = current.withFavorite(!current.isFavorite);
+    _catalogue.add(updated);
     await _persistCatalogueItem(updated);
   }
 
@@ -241,15 +219,11 @@ class AppServices {
   ///
   /// Unfollowing clears that show's New Episode alerts; following rechecks it.
   Future<void> toggleFollowed(int id) async {
-    final index = _tvShowIndex(id);
-    if (index < 0) return;
-
-    final item = _catalogue[index];
-    if (item is! TvShow) return;
+    final item = _catalogue.tvShowById(id);
+    if (item == null) return;
 
     final updated = item.withFollowed(!item.isFollowed) as TvShow;
-    _catalogue[index] = updated;
-    _catalogueByKey[updated.mediaKey] = updated;
+    _catalogue.add(updated);
     await _persistCatalogueItem(updated);
 
     if (updated.isFollowed) {
@@ -533,7 +507,7 @@ class AppServices {
     final items = <CatalogueItem>[];
     final seenKeys = <String>{};
 
-    for (final item in _catalogue) {
+    for (final item in _catalogue.items) {
       if (!item.title.toLowerCase().contains(normalizedQuery)) continue;
       if (!seenKeys.add(item.mediaKey)) continue;
       items.add(item);
@@ -554,10 +528,7 @@ class AppServices {
 
     final store = this.userDataStore;
     await store.open();
-    _catalogue
-      ..clear()
-      ..addAll(await store.loadCatalogue());
-    _rebuildCatalogueIndex();
+    _catalogue.replaceAll(await store.loadCatalogue());
     _history.replaceAll(await store.loadWatchHistory());
     _newEpisodeAlerts
       ..clear()
@@ -814,12 +785,6 @@ class AppServices {
     cacheManager.dispose();
   }
 
-  void _rebuildCatalogueIndex() {
-    _catalogueByKey
-      ..clear()
-      ..addEntries(_catalogue.map((item) => MapEntry(item.mediaKey, item)));
-  }
-
   Future<T> _withDeferredFlush<T>(Future<T> Function() action) async {
     _deferFlushDepth++;
     try {
@@ -919,7 +884,6 @@ class AppServices {
   Future<void> clearAllData() async {
     await clearCacheData();
     _catalogue.clear();
-    _catalogueByKey.clear();
     _history.clear();
     _newEpisodeAlerts.clear();
     newEpisodeAlertsListenable.value = const [];
