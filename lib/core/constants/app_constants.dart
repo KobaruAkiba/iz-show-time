@@ -1,8 +1,12 @@
 /// Application-wide constants for configuration
 class AppConstants {
   // API and Network settings
-  static const Duration connectionTimeout = Duration(seconds: 30);
-  static const Duration receiveTimeout = Duration(seconds: 30);
+  /// Covers DNS + TCP + TLS. Short enough that a stuck handshake is retried
+  /// quickly, long enough for slow mobile networks (EDGE, roaming).
+  static const Duration connectionTimeout = Duration(seconds: 10);
+  /// Max silence between response chunks, not a total duration: TMDB payloads
+  /// are a few KB, so 15s without data means the connection is dead.
+  static const Duration receiveTimeout = Duration(seconds: 15);
 
   /// After this delay while a request is still in flight, show slow-connection UI
   /// (banner / inline hint) so slow networks feel intentional rather than frozen.
