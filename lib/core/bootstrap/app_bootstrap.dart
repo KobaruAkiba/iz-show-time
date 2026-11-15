@@ -1,6 +1,6 @@
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter/widgets.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'package:hive_ce_flutter/hive_flutter.dart';
 
 import '../config/api_key_config.dart';
 import '../constants/api_constants.dart';

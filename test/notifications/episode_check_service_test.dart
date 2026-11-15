@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive/hive.dart';
+import 'package:hive_ce/hive.dart';
 import 'package:iz_show_time_tracker/core/notifications/episode_check_service.dart';
 import 'package:iz_show_time_tracker/data/models/catalogue_item.dart';
 import 'package:iz_show_time_tracker/data/models/episode_model.dart';
