@@ -5,12 +5,14 @@ import 'package:intl/intl.dart';
 import '../../widgets/auto_scrolling_page_carousel.dart';
 import '../../widgets/media_card.dart';
 import '../../widgets/media_detail_sheet.dart';
+import '../../widgets/skeleton.dart';
 import '../../widgets/app_network_image.dart';
 import '../../widgets/app_page_header.dart';
 import '../../widgets/connection_error_view.dart';
 import '../../widgets/connection_feedback.dart';
 import '../../widgets/lazy_paged_list_view.dart';
 import '../../../data/models/catalogue_item.dart';
+import '../../../data/models/episode_model.dart';
 import '../../../data/models/new_episode_alert.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/services/app_services.dart';
@@ -41,6 +43,9 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _detailSheetOpen = false;
   bool _parentScrolling = false;
   int _visibleNewEpisodes = AppConstants.listPageSize;
+
+  /// Episodes being registered from their tile; their button is disabled.
+  final Set<int> _markingEpisodeIds = {};
 
   final _appServices = AppServices();
   final _homeRefreshCooldown = RefreshCooldown(
@@ -173,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const AppPageHeader(),
             if (_isLoading)
               const Expanded(
-                child: ConnectionAwareLoading(),
+                child: ConnectionAwareLoading(placeholder: HomeSkeleton()),
               )
             else
               Expanded(
@@ -460,6 +465,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
+                IconButton(
+                  tooltip: context.l10n.addEpisodeToCatalogue,
+                  icon: const Icon(Icons.bookmark_add_outlined),
+                  onPressed: _markingEpisodeIds.contains(alert.episodeId)
+                      ? null
+                      : () => _markAlertWatched(alert),
+                ),
                 Icon(
                   Icons.chevron_right,
                   color: colorScheme.onSurface.withValues(alpha: 0.45),
@@ -470,6 +482,42 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  /// Registers the alert's episode without opening the show. The alert is
+  /// then replaced by the show's next episode, if any.
+  Future<void> _markAlertWatched(NewEpisodeAlert alert) async {
+    if (!_markingEpisodeIds.add(alert.episodeId)) return;
+    setState(() {});
+    final l10n = context.l10n;
+    try {
+      final show = _appServices.tvShows
+              .where((show) => show.id == alert.showId)
+              .firstOrNull ??
+          TvShow(
+            id: alert.showId,
+            title: alert.showTitle,
+            posterPath: alert.showPosterPath,
+          );
+      final record = await _appServices.markEpisodeWatched(
+        show: show,
+        episode: EpisodeModel(
+          id: alert.episodeId,
+          seasonNumber: alert.seasonNumber,
+          episodeNumber: alert.episodeNumber,
+          name: alert.episodeName,
+          runtimeMinutes: alert.runtimeMinutes,
+          airDate: alert.airDate,
+        ),
+      );
+      if (!mounted || record != null) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.episodeRuntimeNotAvailable)),
+      );
+    } finally {
+      _markingEpisodeIds.remove(alert.episodeId);
+      if (mounted) setState(() {});
+    }
   }
 
   Widget _posterFallback() {
