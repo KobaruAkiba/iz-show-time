@@ -346,6 +346,12 @@
       "count": {"type": "int"}
     }
   },
+  "settingsNotifications": "Notifications",
+  "settingsNotificationsTitle": "Episode alerts",
+  "settingsNotificationsOn": "On. You are alerted when a followed show airs a new episode.",
+  "settingsNotificationsOff": "Off. Tap to turn on.",
+  "settingsNotificationsBlockedTitle": "Notifications are blocked",
+  "settingsNotificationsBlockedBody": "Turn on notifications for IzShowTime in your device settings.",
   "notificationPermissionTitle": "Episode alerts",
   "notificationPermissionBody": "Optional — the app works without them. When on, IzShowTime alerts you when a new episode airs for a show you follow.",
   "notificationPermissionNotNow": "Not now",

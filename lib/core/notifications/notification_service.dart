@@ -63,6 +63,25 @@ class NotificationService {
     );
   }
 
+  /// Whether the OS currently lets the app post notifications.
+  Future<bool> areNotificationsEnabled() {
+    return _notificationsAlreadyEnabled(
+      android: _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>(),
+      ios: _plugin.resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin>(),
+      macOs: _plugin.resolvePlatformSpecificImplementation<
+          MacOSFlutterLocalNotificationsPlugin>(),
+    );
+  }
+
+  /// Shows the OS permission prompt (no in-app rationale) and returns the
+  /// resulting state. The OS may skip the prompt after an earlier denial.
+  Future<bool> requestPermission() async {
+    await _requestPermissions();
+    return areNotificationsEnabled();
+  }
+
   Future<void> _requestPermissions({
     UserDataStore? userDataStore,
     GlobalKey<NavigatorState>? navigatorKey,

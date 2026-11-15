@@ -1180,6 +1180,42 @@ abstract class AppLocalizations {
   /// **'{count} new episodes available. Check Continue Watching on Home.'**
   String notificationBodyOther(int count);
 
+  /// No description provided for @settingsNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get settingsNotifications;
+
+  /// No description provided for @settingsNotificationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Episode alerts'**
+  String get settingsNotificationsTitle;
+
+  /// No description provided for @settingsNotificationsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On. You are alerted when a followed show airs a new episode.'**
+  String get settingsNotificationsOn;
+
+  /// No description provided for @settingsNotificationsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off. Tap to turn on.'**
+  String get settingsNotificationsOff;
+
+  /// No description provided for @settingsNotificationsBlockedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are blocked'**
+  String get settingsNotificationsBlockedTitle;
+
+  /// No description provided for @settingsNotificationsBlockedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on notifications for IzShowTime in your device settings.'**
+  String get settingsNotificationsBlockedBody;
+
   /// No description provided for @notificationPermissionTitle.
   ///
   /// In en, this message translates to:

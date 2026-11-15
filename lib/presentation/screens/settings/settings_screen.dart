@@ -12,6 +12,7 @@ import '../../widgets/app_page_header.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/services/app_services.dart';
 import '../../../l10n/l10n.dart';
+import 'notifications_tile.dart';
 
 /// Settings screen with app preferences
 class SettingsScreen extends StatelessWidget {
@@ -37,6 +38,9 @@ class SettingsScreen extends StatelessWidget {
                 children: [
                   _buildSectionTitle(context, l10n.settingsAppearance),
                   _buildThemeSelector(context),
+                  const Divider(),
+                  _buildSectionTitle(context, l10n.settingsNotifications),
+                  const NotificationsTile(),
                   const Divider(),
                   _buildSectionTitle(context, l10n.settingsCredits),
                   _buildTmdbAttribution(context),

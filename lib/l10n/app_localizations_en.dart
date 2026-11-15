@@ -639,6 +639,26 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get settingsNotifications => 'Notifications';
+
+  @override
+  String get settingsNotificationsTitle => 'Episode alerts';
+
+  @override
+  String get settingsNotificationsOn =>
+      'On. You are alerted when a followed show airs a new episode.';
+
+  @override
+  String get settingsNotificationsOff => 'Off. Tap to turn on.';
+
+  @override
+  String get settingsNotificationsBlockedTitle => 'Notifications are blocked';
+
+  @override
+  String get settingsNotificationsBlockedBody =>
+      'Turn on notifications for IzShowTime in your device settings.';
+
+  @override
   String get notificationPermissionTitle => 'Episode alerts';
 
   @override
