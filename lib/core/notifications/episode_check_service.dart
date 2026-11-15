@@ -26,8 +26,8 @@ class EpisodeCheckService {
   EpisodeCheckService._();
 
   /// Native periodic task: refreshes alerts and raises a system notification
-  /// when the app is not in foreground. Eligible episodes aired today, were
-  /// not notified yet, and are not already in the catalogue.
+  /// when the app is not in foreground. Eligible episodes aired recently,
+  /// were not notified yet, and are not already in the catalogue.
   ///
   /// The UI isolate owns the user-data boxes: this only reads a snapshot of
   /// them and writes its result to [BackgroundCheckOutbox].

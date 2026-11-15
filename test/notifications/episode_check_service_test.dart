@@ -11,6 +11,11 @@ import 'package:iz_show_time_tracker/data/repositories/background_check_outbox.d
 import 'package:iz_show_time_tracker/data/repositories/hive_user_data_store.dart';
 import 'package:iz_show_time_tracker/data/services/tmdb_service.dart';
 
+final String _yesterday = DateTime.now()
+    .subtract(const Duration(days: 1))
+    .toIso8601String()
+    .substring(0, 10);
+
 /// Every show has two aired episodes; ids are `showId * 10 + episodeNumber`.
 /// Shows in [interruptedShowIds] throw a non-API error, like a killed run.
 class _TwoEpisodeStubTmdbService extends TmdbService {
@@ -43,7 +48,8 @@ class _TwoEpisodeStubTmdbService extends TmdbService {
           'season_number': 1,
           'episode_number': number,
           'name': 'E$number',
-          'air_date': '2020-01-0$number',
+          // Recent, so the alert is eligible for a system notification.
+          'air_date': _yesterday,
           'runtime': 40,
         }),
     ];

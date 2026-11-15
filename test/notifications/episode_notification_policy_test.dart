@@ -38,7 +38,7 @@ void main() {
       );
     }
 
-    test('includes catalogue-addable alerts that were not notified yet', () {
+    test('includes recently aired, addable alerts not notified yet', () {
       final now = DateTime(2026, 3, 15, 21);
       final eligible = alertsEligibleForSystemNotification(
         alerts: [
@@ -68,7 +68,28 @@ void main() {
         now: now,
       );
 
-      expect(eligible.map((a) => a.episodeId), [1, 2, 4]);
+      expect(eligible.map((a) => a.episodeId), [1, 2]);
+    });
+
+    test('excludes episodes aired more than a week ago', () {
+      final eligible = alertsEligibleForSystemNotification(
+        alerts: [
+          alert(
+            episodeId: 1,
+            airDate: DateTime(2026, 3, 8),
+            runtimeMinutes: 42,
+          ),
+          alert(
+            episodeId: 2,
+            airDate: DateTime(2026, 3, 7),
+            runtimeMinutes: 42,
+          ),
+        ],
+        alreadyNotifiedEpisodeIds: {},
+        now: DateTime(2026, 3, 15, 21),
+      );
+
+      expect(eligible.map((a) => a.episodeId), [1]);
     });
 
     test('excludes upcoming and missing-runtime alerts', () {

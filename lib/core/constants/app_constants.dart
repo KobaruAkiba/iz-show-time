@@ -36,6 +36,10 @@ class AppConstants {
   // Notification / background episode-check settings
   static const int notificationCheckIntervalHours = 2;
 
+  /// System notifications are raised only for episodes aired within this
+  /// many days; older ones stay in Continue Watching without notifying.
+  static const int notificationRecentAirDays = 7;
+
   /// First WorkManager run after registration (Android minimum ~15 minutes).
   static const int notificationCheckInitialDelayMinutes = 15;
 
