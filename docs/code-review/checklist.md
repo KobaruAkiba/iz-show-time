@@ -130,3 +130,17 @@ Sezione 3 del report, stesso ordine di priorità.
 - [ ] Modifiche d'interfaccia di M6, B8, B9, B10 e M11 non verificate a schermo.
 - [ ] Primo run del workflow CI su GitHub.
 - [ ] Primo run del workflow Android Release su GitHub.
+
+## Decisioni prese (2026-11-15)
+
+Scelte dello sviluppatore per sbloccare le voci aperte.
+
+- **M11**: cache immagini su disco con `cached_network_image`.
+- **B12**: versione letta dal pacchetto con `package_info_plus`.
+- **B7**: notifica di sistema solo per episodi usciti di recente (7 giorni); gli arretrati restano in Continue Watching senza notifica.
+- **B6**: voce "Notifiche" nelle Impostazioni che mostra lo stato e chiede il permesso.
+- **Miglioramento 2**: estrazione graduale di `AppServices` in tre classi (catalogo, cronologia, avvisi), con `AppServices` come facciata e API invariate.
+- **Miglioramento 3**: cache TMDB persistente in un box Hive dedicato, usata solo dall'isolate dell'interfaccia.
+- **Miglioramento 5**: `hive` → `hive_ce`; `flutter_lints` e `share_plus` all'ultima major; font Roboto nel bundle.
+- **Miglioramento 6**: "segna visto" rapido in Continue Watching; pulsanti disabilitati durante l'operazione; skeleton di caricamento; lingua e regione TMDB dal dispositivo.
+- **Miglioramento 8**: nessun servizio di crash reporting per ora.
