@@ -9,10 +9,9 @@ import '../background/background_task_runner.dart';
 import '../constants/storage_constants.dart';
 import '../network/api_error.dart';
 import '../network/network_feedback.dart';
-import '../notifications/new_episode_checker.dart';
 import '../theme/app_theme.dart';
-import '../utils/catalogue_activity.dart';
 import 'catalogue_index.dart';
+import 'episode_alerts_service.dart';
 import 'watch_history_index.dart';
 import '../../data/repositories/hive_user_data_store.dart';
 import '../../data/repositories/user_data_store.dart';
@@ -59,9 +58,16 @@ class AppServices {
 
   final CatalogueIndex _catalogue = CatalogueIndex();
   final WatchHistoryIndex _history = WatchHistoryIndex();
-  final List<NewEpisodeAlert> _newEpisodeAlerts = [];
-  final ValueNotifier<List<NewEpisodeAlert>> newEpisodeAlertsListenable =
-      ValueNotifier<List<NewEpisodeAlert>>([]);
+  late final EpisodeAlertsService _alerts = EpisodeAlertsService(
+    catalogue: _catalogue,
+    history: _history,
+    tmdbService: () => tmdbService,
+    userDataStore: () => userDataStore,
+    flushIfIdle: _maybeFlush,
+  );
+
+  ValueNotifier<List<NewEpisodeAlert>> get newEpisodeAlertsListenable =>
+      _alerts.listenable;
   final ValueNotifier<ThemeMode> themeModeListenable =
       ValueNotifier<ThemeMode>(ThemeMode.system);
 
@@ -73,17 +79,11 @@ class AppServices {
   static const Duration _airingStatesSyncInterval = Duration(minutes: 15);
   DateTime? _lastAiringStatesSyncAt;
 
-  /// Bumped when a watch-driven (per-show) Continue Watching refresh commits.
-  /// Full network scans started earlier discard their result if this changed
-  /// mid-flight, so they cannot restore a just-watched episode alert.
-  int _watchDrivenAlertEpoch = 0;
-
   ThemeMode get themeMode => themeModeListenable.value;
 
   List<CatalogueItem> get catalogue => _catalogue.items;
   List<WatchRecord> get watchHistory => _history.records;
-  List<NewEpisodeAlert> get newEpisodeAlerts =>
-      List.unmodifiable(_newEpisodeAlerts);
+  List<NewEpisodeAlert> get newEpisodeAlerts => _alerts.alerts;
 
   int get totalWatchTimeMinutes => _history.totalMinutes;
 
@@ -200,7 +200,7 @@ class AppServices {
       await _persistCatalogueRemoval(item);
       await _removeWatchHistoryForMedia(item);
       if (item.isTvShow) {
-        await _removeEpisodeDataForShow(item.id);
+        await _alerts.removeForShow(item.id);
       }
     });
   }
@@ -227,9 +227,9 @@ class AppServices {
     await _persistCatalogueItem(updated);
 
     if (updated.isFollowed) {
-      await _refreshNewEpisodeAlerts(forShowId: id);
+      await _alerts.refresh(forShowId: id);
     } else {
-      await _removeEpisodeDataForShow(id);
+      await _alerts.removeForShow(id);
     }
   }
 
@@ -359,7 +359,7 @@ class AppServices {
 
       toAdd.forEach(_history.add);
       await _persistWatchRecords(toAdd);
-      await _refreshNewEpisodeAlerts(forShowId: show.id);
+      await _alerts.refresh(forShowId: show.id);
       return toAdd.length;
     });
   }
@@ -389,7 +389,7 @@ class AppServices {
       await _persistWatchRecordRemovals(
         removedRecords.map((record) => record.watchKey),
       );
-      await _refreshNewEpisodeAlerts(forShowId: showId);
+      await _alerts.refresh(forShowId: showId);
       return removedRecords.length;
     });
   }
@@ -461,8 +461,8 @@ class AppServices {
       );
       _history.add(record);
       await _persistWatchRecords([record]);
-      _removeAlertForEpisode(episode.id);
-      await _refreshNewEpisodeAlerts(forShowId: show.id);
+      _alerts.removeForEpisode(episode.id);
+      await _alerts.refresh(forShowId: show.id);
       return record;
     });
   }
@@ -479,7 +479,7 @@ class AppServices {
       await _persistWatchRecordRemovals(
         removedRecords.map((record) => record.watchKey),
       );
-      await _refreshNewEpisodeAlerts(forShowId: showId);
+      await _alerts.refresh(forShowId: showId);
     });
   }
 
@@ -530,23 +530,7 @@ class AppServices {
     await store.open();
     _catalogue.replaceAll(await store.loadCatalogue());
     _history.replaceAll(await store.loadWatchHistory());
-    _newEpisodeAlerts
-      ..clear()
-      ..addAll(await store.loadNewEpisodeAlerts());
-    final alertCountBeforePrune = _newEpisodeAlerts.length;
-    _pruneAlertsToFollowedShows();
-    newEpisodeAlertsListenable.value = List<NewEpisodeAlert>.from(
-      _newEpisodeAlerts,
-    );
-    if (_newEpisodeAlerts.length != alertCountBeforePrune) {
-      try {
-        await store.saveNewEpisodeAlerts(_newEpisodeAlerts);
-      } catch (error, stackTrace) {
-        debugPrint(
-          'Failed to prune new episode alerts on init: $error\n$stackTrace',
-        );
-      }
-    }
+    await _alerts.loadFrom(store);
 
     try {
       themeModeListenable.value = AppTheme.themeModeFromStorage(
@@ -590,160 +574,17 @@ class AppServices {
     }
   }
 
-  void updateNewEpisodeAlerts(List<NewEpisodeAlert> alerts) {
-    final pruned = [
-      for (final alert in alerts)
-        if (!_history.isEpisodeWatched(alert.episodeId)) alert,
-    ];
-    _newEpisodeAlerts
-      ..clear()
-      ..addAll(pruned);
-    newEpisodeAlertsListenable.value = List<NewEpisodeAlert>.from(pruned);
-  }
-
-  Future<void> _persistNewEpisodeAlerts() async {
-    try {
-      await userDataStore.saveNewEpisodeAlerts(_newEpisodeAlerts);
-      await userDataStore.saveLastEpisodeCheckAt(DateTime.now());
-    } catch (error, stackTrace) {
-      debugPrint(
-        'Failed to persist new episode alerts: $error\n$stackTrace',
-      );
-    }
-  }
-
-  /// Drops any Continue Watching row for [episodeId] immediately so Home
-  /// cannot keep showing a just-catalogued episode while a refresh is in flight.
-  void _removeAlertForEpisode(int episodeId) {
-    final before = _newEpisodeAlerts.length;
-    _newEpisodeAlerts.removeWhere((alert) => alert.episodeId == episodeId);
-    if (_newEpisodeAlerts.length == before) return;
-    newEpisodeAlertsListenable.value = List<NewEpisodeAlert>.from(
-      _newEpisodeAlerts,
-    );
-    _watchDrivenAlertEpoch++;
-  }
+  void updateNewEpisodeAlerts(List<NewEpisodeAlert> alerts) =>
+      _alerts.update(alerts);
 
   /// Adopts the alerts left by the background check when they are newer than
   /// the last check done by this isolate.
-  Future<void> importBackgroundCheckResult() async {
-    try {
-      final store = userDataStore;
-      final result = await store.loadBackgroundCheckResult();
-      if (result == null) return;
-      final lastCheck = await store.loadLastEpisodeCheckAt();
-      if (lastCheck != null && !result.checkedAt.isAfter(lastCheck)) return;
-
-      // The background snapshot may predate an unfollow or a removal.
-      final followedIds = {for (final show in followedTvShows) show.id};
-      updateNewEpisodeAlerts([
-        for (final alert in result.alerts)
-          if (followedIds.contains(alert.showId)) alert,
-      ]);
-      await store.saveNewEpisodeAlerts(_newEpisodeAlerts);
-      await store.saveLastEpisodeCheckAt(result.checkedAt);
-      await _maybeFlush();
-    } catch (error, stackTrace) {
-      debugPrint(
-        'Failed to import background check result: $error\n$stackTrace',
-      );
-    }
-  }
-
-  /// Rebuilds New Episodes from current catalogue progress so the home
-  /// section immediately shows the next aired episode after a watch change.
-  ///
-  /// Only followed shows are considered. When [forShowId] is set, only that
-  /// show is rechecked and merged into existing alerts (avoids scanning the
-  /// whole catalogue on every toggle).
-  ///
-  /// A slow full network scan must not commit after a newer watch-driven
-  /// refresh: it may still hold a stale watch-history snapshot and would
-  /// put a just-catalogued episode back into Continue Watching.
-  Future<void> _refreshNewEpisodeAlerts({
-    int? forShowId,
-    bool forceRefresh = false,
-  }) async {
-    final watchEpochAtStart = _watchDrivenAlertEpoch;
-    final watchDriven = forShowId != null;
-    await NetworkFeedback.runSilent(() async {
-      try {
-        final shows = forShowId == null
-            ? followedTvShows
-            : followedTvShows
-                .where((show) => show.id == forShowId)
-                .toList(growable: false);
-        final historySnapshot = List<WatchRecord>.of(_history.records);
-
-        if (forShowId != null && shows.isEmpty) {
-          _newEpisodeAlerts.removeWhere((alert) => alert.showId == forShowId);
-          newEpisodeAlertsListenable.value = List<NewEpisodeAlert>.from(
-            _newEpisodeAlerts,
-          );
-          await _persistNewEpisodeAlerts();
-          _watchDrivenAlertEpoch++;
-          return;
-        }
-
-        final checker = NewEpisodeChecker(
-          tmdbService: tmdbService,
-          userDataStore: userDataStore,
-        );
-        final result = await checker.checkShows(
-          shows: shows,
-          watchHistory: historySnapshot,
-          forceRefresh: forceRefresh,
-          mergeWithExisting: forShowId != null,
-          existingAlerts: List<NewEpisodeAlert>.of(_newEpisodeAlerts),
-          persistAlerts: false,
-        );
-        final staleFullRefresh = !watchDriven &&
-            watchEpochAtStart != _watchDrivenAlertEpoch;
-        if (staleFullRefresh) return;
-        updateNewEpisodeAlerts(
-          forShowId == null
-              ? result.allAlerts
-              : _mergeShowAlerts(forShowId, result.allAlerts),
-        );
-        await _persistNewEpisodeAlerts();
-        if (watchDriven) {
-          _watchDrivenAlertEpoch++;
-        }
-      } catch (error, stackTrace) {
-        debugPrint(
-          'Failed to refresh new episode alerts: $error\n$stackTrace',
-        );
-      }
-    });
-  }
-
-  /// Current alerts with only [showId]'s entry replaced by [checked].
-  ///
-  /// [checked] is based on the alerts at check start: other shows' refreshes
-  /// may have committed since, so their entries in it are stale.
-  List<NewEpisodeAlert> _mergeShowAlerts(
-    int showId,
-    List<NewEpisodeAlert> checked,
-  ) {
-    final lastActivity = lastCatalogueActivityByMediaId(_history.records);
-    return [
-      ..._newEpisodeAlerts.where((alert) => alert.showId != showId),
-      ...checked.where((alert) => alert.showId == showId),
-    ]..sort((a, b) => compareContinueWatchingAlerts(a, b, lastActivity));
-  }
+  Future<void> importBackgroundCheckResult() =>
+      _alerts.importBackgroundCheckResult();
 
   /// Foreground network refresh of followed-show alerts (no system notify).
-  Future<void> refreshNewEpisodeAlertsFromNetwork() async {
-    await _refreshNewEpisodeAlerts(forceRefresh: true);
-  }
-
-  /// Drops persisted alerts for shows that are no longer followed.
-  void _pruneAlertsToFollowedShows() {
-    final followedIds = {for (final show in followedTvShows) show.id};
-    _newEpisodeAlerts.removeWhere(
-      (alert) => !followedIds.contains(alert.showId),
-    );
-  }
+  Future<void> refreshNewEpisodeAlertsFromNetwork() =>
+      _alerts.refresh(forceRefresh: true);
 
   Future<void> _removeWatchHistoryForMedia(CatalogueItem item) async {
     final key = item.mediaKey;
@@ -756,21 +597,6 @@ class AppServices {
     await _persistWatchRecordRemovals(
       removedRecords.map((record) => record.watchKey),
     );
-  }
-
-  Future<void> _removeEpisodeDataForShow(int showId) async {
-    _newEpisodeAlerts.removeWhere((alert) => alert.showId == showId);
-    newEpisodeAlertsListenable.value = List<NewEpisodeAlert>.from(
-      _newEpisodeAlerts,
-    );
-
-    try {
-      await userDataStore.saveNewEpisodeAlerts(_newEpisodeAlerts);
-    } catch (error, stackTrace) {
-      debugPrint(
-        'Failed to remove episode data for show $showId: $error\n$stackTrace',
-      );
-    }
   }
 
   Future<void> startBackgroundTasks() async {
@@ -885,9 +711,7 @@ class AppServices {
     await clearCacheData();
     _catalogue.clear();
     _history.clear();
-    _newEpisodeAlerts.clear();
-    newEpisodeAlertsListenable.value = const [];
-    _watchDrivenAlertEpoch = 0;
+    _alerts.clear();
     _lastAiringStatesSyncAt = null;
     await userDataStore.clearAll();
     // clearAll removes the purge stamp; re-record so the next launch is not forced.
