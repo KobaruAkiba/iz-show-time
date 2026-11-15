@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../widgets/auto_scrolling_page_carousel.dart';
 import '../../widgets/media_card.dart';
 import '../../widgets/media_detail_sheet.dart';
+import '../../widgets/app_network_image.dart';
 import '../../widgets/app_page_header.dart';
 import '../../widgets/connection_error_view.dart';
 import '../../widgets/connection_feedback.dart';
@@ -383,10 +384,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildNewEpisodeTile(NewEpisodeAlert alert) {
     final colorScheme = Theme.of(context).colorScheme;
-    final posterUrl = ApiConstants.posterUrl(alert.showPosterPath);
-    final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
-    final cacheWidth = (56 * devicePixelRatio).round();
-    final cacheHeight = (84 * devicePixelRatio).round();
+    final posterUrl = ApiConstants.posterUrl(
+      alert.showPosterPath,
+      size: ApiConstants.w342Image,
+    );
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -409,16 +410,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       Positioned.fill(
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(10),
-                          child: posterUrl.isNotEmpty
-                              ? Image.network(
-                                  posterUrl,
-                                  fit: BoxFit.cover,
-                                  cacheWidth: cacheWidth,
-                                  cacheHeight: cacheHeight,
-                                  errorBuilder: (_, __, ___) =>
-                                      _posterFallback(),
-                                )
-                              : _posterFallback(),
+                          child: AppNetworkImage(
+                            url: posterUrl,
+                            logicalWidth: 56,
+                            fallback: _posterFallback(),
+                          ),
                         ),
                       ),
                       if (alert.showsNewBadge)

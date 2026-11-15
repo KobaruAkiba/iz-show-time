@@ -44,6 +44,10 @@ class AppServices {
 
   final BackgroundTaskRunner backgroundTaskRunner = BackgroundTaskRunner();
 
+  /// Empties the on-disk image cache; part of the TMDB cache purge.
+  /// Set at startup so this class does not depend on the image plugin.
+  Future<void> Function()? imageDiskCachePurge;
+
   final List<CatalogueItem> _catalogue = [];
   /// Indexed by [CatalogueItemExtension.mediaKey]: film and TV ids overlap.
   final Map<String, CatalogueItem> _catalogueByKey = {};
@@ -949,6 +953,11 @@ class AppServices {
   Future<void> clearCacheData() async {
     cacheManager.clearAll();
     _clearFlutterImageCache();
+    try {
+      await imageDiskCachePurge?.call();
+    } catch (error, stackTrace) {
+      debugPrint('Failed to empty the image disk cache: $error\n$stackTrace');
+    }
     try {
       await userDataStore.saveLastTmdbCachePurgeAt(DateTime.now().toUtc());
       await _maybeFlush();

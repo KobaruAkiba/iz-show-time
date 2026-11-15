@@ -9,6 +9,7 @@ import '../../data/models/episode_model.dart';
 import '../../data/models/media_details.dart';
 import '../../data/models/season_model.dart';
 import '../../l10n/l10n.dart';
+import 'app_network_image.dart';
 import 'confirm_remove_from_catalogue.dart';
 
 /// Opens a bottom sheet with TMDB details for the tapped carousel item.
@@ -393,7 +394,6 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
       posterPath,
       size: ApiConstants.w342Image,
     );
-    final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
     final isFilm = widget.item is Film;
     final inCatalogue = _appServices.isInCatalogue(widget.item);
     final isFavorite = _appServices.isFavorite(widget.item);
@@ -442,15 +442,11 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                       child: SizedBox(
                         width: 100,
                         height: 150,
-                        child: posterUrl.isNotEmpty
-                            ? Image.network(
-                                posterUrl,
-                                fit: BoxFit.cover,
-                                cacheWidth: (100 * devicePixelRatio).round(),
-                                errorBuilder: (_, __, ___) =>
-                                    _posterFallback(context),
-                              )
-                            : _posterFallback(context),
+                        child: AppNetworkImage(
+                          url: posterUrl,
+                          logicalWidth: 100,
+                          fallback: _posterFallback(context),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -726,16 +722,11 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
             child: SizedBox(
               width: 88,
               height: 110,
-              child: profileUrl.isNotEmpty
-                  ? Image.network(
-                      profileUrl,
-                      fit: BoxFit.cover,
-                      cacheWidth:
-                          (88 * MediaQuery.devicePixelRatioOf(context)).round(),
-                      errorBuilder: (_, __, ___) =>
-                          _castAvatarFallback(context),
-                    )
-                  : _castAvatarFallback(context),
+              child: AppNetworkImage(
+                url: profileUrl,
+                logicalWidth: 88,
+                fallback: _castAvatarFallback(context),
+              ),
             ),
           ),
           const SizedBox(height: 8),

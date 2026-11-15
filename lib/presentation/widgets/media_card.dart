@@ -3,6 +3,7 @@ import '../../core/services/app_services.dart';
 import '../../data/models/catalogue_item.dart';
 import '../../core/constants/api_constants.dart';
 import '../../l10n/l10n.dart';
+import 'app_network_image.dart';
 
 /// Shared card widget for films and shows
 class MediaCard extends StatelessWidget {
@@ -50,8 +51,6 @@ class MediaCard extends StatelessWidget {
       item.posterPath,
       size: ApiConstants.w342Image,
     );
-    final posterCacheWidth =
-        (72 * MediaQuery.devicePixelRatioOf(context)).round();
     final badgeLabel = _posterBadgeLabel(l10n);
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -82,15 +81,11 @@ class MediaCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                       child: AspectRatio(
                         aspectRatio: 2 / 3,
-                        child: posterUrl.isNotEmpty
-                            ? Image.network(
-                                posterUrl,
-                                fit: BoxFit.cover,
-                                cacheWidth: posterCacheWidth,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    _placeholder(context),
-                              )
-                            : _placeholder(context),
+                        child: AppNetworkImage(
+                          url: posterUrl,
+                          logicalWidth: 72,
+                          fallback: _placeholder(context),
+                        ),
                       ),
                     ),
                     if (badgeLabel != null)
@@ -342,14 +337,7 @@ class MediaPosterCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                if (posterUrl.isNotEmpty)
-                  Image.network(
-                    posterUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _fallback(context),
-                  )
-                else
-                  _fallback(context),
+                AppNetworkImage(url: posterUrl, fallback: _fallback(context)),
                 Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(

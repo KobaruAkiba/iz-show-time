@@ -1,3 +1,4 @@
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter/widgets.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -13,7 +14,8 @@ class AppBootstrap {
   static Future<AppServices> initializeServices() async {
     await initializePlatform();
 
-    final appServices = AppServices();
+    final appServices = AppServices()
+      ..imageDiskCachePurge = DefaultCacheManager().emptyCache;
     await appServices.initialize();
     return appServices;
   }
