@@ -12,6 +12,7 @@ import '../network/network_feedback.dart';
 import '../notifications/new_episode_checker.dart';
 import '../theme/app_theme.dart';
 import '../utils/catalogue_activity.dart';
+import 'watch_history_index.dart';
 import '../../data/repositories/hive_user_data_store.dart';
 import '../../data/repositories/user_data_store.dart';
 import '../../data/services/tmdb_service.dart';
@@ -58,10 +59,7 @@ class AppServices {
   final List<CatalogueItem> _catalogue = [];
   /// Indexed by [CatalogueItemExtension.mediaKey]: film and TV ids overlap.
   final Map<String, CatalogueItem> _catalogueByKey = {};
-  final List<WatchRecord> _watchHistory = [];
-  final Set<int> _watchedEpisodeIds = {};
-  final Set<int> _watchedFilmIds = {};
-  final Map<int, int> _episodeCountByMediaId = {};
+  final WatchHistoryIndex _history = WatchHistoryIndex();
   final List<NewEpisodeAlert> _newEpisodeAlerts = [];
   final ValueNotifier<List<NewEpisodeAlert>> newEpisodeAlertsListenable =
       ValueNotifier<List<NewEpisodeAlert>>([]);
@@ -84,16 +82,15 @@ class AppServices {
   ThemeMode get themeMode => themeModeListenable.value;
 
   List<CatalogueItem> get catalogue => List.unmodifiable(_catalogue);
-  List<WatchRecord> get watchHistory => List.unmodifiable(_watchHistory);
+  List<WatchRecord> get watchHistory => _history.records;
   List<NewEpisodeAlert> get newEpisodeAlerts =>
       List.unmodifiable(_newEpisodeAlerts);
 
-  int get totalWatchTimeMinutes =>
-      _watchHistory.fold(0, (sum, record) => sum + record.durationMinutes);
+  int get totalWatchTimeMinutes => _history.totalMinutes;
 
-  int get filmsWatchedCount => _watchedFilmIds.length;
+  int get filmsWatchedCount => _history.filmCount;
 
-  int get episodesWatchedCount => _watchedEpisodeIds.length;
+  int get episodesWatchedCount => _history.episodeCount;
 
   List<Film> get films => _catalogue.whereType<Film>().toList(growable: false);
 
@@ -297,8 +294,7 @@ class AppServices {
     }
   }
 
-  int watchedEpisodesCountFor(int mediaId) =>
-      _episodeCountByMediaId[mediaId] ?? 0;
+  int watchedEpisodesCountFor(int mediaId) => _history.episodeCountFor(mediaId);
 
   /// Whether removing [episodeIds] would leave the show with no catalogued
   /// episodes. Bookmark-only shows (zero episodes) return `false`.
@@ -318,9 +314,8 @@ class AppServices {
     return removing >= total;
   }
 
-  List<WatchRecord> watchedEpisodesFor(int mediaId) => _watchHistory
-      .where((record) => !record.isFilm && record.mediaId == mediaId)
-      .toList(growable: false);
+  List<WatchRecord> watchedEpisodesFor(int mediaId) =>
+      _history.episodesFor(mediaId);
 
   /// Adds the series to the catalogue (if needed) and records the episode.
   Future<WatchRecord?> addEpisodeToCatalogue({
@@ -388,9 +383,7 @@ class AppServices {
         if (toAdd.isEmpty) return 0;
       }
 
-      for (final record in toAdd) {
-        _addWatchRecordInMemory(record);
-      }
+      toAdd.forEach(_history.add);
       await _persistWatchRecords(toAdd);
       await _refreshNewEpisodeAlerts(forShowId: show.id);
       return toAdd.length;
@@ -408,7 +401,7 @@ class AppServices {
       final episodeIds = {
         for (final episode in episodes) episode.id,
       };
-      final removedRecords = _watchHistory
+      final removedRecords = _history.records
           .where(
             (record) =>
                 record.episodeId != null &&
@@ -418,7 +411,7 @@ class AppServices {
       if (removedRecords.isEmpty) return 0;
 
       final showId = removedRecords.first.mediaId;
-      _removeWatchRecordsInMemory(removedRecords);
+      _history.removeAll(removedRecords);
       await _persistWatchRecordRemovals(
         removedRecords.map((record) => record.watchKey),
       );
@@ -427,12 +420,8 @@ class AppServices {
     });
   }
 
-  bool isWatched({required int mediaId, int? episodeId}) {
-    if (episodeId != null) {
-      return _watchedEpisodeIds.contains(episodeId);
-    }
-    return _watchedFilmIds.contains(mediaId);
-  }
+  bool isWatched({required int mediaId, int? episodeId}) =>
+      _history.isWatched(mediaId: mediaId, episodeId: episodeId);
 
   /// Adds the film to the catalogue (if needed) and records it as watched.
   /// Returns the new record, or null if already watched or duration is invalid.
@@ -455,7 +444,7 @@ class AppServices {
         durationMinutes: durationMinutes,
         watchedAt: DateTime.now(),
       );
-      _addWatchRecordInMemory(record);
+      _history.add(record);
       await _persistWatchRecords([record]);
       return record;
     });
@@ -496,7 +485,7 @@ class AppServices {
         durationMinutes: duration,
         watchedAt: DateTime.now(),
       );
-      _addWatchRecordInMemory(record);
+      _history.add(record);
       await _persistWatchRecords([record]);
       _removeAlertForEpisode(episode.id);
       await _refreshNewEpisodeAlerts(forShowId: show.id);
@@ -506,13 +495,13 @@ class AppServices {
 
   Future<void> unmarkEpisodeWatched(int episodeId) async {
     await _withDeferredFlush(() async {
-      final removedRecords = _watchHistory
+      final removedRecords = _history.records
           .where((record) => record.episodeId == episodeId)
           .toList(growable: false);
       if (removedRecords.isEmpty) return;
 
       final showId = removedRecords.first.mediaId;
-      _removeWatchRecordsInMemory(removedRecords);
+      _history.removeAll(removedRecords);
       await _persistWatchRecordRemovals(
         removedRecords.map((record) => record.watchKey),
       );
@@ -522,12 +511,12 @@ class AppServices {
 
   Future<void> unmarkFilmWatched(int mediaId) async {
     await _withDeferredFlush(() async {
-      final removedRecords = _watchHistory
+      final removedRecords = _history.records
           .where((record) => record.isFilm && record.mediaId == mediaId)
           .toList(growable: false);
       if (removedRecords.isEmpty) return;
 
-      _removeWatchRecordsInMemory(removedRecords);
+      _history.removeAll(removedRecords);
       await _persistWatchRecordRemovals(
         removedRecords.map((record) => record.watchKey),
       );
@@ -569,10 +558,7 @@ class AppServices {
       ..clear()
       ..addAll(await store.loadCatalogue());
     _rebuildCatalogueIndex();
-    _watchHistory
-      ..clear()
-      ..addAll(await store.loadWatchHistory());
-    _rebuildWatchIndexes();
+    _history.replaceAll(await store.loadWatchHistory());
     _newEpisodeAlerts
       ..clear()
       ..addAll(await store.loadNewEpisodeAlerts());
@@ -636,7 +622,7 @@ class AppServices {
   void updateNewEpisodeAlerts(List<NewEpisodeAlert> alerts) {
     final pruned = [
       for (final alert in alerts)
-        if (!_watchedEpisodeIds.contains(alert.episodeId)) alert,
+        if (!_history.isEpisodeWatched(alert.episodeId)) alert,
     ];
     _newEpisodeAlerts
       ..clear()
@@ -716,7 +702,7 @@ class AppServices {
             : followedTvShows
                 .where((show) => show.id == forShowId)
                 .toList(growable: false);
-        final historySnapshot = List<WatchRecord>.of(_watchHistory);
+        final historySnapshot = List<WatchRecord>.of(_history.records);
 
         if (forShowId != null && shows.isEmpty) {
           _newEpisodeAlerts.removeWhere((alert) => alert.showId == forShowId);
@@ -768,7 +754,7 @@ class AppServices {
     int showId,
     List<NewEpisodeAlert> checked,
   ) {
-    final lastActivity = lastCatalogueActivityByMediaId(_watchHistory);
+    final lastActivity = lastCatalogueActivityByMediaId(_history.records);
     return [
       ..._newEpisodeAlerts.where((alert) => alert.showId != showId),
       ...checked.where((alert) => alert.showId == showId),
@@ -790,12 +776,12 @@ class AppServices {
 
   Future<void> _removeWatchHistoryForMedia(CatalogueItem item) async {
     final key = item.mediaKey;
-    final removedRecords = _watchHistory
+    final removedRecords = _history.records
         .where((record) => record.mediaKey == key)
         .toList(growable: false);
     if (removedRecords.isEmpty) return;
 
-    _removeWatchRecordsInMemory(removedRecords);
+    _history.removeAll(removedRecords);
     await _persistWatchRecordRemovals(
       removedRecords.map((record) => record.watchKey),
     );
@@ -832,61 +818,6 @@ class AppServices {
     _catalogueByKey
       ..clear()
       ..addEntries(_catalogue.map((item) => MapEntry(item.mediaKey, item)));
-  }
-
-  void _rebuildWatchIndexes() {
-    _watchedEpisodeIds.clear();
-    _watchedFilmIds.clear();
-    _episodeCountByMediaId.clear();
-    for (final record in _watchHistory) {
-      _indexWatchRecord(record);
-    }
-  }
-
-  void _addWatchRecordInMemory(WatchRecord record) {
-    _watchHistory.add(record);
-    _indexWatchRecord(record);
-  }
-
-  void _removeWatchRecordsInMemory(List<WatchRecord> records) {
-    if (records.isEmpty) return;
-    final keys = {for (final record in records) record.watchKey};
-    _watchHistory.removeWhere((record) => keys.contains(record.watchKey));
-    for (final record in records) {
-      _unindexWatchRecord(record);
-    }
-  }
-
-  void _indexWatchRecord(WatchRecord record) {
-    if (record.isFilm) {
-      _watchedFilmIds.add(record.mediaId);
-      return;
-    }
-    final episodeId = record.episodeId;
-    if (episodeId == null) return;
-    if (_watchedEpisodeIds.add(episodeId)) {
-      _episodeCountByMediaId.update(
-        record.mediaId,
-        (count) => count + 1,
-        ifAbsent: () => 1,
-      );
-    }
-  }
-
-  void _unindexWatchRecord(WatchRecord record) {
-    if (record.isFilm) {
-      _watchedFilmIds.remove(record.mediaId);
-      return;
-    }
-    final episodeId = record.episodeId;
-    if (episodeId == null) return;
-    if (!_watchedEpisodeIds.remove(episodeId)) return;
-    final remaining = (_episodeCountByMediaId[record.mediaId] ?? 1) - 1;
-    if (remaining <= 0) {
-      _episodeCountByMediaId.remove(record.mediaId);
-    } else {
-      _episodeCountByMediaId[record.mediaId] = remaining;
-    }
   }
 
   Future<T> _withDeferredFlush<T>(Future<T> Function() action) async {
@@ -989,10 +920,7 @@ class AppServices {
     await clearCacheData();
     _catalogue.clear();
     _catalogueByKey.clear();
-    _watchHistory.clear();
-    _watchedEpisodeIds.clear();
-    _watchedFilmIds.clear();
-    _episodeCountByMediaId.clear();
+    _history.clear();
     _newEpisodeAlerts.clear();
     newEpisodeAlertsListenable.value = const [];
     _watchDrivenAlertEpoch = 0;
