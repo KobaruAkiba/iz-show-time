@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_file_dialog/flutter_file_dialog.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -18,7 +19,8 @@ import 'notifications_tile.dart';
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
-  static const _appVersion = '1.0.2';
+  // Read once: the version shown is the one of the installed package.
+  static final Future<PackageInfo> _packageInfo = PackageInfo.fromPlatform();
   static const _authorName = 'Mirko Corba';
   static const _tmdbLogoAsset = 'assets/images/TmdbLogo.png';
   static const _paypalLogoAsset = 'assets/images/PaypalLogo.png';
@@ -86,7 +88,11 @@ class SettingsScreen extends StatelessWidget {
                   ListTile(
                     leading: const Icon(Icons.info_outline),
                     title: Text(l10n.settingsVersion),
-                    subtitle: const Text(_appVersion),
+                    subtitle: FutureBuilder<PackageInfo>(
+                      future: _packageInfo,
+                      builder: (context, snapshot) =>
+                          Text(snapshot.data?.version ?? ''),
+                    ),
                   ),
                   ListTile(
                     leading: const Icon(Icons.person_outline),
