@@ -19,7 +19,7 @@ import 'notifications_tile.dart';
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
-  // Read once: the version shown is the one of the installed package.
+  // Static so the platform is queried once, not on every rebuild.
   static final Future<PackageInfo> _packageInfo = PackageInfo.fromPlatform();
   static const _authorName = 'Mirko Corba';
   static const _tmdbLogoAsset = 'assets/images/TmdbLogo.png';

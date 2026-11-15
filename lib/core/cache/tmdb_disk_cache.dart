@@ -69,7 +69,7 @@ class TmdbDiskCache {
     }
   }
 
-  /// Drops the entries closest to (or furthest past) expiry beyond the cap.
+  /// Keeps the [maxEntries] entries that expire last.
   Future<void> trim({int maxEntries = TmdbDiskCache.maxEntries}) async {
     try {
       if (_box.length <= maxEntries) return;

@@ -17,7 +17,7 @@ class SeasonSummary {
   /// TMDB numbers specials as season 0.
   bool get isSpecials => seasonNumber == 0;
 
-  /// Best guess without episodes: no episodes yet, or a future air date.
+  /// Judged from the show payload alone: no episodes, or a future air date.
   bool get isUpcoming {
     if (episodeCount <= 0) return true;
     final date = airDate;
