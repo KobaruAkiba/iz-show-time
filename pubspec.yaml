@@ -28,6 +28,9 @@ dependencies:
   # Workaround: 2.6.0 FFI/`objective_c` crashes on iOS device Release
   # (Hive.initFlutter → path_provider). Revert after Flutter fixes #186794.
   path_provider_foundation: 2.5.1
+  cached_network_image: ^4.0.3
+  package_info_plus: ^9.0.1
+  flutter_cache_manager: ^3.5.0
 
 dev_dependencies:
   flutter_test:
