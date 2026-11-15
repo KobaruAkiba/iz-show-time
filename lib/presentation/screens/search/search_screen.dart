@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../widgets/media_card.dart';
 import '../../widgets/media_detail_sheet.dart';
 import '../../widgets/media_filters.dart';
+import '../../widgets/skeleton.dart';
 import '../../widgets/app_page_header.dart';
 import '../../widgets/confirm_remove_from_catalogue.dart';
 import '../../widgets/connection_error_view.dart';
@@ -317,7 +318,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     if (_isLoading) {
-      return const ConnectionAwareLoading();
+      return const ConnectionAwareLoading(placeholder: MediaListSkeleton());
     }
 
     if (_errorMessage != null) {

@@ -11,6 +11,7 @@ import '../../data/models/season_model.dart';
 import '../../l10n/l10n.dart';
 import 'app_network_image.dart';
 import 'confirm_remove_from_catalogue.dart';
+import 'skeleton.dart';
 
 /// Opens a bottom sheet with TMDB details for the tapped carousel item.
 Future<void> showMediaDetailSheet(
@@ -429,10 +430,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
               ),
               const SizedBox(height: 20),
               if (_isLoading)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 48),
-                  child: Center(child: CircularProgressIndicator()),
-                )
+                const DetailSkeleton()
               else if (details != null) ...[
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
