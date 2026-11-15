@@ -1,4 +1,4 @@
-import '../../core/constants/api_constants.dart';
+import '../../core/config/tmdb_locale.dart';
 import '../../l10n/l10n.dart';
 import 'season_model.dart';
 
@@ -325,7 +325,7 @@ String? _parseCertification(
   Map<String, dynamic> json, {
   required bool isFilm,
 }) {
-  const preferred = ApiConstants.watchProviderRegion;
+  final preferred = TmdbLocale.region;
 
   if (isFilm) {
     final releaseDates = json['release_dates'] as Map<String, dynamic>?;
@@ -389,7 +389,7 @@ List<String> _parseWatchProviders(Map<String, dynamic> json) {
   final results = providers?['results'] as Map<String, dynamic>?;
   if (results == null || results.isEmpty) return const [];
 
-  final region = results[ApiConstants.watchProviderRegion] as Map<String, dynamic>? ??
+  final region = results[TmdbLocale.region] as Map<String, dynamic>? ??
       results.values.whereType<Map<String, dynamic>>().firstOrNull;
   if (region == null) return const [];
 

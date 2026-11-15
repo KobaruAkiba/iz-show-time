@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dio/dio.dart' show CancelToken;
 
 import '../../core/network/dio_client.dart';
+import '../../core/config/tmdb_locale.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/cache/cache_manager.dart';
@@ -468,7 +469,7 @@ class TmdbService {
 
   Map<String, String> _baseParams(Map<String, String>? extra) {
     return {
-      'language': 'en-US',
+      'language': TmdbLocale.language,
       ...?extra,
     };
   }

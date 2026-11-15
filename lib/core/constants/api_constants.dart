@@ -17,9 +17,6 @@ class ApiConstants {
     return '$imageBaseUrl$size$path';
   }
 
-  /// Region used when reading [watch/providers] from appended detail payloads.
-  static const String watchProviderRegion = 'US';
-
   /// Movie detail appends (excludes videos/images; poster/backdrop stay on base).
   static const String movieAppendToResponse =
       'credits,keywords,external_ids,release_dates,watch/providers,'
