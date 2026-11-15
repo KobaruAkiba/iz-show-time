@@ -154,6 +154,8 @@
   "removeSeasonFromCatalogue": "Remove season from catalogue",
   "addEpisodeToCatalogue": "Add episode to catalogue",
   "removeFromCatalogue": "Remove from catalogue",
+  "seasonSpecials": "Specials",
+  "seasonLoadFailed": "Could not load episodes. Tap to retry.",
   "seasonLabel": "Season {number}",
   "@seasonLabel": {
     "placeholders": {

@@ -646,6 +646,18 @@ abstract class AppLocalizations {
   /// **'Remove from catalogue'**
   String get removeFromCatalogue;
 
+  /// No description provided for @seasonSpecials.
+  ///
+  /// In en, this message translates to:
+  /// **'Specials'**
+  String get seasonSpecials;
+
+  /// No description provided for @seasonLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load episodes. Tap to retry.'**
+  String get seasonLoadFailed;
+
   /// No description provided for @seasonLabel.
   ///
   /// In en, this message translates to:

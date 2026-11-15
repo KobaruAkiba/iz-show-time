@@ -62,7 +62,8 @@ class MediaDetails {
   final double? voteAverage;
   final int? voteCount;
   final bool isFilm;
-  final List<SeasonModel> seasons;
+  /// TMDB `seasons[]`: real season numbers (gaps, specials) and counts.
+  final List<SeasonSummary> seasonSummaries;
   final List<String> genres;
   final List<String> networkNames;
   final String? lastAirDate;
@@ -96,7 +97,7 @@ class MediaDetails {
     this.voteAverage,
     this.voteCount,
     this.isFilm = true,
-    this.seasons = const [],
+    this.seasonSummaries = const [],
     this.genres = const [],
     this.networkNames = const [],
     this.lastAirDate,
@@ -178,6 +179,9 @@ class MediaDetails {
               (json['next_episode_to_air'] as Map<String, dynamic>?)
                   ?['air_date'],
             ),
+      seasonSummaries: isFilm
+          ? const []
+          : SeasonSummary.listFromTmdbJson(json['seasons']),
       cast: _parseCast(json, isFilm: isFilm),
       certification: _parseCertification(json, isFilm: isFilm),
       keywordNames: _parseKeywords(json, isFilm: isFilm),

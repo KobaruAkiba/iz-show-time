@@ -47,9 +47,16 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
 
   MediaDetails? _details;
   bool _isLoading = true;
-  List<SeasonModel> _seasons = [];
-  bool _isLoadingSeasons = false;
+  /// Seasons listed from the show payload; episodes load on expansion.
+  List<SeasonSummary> _seasonSummaries = const [];
+  final Map<int, SeasonModel> _loadedSeasons = {};
+  final Map<int, Future<SeasonModel?>> _seasonLoads = {};
+  final Set<int> _failedSeasons = {};
   final Set<int> _expandedSeasons = {};
+
+  /// True while a catalogue action runs: its buttons are disabled so a
+  /// second tap cannot start the same action twice.
+  bool _busy = false;
 
   @override
   void initState() {
@@ -80,8 +87,8 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
         if (!mounted) return;
       }
 
-      if (widget.item is TvShow && (_details?.numberOfSeasons ?? 0) > 0) {
-        await _loadSeasons();
+      if (widget.item is TvShow) {
+        setState(() => _seasonSummaries = _summariesFor(_details));
       }
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -110,30 +117,59 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     }
   }
 
-  Future<void> _loadSeasons() async {
-    setState(() => _isLoadingSeasons = true);
+  /// Season list from the payload, or 1..N when TMDB sent only the count.
+  List<SeasonSummary> _summariesFor(MediaDetails? details) {
+    if (details == null) return const [];
+    if (details.seasonSummaries.isNotEmpty) return details.seasonSummaries;
+    return [
+      for (var number = 1; number <= (details.numberOfSeasons ?? 0); number++)
+        // Count unknown: 1 keeps the season from reading as upcoming.
+        SeasonSummary(seasonNumber: number, episodeCount: 1),
+    ];
+  }
 
+  /// Loads one season's episodes once; null when the request failed.
+  Future<SeasonModel?> _ensureSeasonLoaded(int seasonNumber) {
+    final loaded = _loadedSeasons[seasonNumber];
+    if (loaded != null) return Future.value(loaded);
+    return _seasonLoads[seasonNumber] ??= _loadSeason(seasonNumber);
+  }
+
+  Future<SeasonModel?> _loadSeason(int seasonNumber) async {
+    setState(() => _failedSeasons.remove(seasonNumber));
     try {
-      final seasons = await _appServices.tmdbService.getTvSeasons(
-        tvId: widget.item.id,
-        numberOfSeasons: _details!.numberOfSeasons!,
-      );
-
-      if (!mounted) return;
-      setState(() {
-        _seasons = seasons;
-        _isLoadingSeasons = false;
-      });
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() => _isLoadingSeasons = false);
-      NetworkFeedback.showError(e.type, message: e.message);
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _isLoadingSeasons = false);
-      NetworkFeedback.showError(ApiErrorType.networkError);
+      final season = await _appServices.tmdbService.getSeason(
+            tvId: widget.item.id,
+            seasonNumber: seasonNumber,
+          ) ??
+          SeasonModel(seasonNumber: seasonNumber, episodes: const []);
+      if (mounted) setState(() => _loadedSeasons[seasonNumber] = season);
+      return season;
+    } catch (error) {
+      if (mounted) {
+        setState(() => _failedSeasons.add(seasonNumber));
+        NetworkFeedback.showErrorFrom(error);
+      }
+      return null;
+    } finally {
+      _seasonLoads.remove(seasonNumber);
+      if (mounted) setState(() {});
     }
   }
+
+  /// Runs a catalogue action with its buttons disabled.
+  Future<void> _runAction(Future<void> Function() action) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  VoidCallback? _guarded(Future<void> Function() action) =>
+      _busy ? null : () => _runAction(action);
 
   void _notifyWatchTimeChanged() {
     // Callers reach this after awaits: the sheet may be closed by then.
@@ -203,9 +239,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
   Future<void> _addEpisodeToCatalogue(EpisodeModel episode) async {
     final show = widget.item as TvShow;
     final l10n = context.l10n;
-    final season = _seasons
-        .where((s) => s.seasonNumber == episode.seasonNumber)
-        .firstOrNull;
+    final season = _loadedSeasons[episode.seasonNumber];
     final fallbackRuntime = _runtimeFallbackFor(episode, season: season);
     final isWatched =
         _appServices.isWatched(mediaId: show.id, episodeId: episode.id);
@@ -265,7 +299,9 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     _notifyWatchTimeChanged();
   }
 
-  Future<void> _toggleSeasonInCatalogue(SeasonModel season) async {
+  Future<void> _toggleSeasonInCatalogue(int seasonNumber) async {
+    final season = await _ensureSeasonLoaded(seasonNumber);
+    if (season == null || !mounted) return;
     if (season.episodes.isEmpty || season.isUpcoming) return;
 
     final show = widget.item as TvShow;
@@ -333,13 +369,18 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
   }
 
   void _toggleSeason(int seasonNumber) {
+    // Tapping a season that failed to load retries instead of collapsing.
+    final retry = _failedSeasons.contains(seasonNumber);
     setState(() {
-      if (_expandedSeasons.contains(seasonNumber)) {
+      if (_expandedSeasons.contains(seasonNumber) && !retry) {
         _expandedSeasons.remove(seasonNumber);
       } else {
         _expandedSeasons.add(seasonNumber);
       }
     });
+    if (_expandedSeasons.contains(seasonNumber)) {
+      _ensureSeasonLoaded(seasonNumber);
+    }
   }
 
   @override
@@ -515,7 +556,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton.icon(
-                      onPressed: _toggleFilmWatched,
+                      onPressed: _guarded(_toggleFilmWatched),
                       icon: Icon(
                         filmWatched
                             ? Icons.check_circle
@@ -618,7 +659,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
-        onPressed: _toggleFavorite,
+        onPressed: _guarded(_toggleFavorite),
         icon: Icon(
           isFavorite ? Icons.favorite : Icons.favorite_border,
         ),
@@ -634,7 +675,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
-        onPressed: _toggleFollowed,
+        onPressed: _guarded(_toggleFollowed),
         icon: Icon(
           isFollowed
               ? Icons.notifications_active
@@ -744,12 +785,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
       children: [
         _buildSectionLabel(l10n.episodes),
         const SizedBox(height: 8),
-        if (_isLoadingSeasons)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 24),
-            child: Center(child: CircularProgressIndicator()),
-          )
-        else if (_seasons.isEmpty)
+        if (_seasonSummaries.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
             child: Text(
@@ -760,51 +796,75 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
             ),
           )
         else
-          ..._seasons.map(_buildSeasonSection),
+          ..._seasonSummaries.map(_buildSeasonSection),
       ],
     );
   }
 
-  Widget _buildSeasonSection(SeasonModel season) {
+  Widget _buildSeasonSection(SeasonSummary summary) {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = context.l10n;
-    final isExpanded = _expandedSeasons.contains(season.seasonNumber);
-    final catalogueEpisodes = season.episodes
-        .where(
-          (episode) => episode.isCatalogueAddable(
-            fallbackRuntimeMinutes: _runtimeFallbackFor(
-              episode,
-              season: season,
+    final seasonNumber = summary.seasonNumber;
+    final season = _loadedSeasons[seasonNumber];
+    final isExpanded = _expandedSeasons.contains(seasonNumber);
+    final isLoading = _seasonLoads.containsKey(seasonNumber);
+    final loadFailed = _failedSeasons.contains(seasonNumber);
+
+    // Exact figures once the episodes are loaded; before that, the counts
+    // from the show payload and the local watch history.
+    final int watchedInSeason;
+    final int addableCount;
+    final int episodeCount;
+    final bool isUpcoming;
+    final DateTime? airDate;
+    if (season != null) {
+      final catalogueEpisodes = season.episodes
+          .where(
+            (episode) => episode.isCatalogueAddable(
+              fallbackRuntimeMinutes: _runtimeFallbackFor(
+                episode,
+                season: season,
+              ),
             ),
-          ),
-        )
-        .toList(growable: false);
-    final watchedInSeason = catalogueEpisodes
-        .where(
-          (episode) => _appServices.isWatched(
-            mediaId: widget.item.id,
-            episodeId: episode.id,
-          ),
-        )
-        .length;
-    final allInCatalogue = catalogueEpisodes.isNotEmpty &&
-        watchedInSeason == catalogueEpisodes.length;
-    final partialInCatalogue =
-        watchedInSeason > 0 && watchedInSeason < catalogueEpisodes.length;
-    final canAddSeason = catalogueEpisodes.isNotEmpty && !season.isUpcoming;
+          )
+          .toList(growable: false);
+      watchedInSeason = catalogueEpisodes
+          .where(
+            (episode) => _appServices.isWatched(
+              mediaId: widget.item.id,
+              episodeId: episode.id,
+            ),
+          )
+          .length;
+      addableCount = catalogueEpisodes.length;
+      episodeCount = season.episodes.length;
+      isUpcoming = season.isUpcoming;
+      airDate = season.airDate;
+    } else {
+      watchedInSeason = _appServices
+          .watchedEpisodesFor(widget.item.id)
+          .where((record) => record.seasonNumber == seasonNumber)
+          .length;
+      addableCount = summary.episodeCount;
+      episodeCount = summary.episodeCount;
+      isUpcoming = summary.isUpcoming;
+      airDate = summary.airDate;
+    }
+    final allInCatalogue = addableCount > 0 && watchedInSeason >= addableCount;
+    final partialInCatalogue = watchedInSeason > 0 && !allInCatalogue;
+    final canAddSeason = addableCount > 0 && !isUpcoming;
 
     final String subtitle;
-    if (season.isUpcoming) {
-      subtitle = season.airDate != null
-          ? l10n.upcomingWithDate(_formatShortAirDate(season.airDate!))
+    if (loadFailed) {
+      subtitle = l10n.seasonLoadFailed;
+    } else if (isUpcoming) {
+      subtitle = airDate != null
+          ? l10n.upcomingWithDate(_formatShortAirDate(airDate))
           : l10n.upcoming;
     } else if (watchedInSeason > 0) {
-      subtitle = l10n.seasonProgressInCatalogue(
-        watchedInSeason,
-        catalogueEpisodes.length,
-      );
+      subtitle = l10n.seasonProgressInCatalogue(watchedInSeason, addableCount);
     } else {
-      subtitle = l10n.episodeCountLabel(season.episodes.length);
+      subtitle = l10n.episodeCountLabel(episodeCount);
     }
 
     return Card(
@@ -814,16 +874,18 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
       child: Column(
         children: [
           ListTile(
-            onTap: () => _toggleSeason(season.seasonNumber),
+            onTap: () => _toggleSeason(seasonNumber),
             title: Row(
               children: [
                 Flexible(
                   child: Text(
-                    season.label,
+                    summary.isSpecials
+                        ? l10n.seasonSpecials
+                        : l10n.seasonLabel(seasonNumber),
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
-                if (season.isUpcoming) ...[
+                if (isUpcoming) ...[
                   const SizedBox(width: 8),
                   const _StatusBadge.upcoming(),
                 ],
@@ -848,7 +910,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                         : null,
                   ),
                   onPressed: canAddSeason
-                      ? () => _toggleSeasonInCatalogue(season)
+                      ? _guarded(() => _toggleSeasonInCatalogue(seasonNumber))
                       : null,
                 ),
                 Icon(
@@ -857,9 +919,14 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
               ],
             ),
           ),
-          if (isExpanded)
+          if (isExpanded && season != null)
             ...season.episodes.map(
               (episode) => _buildEpisodeTile(episode, season: season),
+            )
+          else if (isExpanded && isLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(child: CircularProgressIndicator()),
             ),
         ],
       ),
@@ -949,7 +1016,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
             ),
             onPressed: addDisabled
                 ? null
-                : () => _addEpisodeToCatalogue(episode),
+                : _guarded(() => _addEpisodeToCatalogue(episode)),
           ),
         ],
       ),

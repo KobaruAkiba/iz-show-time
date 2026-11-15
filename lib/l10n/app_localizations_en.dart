@@ -307,6 +307,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get removeFromCatalogue => 'Remove from catalogue';
 
   @override
+  String get seasonSpecials => 'Specials';
+
+  @override
+  String get seasonLoadFailed => 'Could not load episodes. Tap to retry.';
+
+  @override
   String seasonLabel(int number) {
     return 'Season $number';
   }

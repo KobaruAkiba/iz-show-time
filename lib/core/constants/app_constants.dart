@@ -8,9 +8,6 @@ class AppConstants {
   /// (banner / inline hint) so slow networks feel intentional rather than frozen.
   static const Duration slowConnectionThreshold = Duration(seconds: 4);
 
-  /// Max in-flight season fetches for a single TV show (avoids TMDb 429 bursts).
-  static const int tvSeasonsFetchConcurrency = 6;
-
   /// Max shows checked in parallel by the new-episode check.
   static const int episodeCheckConcurrency = 4;
 

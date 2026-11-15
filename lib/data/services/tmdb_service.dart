@@ -264,47 +264,6 @@ class TmdbService {
     return SeasonModel.fromTmdbSeasonJson(data);
   }
 
-  Future<List<SeasonModel>> getTvSeasons({
-    required int tvId,
-    required int numberOfSeasons,
-  }) async {
-    if (numberOfSeasons <= 0) return const [];
-
-    final seasons = <SeasonModel?>[];
-    const concurrency = AppConstants.tvSeasonsFetchConcurrency;
-    ApiException? lastError;
-    var failures = 0;
-
-    // One missing season (e.g. a 404 in a gapped numbering) must not blank
-    // the whole list: it becomes an empty placeholder below.
-    Future<SeasonModel?> loadSeason(int seasonNumber) async {
-      try {
-        return await getSeason(tvId: tvId, seasonNumber: seasonNumber);
-      } on ApiException catch (error) {
-        lastError = error;
-        failures++;
-        return null;
-      }
-    }
-
-    for (var start = 0; start < numberOfSeasons; start += concurrency) {
-      final end = (start + concurrency).clamp(0, numberOfSeasons);
-      final chunk = await Future.wait([
-        for (var index = start; index < end; index++) loadSeason(index + 1),
-      ]);
-      seasons.addAll(chunk);
-    }
-
-    final error = lastError;
-    if (error != null && failures == numberOfSeasons) throw error;
-
-    return [
-      for (var i = 0; i < seasons.length; i++)
-        seasons[i] ??
-            SeasonModel(seasonNumber: i + 1, episodes: const []),
-    ];
-  }
-
   Future<List<Map<String, dynamic>>> _fetchResults(
     String path, {
     Map<String, String>? extraParams,
