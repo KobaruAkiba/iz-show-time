@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../cache/cache_manager.dart';
+import '../cache/tmdb_disk_cache.dart';
 import '../background/background_task_runner.dart';
 import '../constants/storage_constants.dart';
 import '../network/api_error.dart';
@@ -36,8 +37,14 @@ class AppServices {
 
   final CacheManager cacheManager = CacheManager();
   TmdbService? _tmdbService;
-  TmdbService get tmdbService =>
-      _tmdbService ??= TmdbService(cacheManager: cacheManager);
+  TmdbService get tmdbService => _tmdbService ??= TmdbService(
+        cacheManager: cacheManager,
+        diskCache: tmdbDiskCache,
+      );
+
+  /// Persistent TMDB cache; set at startup, before [tmdbService] is first
+  /// used. Left null in the background isolate and in tests.
+  TmdbDiskCache? tmdbDiskCache;
 
   @visibleForTesting
   set tmdbService(TmdbService service) => _tmdbService = service;
@@ -954,9 +961,10 @@ class AppServices {
     cacheManager.clearAll();
     _clearFlutterImageCache();
     try {
+      await tmdbDiskCache?.clear();
       await imageDiskCachePurge?.call();
     } catch (error, stackTrace) {
-      debugPrint('Failed to empty the image disk cache: $error\n$stackTrace');
+      debugPrint('Failed to empty the disk caches: $error\n$stackTrace');
     }
     try {
       await userDataStore.saveLastTmdbCachePurgeAt(DateTime.now().toUtc());

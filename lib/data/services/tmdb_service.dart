@@ -6,6 +6,7 @@ import '../../core/network/dio_client.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/cache/cache_manager.dart';
+import '../../core/cache/tmdb_disk_cache.dart';
 import '../models/catalogue_item.dart';
 import '../models/episode_model.dart';
 import '../models/media_details.dart';
@@ -14,10 +15,15 @@ import '../models/tv_show_summary.dart';
 
 /// Unified TMDB API service with caching and JSON parsing
 class TmdbService {
-  TmdbService({CacheManager? cacheManager})
-      : _cache = cacheManager ?? CacheManager();
+  TmdbService({CacheManager? cacheManager, TmdbDiskCache? diskCache})
+      : _cache = cacheManager ?? CacheManager(),
+        _diskCache = diskCache;
 
   final CacheManager _cache;
+
+  /// Persistent copy of detail and season payloads; null in the background
+  /// isolate and in tests.
+  final TmdbDiskCache? _diskCache;
   final Map<String, Future<dynamic>> _inflight = {};
 
   Future<List<CatalogueItem>> getTrendingAll({
@@ -394,6 +400,17 @@ class TmdbService {
         if (cachedAfterWait != null) return cachedAfterWait;
       }
 
+      final ttl = ttlMinutes ?? AppConstants.defaultCacheTTLMinutes;
+      final onDisk = await _diskCache?.read(cacheKey);
+      if (onDisk != null && !onDisk.isExpired && !bypassCache) {
+        _cache.put(
+          cacheKey,
+          onDisk.value,
+          ttlMinutes: onDisk.expiresAt.difference(DateTime.now()).inMinutes + 1,
+        );
+        return onDisk.value;
+      }
+
       try {
         final data = _unwrap(
           await DioClient.instance.get<Map<String, dynamic>>(
@@ -402,14 +419,13 @@ class TmdbService {
           ),
         );
 
-        _cache.put(
-          cacheKey,
-          data,
-          ttlMinutes: ttlMinutes ?? AppConstants.defaultCacheTTLMinutes,
-        );
+        _cache.put(cacheKey, data, ttlMinutes: ttl);
+        unawaited(_diskCache?.write(cacheKey, data, ttlMinutes: ttl));
 
         return data;
-      } on ApiException {
+      } on ApiException catch (error) {
+        // Offline: an outdated copy is better than no data at all.
+        if (onDisk != null && error.isConnectionIssue) return onDisk.value;
         rethrow;
       } catch (e, stackTrace) {
         Error.throwWithStackTrace(
