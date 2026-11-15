@@ -15,7 +15,6 @@ dependencies:
     sdk: flutter
   intl: any
   cupertino_icons: ^1.0.2
-  google_fonts: ^6.1.0
   dio: ^5.4.0
   flutter_local_notifications: ^22.3.0
   workmanager: ^0.10.9
@@ -73,3 +72,13 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+
+  # Bundled so the app never downloads typefaces at runtime.
+  fonts:
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Roboto-Regular.ttf
+        - asset: assets/fonts/Roboto-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Roboto-Bold.ttf
+          weight: 700
