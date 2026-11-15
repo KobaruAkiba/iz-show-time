@@ -695,8 +695,11 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
   }
 
   Widget _buildCastCarousel(List<MediaCastMember> cast) {
+    // 120 for photo and spacing, the rest for up to four lines of text:
+    // that part grows with the system text size instead of overflowing.
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
     return SizedBox(
-      height: 198,
+      height: 120 + 78 * (textScale < 1 ? 1 : textScale),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: cast.length,
