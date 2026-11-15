@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, visibleForTesting;
 import '../constants/app_constants.dart';
 import '../constants/api_constants.dart';
 import '../../l10n/l10n.dart';
@@ -244,6 +244,12 @@ class DioClient {
       return AppConstants.tmdbRateLimitRetryMaxDelay;
     }
     return delay;
+  }
+
+  /// Replaces the HTTP transport so tests can script responses.
+  @visibleForTesting
+  static set httpClientAdapter(HttpClientAdapter adapter) {
+    instance._dio.httpClientAdapter = adapter;
   }
 
   static Future<void> init({String apiKey = ''}) async {
