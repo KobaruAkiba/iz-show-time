@@ -5,13 +5,15 @@ import 'media_filters.dart';
 
 /// Summary counts for films, shows, total catalogue items, and watch time.
 ///
-/// Collapsed by default: only total watch time. Expanding reveals the three
+/// Collapsed by default: only the summary card (total watch time, or the
+/// catalogue size when [hideWatchTime] is on). Expanding reveals the three
 /// type counters, which also act as the catalogue media-type filter.
 class CatalogueStatsRow extends StatelessWidget {
   final int tvShowCount;
   final int filmCount;
   final int totalCount;
   final int watchTimeMinutes;
+  final bool hideWatchTime;
   final bool expanded;
   final VoidCallback onToggleExpanded;
   final MediaFilter selectedFilter;
@@ -23,6 +25,7 @@ class CatalogueStatsRow extends StatelessWidget {
     required this.filmCount,
     required this.totalCount,
     this.watchTimeMinutes = 0,
+    this.hideWatchTime = false,
     required this.expanded,
     required this.onToggleExpanded,
     required this.selectedFilter,
@@ -37,11 +40,24 @@ class CatalogueStatsRow extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       child: Column(
         children: [
-          _WatchTimeCard(
-            minutes: watchTimeMinutes,
-            expanded: expanded,
-            onTap: onToggleExpanded,
-          ),
+          hideWatchTime
+              ? _SummaryCard(
+                  icon: Icons.collections_bookmark_outlined,
+                  label: l10n.statsYourCatalogue,
+                  value: l10n.statsCatalogueTitleCount(totalCount),
+                  expanded: expanded,
+                  onTap: onToggleExpanded,
+                )
+              : _SummaryCard(
+                  icon: Icons.schedule,
+                  label: l10n.statsTotalWatchTime,
+                  value: formatDurationMinutes(watchTimeMinutes, l10n: l10n),
+                  hint: isAtLeastOneDay(watchTimeMinutes)
+                      ? formatHoursOnlyHint(watchTimeMinutes, l10n: l10n)
+                      : null,
+                  expanded: expanded,
+                  onTap: onToggleExpanded,
+                ),
           AnimatedSize(
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeInOut,
@@ -93,13 +109,20 @@ class CatalogueStatsRow extends StatelessWidget {
   }
 }
 
-class _WatchTimeCard extends StatelessWidget {
-  final int minutes;
+/// Accordion header: tapping it expands or collapses the type counters.
+class _SummaryCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final String? hint;
   final bool expanded;
   final VoidCallback onTap;
 
-  const _WatchTimeCard({
-    required this.minutes,
+  const _SummaryCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.hint,
     required this.expanded,
     required this.onTap,
   });
@@ -107,7 +130,7 @@ class _WatchTimeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final l10n = context.l10n;
+    final hint = this.hint;
 
     return Material(
       color: Colors.transparent,
@@ -126,29 +149,29 @@ class _WatchTimeCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(Icons.schedule, size: 24, color: colorScheme.primary),
+              Icon(icon, size: 24, color: colorScheme.primary),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      l10n.statsTotalWatchTime,
+                      label,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      formatDurationMinutes(minutes, l10n: l10n),
+                      value,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                     ),
-                    if (isAtLeastOneDay(minutes)) ...[
+                    if (hint != null) ...[
                       const SizedBox(height: 2),
                       Text(
-                        formatHoursOnlyHint(minutes, l10n: l10n),
+                        hint,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: colorScheme.onSurface
                                   .withValues(alpha: 0.5),

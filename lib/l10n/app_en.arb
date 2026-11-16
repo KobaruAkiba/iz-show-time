@@ -29,6 +29,13 @@
   "statsFilms": "Films",
   "statsTotal": "Total",
   "statsTotalWatchTime": "Total Watch Time",
+  "statsYourCatalogue": "Your Catalogue",
+  "statsCatalogueTitleCount": "{count, plural, =0{No titles yet} =1{1 title} other{{count} titles}}",
+  "@statsCatalogueTitleCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
 
   "filterAll": "All",
   "filterFilms": "Films",
@@ -300,6 +307,9 @@
   "settingsThemeSystem": "System",
   "settingsThemeLight": "Light",
   "settingsThemeDark": "Dark",
+  "settingsCatalogue": "Catalogue",
+  "settingsHideWatchTimeTitle": "Hide watch time",
+  "settingsHideWatchTimeSubtitle": "Show a catalogue summary instead of total watch time",
   "settingsCredits": "Credits",
   "settingsAbout": "About",
   "settingsAuthor": "Author",

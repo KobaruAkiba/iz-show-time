@@ -178,6 +178,16 @@ void main() {
       expect(await store.loadThemeMode(), 'dark');
     });
 
+    test('persists hide watch time and keeps it across clearAll', () async {
+      expect(await store.loadHideWatchTime(), isFalse);
+
+      await store.saveHideWatchTime(true);
+      expect(await store.loadHideWatchTime(), isTrue);
+
+      await store.clearAll();
+      expect(await store.loadHideWatchTime(), isTrue);
+    });
+
     test('removeCatalogueItem and removeWatchRecord delete entries', () async {
       const film = Film(id: 42, title: 'Removed Film');
       final record = WatchRecord(
@@ -424,12 +434,15 @@ void main() {
       await store.saveWatchRecord(record);
       await store.saveNewEpisodeAlerts([alert]);
       await store.saveThemeMode('dark');
+      await store.saveHideWatchTime(true);
       await store.saveAppInForeground(true);
       await store.saveLastTmdbCachePurgeAt(DateTime(2026, 2, 1).toUtc());
       await store.flush();
 
       final backup = await store.exportBackupData();
       final backupMeta = Map<String, dynamic>.from(backup['meta'] as Map);
+
+      expect(backupMeta[StorageConstants.hideWatchTimeKey], isTrue);
 
       expect(
         backupMeta.containsKey(StorageConstants.appInForegroundKey),
@@ -447,6 +460,7 @@ void main() {
       expect(await store.loadWatchHistory(), hasLength(1));
       expect(await store.loadNewEpisodeAlerts(), hasLength(1));
       expect(await store.loadThemeMode(), 'dark');
+      expect(await store.loadHideWatchTime(), isTrue);
     });
 
     test('migrates legacy bulky payloads to schema v2', () async {

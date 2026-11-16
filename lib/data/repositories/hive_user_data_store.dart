@@ -38,6 +38,7 @@ class UserDataSnapshot {
 /// O(items × fsync).
 class HiveUserDataStore implements UserDataStore {
   static const String _backupFormat = 'iz_show_time_backup';
+
   /// v2: catalogue keyed by media key; older app versions must reject it.
   static const int _backupVersion = 2;
   static const Set<String> _backupMetaKeys = {
@@ -46,6 +47,7 @@ class HiveUserDataStore implements UserDataStore {
     StorageConstants.notifiedEpisodeIdsKey,
     StorageConstants.notificationPermissionPrePromptShownKey,
     StorageConstants.themeModeKey,
+    StorageConstants.hideWatchTimeKey,
   };
 
   HiveUserDataStore() : _readOnly = false;
@@ -541,6 +543,18 @@ class HiveUserDataStore implements UserDataStore {
   Future<void> saveThemeMode(String themeMode) async {
     await open();
     await metaBox.put(StorageConstants.themeModeKey, themeMode);
+  }
+
+  @override
+  Future<bool> loadHideWatchTime() async {
+    await open();
+    return metaBox.get(StorageConstants.hideWatchTimeKey) == true;
+  }
+
+  @override
+  Future<void> saveHideWatchTime(bool hidden) async {
+    await open();
+    await metaBox.put(StorageConstants.hideWatchTimeKey, hidden);
   }
 
   @override

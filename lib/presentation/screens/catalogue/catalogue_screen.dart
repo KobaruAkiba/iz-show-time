@@ -203,16 +203,20 @@ class _CatalogueScreenState extends State<CatalogueScreen> {
         child: Column(
           children: [
             const AppPageHeader(),
-            CatalogueStatsRow(
-              tvShowCount: tvShows.length,
-              filmCount: films.length,
-              totalCount: catalogue.length,
-              watchTimeMinutes: watchTime,
-              expanded: _statsExpanded,
-              onToggleExpanded: () =>
-                  setState(() => _statsExpanded = !_statsExpanded),
-              selectedFilter: _mediaFilter,
-              onFilterSelected: _onMediaFilterSelected,
+            ValueListenableBuilder<bool>(
+              valueListenable: _appServices.hideWatchTimeListenable,
+              builder: (context, hideWatchTime, _) => CatalogueStatsRow(
+                tvShowCount: tvShows.length,
+                filmCount: films.length,
+                totalCount: catalogue.length,
+                watchTimeMinutes: watchTime,
+                hideWatchTime: hideWatchTime,
+                expanded: _statsExpanded,
+                onToggleExpanded: () =>
+                    setState(() => _statsExpanded = !_statsExpanded),
+                selectedFilter: _mediaFilter,
+                onFilterSelected: _onMediaFilterSelected,
+              ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),

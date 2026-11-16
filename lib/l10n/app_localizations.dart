@@ -208,6 +208,18 @@ abstract class AppLocalizations {
   /// **'Total Watch Time'**
   String get statsTotalWatchTime;
 
+  /// No description provided for @statsYourCatalogue.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Catalogue'**
+  String get statsYourCatalogue;
+
+  /// No description provided for @statsCatalogueTitleCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No titles yet} =1{1 title} other{{count} titles}}'**
+  String statsCatalogueTitleCount(int count);
+
   /// No description provided for @filterAll.
   ///
   /// In en, this message translates to:
@@ -939,6 +951,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Dark'**
   String get settingsThemeDark;
+
+  /// No description provided for @settingsCatalogue.
+  ///
+  /// In en, this message translates to:
+  /// **'Catalogue'**
+  String get settingsCatalogue;
+
+  /// No description provided for @settingsHideWatchTimeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide watch time'**
+  String get settingsHideWatchTimeTitle;
+
+  /// No description provided for @settingsHideWatchTimeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show a catalogue summary instead of total watch time'**
+  String get settingsHideWatchTimeSubtitle;
 
   /// No description provided for @settingsCredits.
   ///

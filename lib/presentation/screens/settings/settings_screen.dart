@@ -41,6 +41,9 @@ class SettingsScreen extends StatelessWidget {
                   _buildSectionTitle(context, l10n.settingsAppearance),
                   _buildThemeSelector(context),
                   const Divider(),
+                  _buildSectionTitle(context, l10n.settingsCatalogue),
+                  _buildHideWatchTimeToggle(context),
+                  const Divider(),
                   _buildSectionTitle(context, l10n.settingsNotifications),
                   const NotificationsTile(),
                   const Divider(),
@@ -156,6 +159,23 @@ class SettingsScreen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildHideWatchTimeToggle(BuildContext context) {
+    final l10n = context.l10n;
+
+    return ValueListenableBuilder<bool>(
+      valueListenable: AppServices().hideWatchTimeListenable,
+      builder: (context, hidden, _) => SwitchListTile(
+        secondary: Icon(
+          hidden ? Icons.visibility_off_outlined : Icons.schedule,
+        ),
+        title: Text(l10n.settingsHideWatchTimeTitle),
+        subtitle: Text(l10n.settingsHideWatchTimeSubtitle),
+        value: hidden,
+        onChanged: AppServices().setHideWatchTime,
+      ),
     );
   }
 

@@ -61,6 +61,11 @@ abstract class UserDataStore {
 
   Future<void> saveThemeMode(String themeMode);
 
+  /// Whether total watch time is hidden in the catalogue. Missing means false.
+  Future<bool> loadHideWatchTime();
+
+  Future<void> saveHideWatchTime(bool hidden);
+
   /// Last purge of non-catalogue TMDB caches (API Terms of Use).
   Future<DateTime?> loadLastTmdbCachePurgeAt();
 

@@ -68,6 +68,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get statsTotalWatchTime => 'Total Watch Time';
 
   @override
+  String get statsYourCatalogue => 'Your Catalogue';
+
+  @override
+  String statsCatalogueTitleCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count titles',
+      one: '1 title',
+      zero: 'No titles yet',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get filterAll => 'All';
 
   @override
@@ -497,6 +512,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsThemeDark => 'Dark';
+
+  @override
+  String get settingsCatalogue => 'Catalogue';
+
+  @override
+  String get settingsHideWatchTimeTitle => 'Hide watch time';
+
+  @override
+  String get settingsHideWatchTimeSubtitle =>
+      'Show a catalogue summary instead of total watch time';
 
   @override
   String get settingsCredits => 'Credits';

@@ -5,6 +5,7 @@ class StorageConstants {
   static const String metaBoxName = 'meta';
 
   static const String schemaVersionKey = 'schema_version';
+
   /// v2: catalogue without overview; watch records without media_title.
   /// v3: catalogue keyed by media key (film/TV + id) instead of bare TMDB id.
   static const int storageSchemaVersion = 3;
@@ -20,6 +21,9 @@ class StorageConstants {
   static const String notificationPermissionPrePromptShownKey =
       'notification_permission_pre_prompt_shown';
   static const String themeModeKey = 'theme_mode';
+
+  /// Catalogue header shows a catalogue summary instead of total watch time.
+  static const String hideWatchTimeKey = 'hide_watch_time';
 
   /// Last time non-catalogue TMDB caches were purged (API Terms ≤6 months).
   static const String lastTmdbCachePurgeKey = 'last_tmdb_cache_purge_at';

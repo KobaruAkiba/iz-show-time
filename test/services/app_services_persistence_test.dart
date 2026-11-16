@@ -39,6 +39,7 @@ class FakeUserDataStore implements UserDataStore {
         'watchHistory': history.map((record) => record.toJson()).toList(),
         'alerts': alerts.map((alert) => alert.toJson()).toList(),
         'themeMode': themeMode,
+        'hideWatchTime': hideWatchTime,
       };
 
   @override
@@ -65,6 +66,7 @@ class FakeUserDataStore implements UserDataStore {
             NewEpisodeAlert.fromJson(Map<String, dynamic>.from(entry as Map)))
         .toList();
     themeMode = data['themeMode'] as String?;
+    hideWatchTime = data['hideWatchTime'] == true;
   }
 
   @override
@@ -191,6 +193,16 @@ class FakeUserDataStore implements UserDataStore {
   @override
   Future<void> saveThemeMode(String themeMode) async {
     this.themeMode = themeMode;
+  }
+
+  bool hideWatchTime = false;
+
+  @override
+  Future<bool> loadHideWatchTime() async => hideWatchTime;
+
+  @override
+  Future<void> saveHideWatchTime(bool hidden) async {
+    hideWatchTime = hidden;
   }
 
   DateTime? lastTmdbCachePurgeAt;
@@ -646,6 +658,20 @@ void main() {
       expect(appServices.newEpisodeAlerts, hasLength(1));
       expect(appServices.themeMode.name, 'dark');
       expect(jsonDecode(backup), isA<Map<String, dynamic>>());
+    });
+
+    test('setHideWatchTime persists and is reloaded on initialize', () async {
+      addTearDown(() => appServices.setHideWatchTime(false));
+
+      await appServices.setHideWatchTime(true);
+
+      expect(appServices.hideWatchTime, isTrue);
+      expect(store.hideWatchTime, isTrue);
+
+      appServices.hideWatchTimeListenable.value = false;
+      await appServices.initialize(userDataStore: store);
+
+      expect(appServices.hideWatchTime, isTrue);
     });
   });
 

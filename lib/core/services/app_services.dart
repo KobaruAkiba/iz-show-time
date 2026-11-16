@@ -71,6 +71,11 @@ class AppServices {
   final ValueNotifier<ThemeMode> themeModeListenable =
       ValueNotifier<ThemeMode>(ThemeMode.system);
 
+  /// When true the catalogue header shows a catalogue summary instead of
+  /// total watch time.
+  final ValueNotifier<bool> hideWatchTimeListenable =
+      ValueNotifier<bool>(false);
+
   /// While positive, disk [UserDataStore.flush] is deferred until every
   /// mutating operation in flight completes (one fsync per user action).
   /// A counter, not a flag: operations can overlap.
@@ -80,6 +85,8 @@ class AppServices {
   DateTime? _lastAiringStatesSyncAt;
 
   ThemeMode get themeMode => themeModeListenable.value;
+
+  bool get hideWatchTime => hideWatchTimeListenable.value;
 
   List<CatalogueItem> get catalogue => _catalogue.items;
   List<WatchRecord> get watchHistory => _history.records;
@@ -541,6 +548,13 @@ class AppServices {
       themeModeListenable.value = ThemeMode.system;
     }
 
+    try {
+      hideWatchTimeListenable.value = await store.loadHideWatchTime();
+    } catch (error, stackTrace) {
+      debugPrint('Failed to load hide watch time: $error\n$stackTrace');
+      hideWatchTimeListenable.value = false;
+    }
+
     await importBackgroundCheckResult();
     await _purgeTmdbCachesIfStale();
 
@@ -571,6 +585,18 @@ class AppServices {
       await _maybeFlush();
     } catch (error, stackTrace) {
       debugPrint('Failed to persist theme mode: $error\n$stackTrace');
+    }
+  }
+
+  /// Shows or hides total watch time in the catalogue and persists it.
+  Future<void> setHideWatchTime(bool hidden) async {
+    if (hideWatchTimeListenable.value == hidden) return;
+    hideWatchTimeListenable.value = hidden;
+    try {
+      await userDataStore.saveHideWatchTime(hidden);
+      await _maybeFlush();
+    } catch (error, stackTrace) {
+      debugPrint('Failed to persist hide watch time: $error\n$stackTrace');
     }
   }
 

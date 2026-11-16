@@ -105,6 +105,16 @@ class FakeEpisodeCheckStore implements UserDataStore {
     this.themeMode = themeMode;
   }
 
+  bool hideWatchTime = false;
+
+  @override
+  Future<bool> loadHideWatchTime() async => hideWatchTime;
+
+  @override
+  Future<void> saveHideWatchTime(bool hidden) async {
+    hideWatchTime = hidden;
+  }
+
   DateTime? lastTmdbCachePurgeAt;
 
   @override
