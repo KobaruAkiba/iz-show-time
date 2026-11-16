@@ -1,4 +1,4 @@
-import '../../core/constants/api_constants.dart';
+import '../../core/config/tmdb_locale.dart';
 import '../../l10n/l10n.dart';
 import 'season_model.dart';
 
@@ -62,7 +62,8 @@ class MediaDetails {
   final double? voteAverage;
   final int? voteCount;
   final bool isFilm;
-  final List<SeasonModel> seasons;
+  /// TMDB `seasons[]`: real season numbers (gaps, specials) and counts.
+  final List<SeasonSummary> seasonSummaries;
   final List<String> genres;
   final List<String> networkNames;
   final String? lastAirDate;
@@ -96,7 +97,7 @@ class MediaDetails {
     this.voteAverage,
     this.voteCount,
     this.isFilm = true,
-    this.seasons = const [],
+    this.seasonSummaries = const [],
     this.genres = const [],
     this.networkNames = const [],
     this.lastAirDate,
@@ -178,6 +179,9 @@ class MediaDetails {
               (json['next_episode_to_air'] as Map<String, dynamic>?)
                   ?['air_date'],
             ),
+      seasonSummaries: isFilm
+          ? const []
+          : SeasonSummary.listFromTmdbJson(json['seasons']),
       cast: _parseCast(json, isFilm: isFilm),
       certification: _parseCertification(json, isFilm: isFilm),
       keywordNames: _parseKeywords(json, isFilm: isFilm),
@@ -321,7 +325,7 @@ String? _parseCertification(
   Map<String, dynamic> json, {
   required bool isFilm,
 }) {
-  final preferred = ApiConstants.watchProviderRegion;
+  final preferred = TmdbLocale.region;
 
   if (isFilm) {
     final releaseDates = json['release_dates'] as Map<String, dynamic>?;
@@ -385,7 +389,7 @@ List<String> _parseWatchProviders(Map<String, dynamic> json) {
   final results = providers?['results'] as Map<String, dynamic>?;
   if (results == null || results.isEmpty) return const [];
 
-  final region = results[ApiConstants.watchProviderRegion] as Map<String, dynamic>? ??
+  final region = results[TmdbLocale.region] as Map<String, dynamic>? ??
       results.values.whereType<Map<String, dynamic>>().firstOrNull;
   if (region == null) return const [];
 

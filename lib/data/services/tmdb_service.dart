@@ -1,20 +1,30 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart' show CancelToken;
+
 import '../../core/network/dio_client.dart';
+import '../../core/config/tmdb_locale.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/constants/api_constants.dart';
 import '../../core/cache/cache_manager.dart';
+import '../../core/cache/tmdb_disk_cache.dart';
 import '../models/catalogue_item.dart';
 import '../models/episode_model.dart';
 import '../models/media_details.dart';
 import '../models/season_model.dart';
+import '../models/tv_show_summary.dart';
 
 /// Unified TMDB API service with caching and JSON parsing
 class TmdbService {
-  TmdbService({CacheManager? cacheManager})
-      : _cache = cacheManager ?? CacheManager();
+  TmdbService({CacheManager? cacheManager, TmdbDiskCache? diskCache})
+      : _cache = cacheManager ?? CacheManager(),
+        _diskCache = diskCache;
 
   final CacheManager _cache;
+
+  /// Persistent copy of detail and season payloads; null in the background
+  /// isolate and in tests.
+  final TmdbDiskCache? _diskCache;
   final Map<String, Future<dynamic>> _inflight = {};
 
   Future<List<CatalogueItem>> getTrendingAll({
@@ -49,6 +59,22 @@ class TmdbService {
     return MediaDetails.fromTmdbJson(data, isFilm: isFilm);
   }
 
+  /// Base `tv/{id}` payload without appended sections.
+  ///
+  /// Much smaller than [getMediaDetails]; used by the new-episode check.
+  Future<TvShowSummary?> getTvShowSummary(
+    int tvId, {
+    bool forceRefresh = false,
+  }) async {
+    final data = await _fetchSingle(
+      'tv/$tvId',
+      ttlMinutes: AppConstants.episodeCacheTTL,
+      bypassCache: forceRefresh,
+    );
+    if (data == null) return null;
+    return TvShowSummary.fromTmdbJson(data);
+  }
+
   /// Searches TMDB multi endpoint. Pass [page] to fetch subsequent pages.
   /// TMDB returns a fixed ~20 results per page; UI may window further locally.
   /// Items keep API relevance order (films and TV interleaved).
@@ -60,6 +86,7 @@ class TmdbService {
       })> searchMulti({
     required String query,
     int page = 1,
+    CancelToken? cancelToken,
   }) async {
     if (query.trim().isEmpty) {
       return (
@@ -77,6 +104,7 @@ class TmdbService {
         'page': '$safePage',
       },
       ttlMinutes: AppConstants.searchCacheTTL,
+      cancelToken: cancelToken,
     );
 
     return (
@@ -216,12 +244,9 @@ class TmdbService {
     required List<CatalogueItem> items,
   }) {
     if (item == null || !item.title.toLowerCase().contains(query)) return;
-    if (!seenKeys.add(_mediaSeenKey(item))) return;
+    if (!seenKeys.add(item.mediaKey)) return;
     items.add(item);
   }
-
-  String _mediaSeenKey(CatalogueItem item) =>
-      '${item.isFilm ? 'm' : 't'}-${item.id}';
 
   Future<List<EpisodeModel>> getSeasonEpisodes({
     required int tvId,
@@ -248,34 +273,6 @@ class TmdbService {
     );
     if (data == null) return null;
     return SeasonModel.fromTmdbSeasonJson(data);
-  }
-
-  Future<List<SeasonModel>> getTvSeasons({
-    required int tvId,
-    required int numberOfSeasons,
-  }) async {
-    if (numberOfSeasons <= 0) return const [];
-
-    final seasons = <SeasonModel?>[];
-    const concurrency = AppConstants.tvSeasonsFetchConcurrency;
-
-    for (var start = 0; start < numberOfSeasons; start += concurrency) {
-      final end = (start + concurrency).clamp(0, numberOfSeasons);
-      final chunk = await Future.wait([
-        for (var index = start; index < end; index++)
-          getSeason(
-            tvId: tvId,
-            seasonNumber: index + 1,
-          ),
-      ]);
-      seasons.addAll(chunk);
-    }
-
-    return [
-      for (var i = 0; i < seasons.length; i++)
-        seasons[i] ??
-            SeasonModel(seasonNumber: i + 1, episodes: const []),
-    ];
   }
 
   Future<List<Map<String, dynamic>>> _fetchResults(
@@ -306,6 +303,7 @@ class TmdbService {
     int? ttlMinutes,
     String resultsKey = 'results',
     bool bypassCache = false,
+    CancelToken? cancelToken,
   }) async {
     final params = _baseParams(extraParams);
     final cacheKey = _buildCacheKey(path, params);
@@ -332,7 +330,8 @@ class TmdbService {
     }
 
     return _dedupe(cacheKey, () async {
-      final cachedAfterWait = _cache.get<List<dynamic>>(cacheKey);
+      final cachedAfterWait =
+          bypassCache ? null : _cache.get<List<dynamic>>(cacheKey);
       if (cachedAfterWait != null) {
         final meta = _cache.get<Map<String, dynamic>>(metaCacheKey);
         return (
@@ -343,19 +342,13 @@ class TmdbService {
       }
 
       try {
-        final result = await DioClient.instance.get<Map<String, dynamic>>(
-          path,
-          queryParameters: params,
+        final payload = _unwrap(
+          await DioClient.instance.get<Map<String, dynamic>>(
+            path,
+            queryParameters: params,
+            cancelToken: cancelToken,
+          ),
         );
-
-        if (!result.isSuccess || result.data == null) {
-          throw ApiException(
-            result.error,
-            apiErrorMessage(result.error),
-          );
-        }
-
-        final payload = result.data!;
         final rawResults = payload[resultsKey] as List<dynamic>? ?? [];
         final list = rawResults.whereType<Map<String, dynamic>>().toList();
         final page = (payload['page'] as num?)?.toInt() ?? 1;
@@ -408,27 +401,32 @@ class TmdbService {
         if (cachedAfterWait != null) return cachedAfterWait;
       }
 
-      try {
-        final result = await DioClient.instance.get<Map<String, dynamic>>(
-          path,
-          queryParameters: params,
-        );
-
-        if (!result.isSuccess || result.data == null) {
-          throw ApiException(
-            result.error,
-            apiErrorMessage(result.error),
-          );
-        }
-
+      final ttl = ttlMinutes ?? AppConstants.defaultCacheTTLMinutes;
+      final onDisk = await _diskCache?.read(cacheKey);
+      if (onDisk != null && !onDisk.isExpired && !bypassCache) {
         _cache.put(
           cacheKey,
-          result.data,
-          ttlMinutes: ttlMinutes ?? AppConstants.defaultCacheTTLMinutes,
+          onDisk.value,
+          ttlMinutes: onDisk.expiresAt.difference(DateTime.now()).inMinutes + 1,
+        );
+        return onDisk.value;
+      }
+
+      try {
+        final data = _unwrap(
+          await DioClient.instance.get<Map<String, dynamic>>(
+            path,
+            queryParameters: params,
+          ),
         );
 
-        return result.data;
-      } on ApiException {
+        _cache.put(cacheKey, data, ttlMinutes: ttl);
+        unawaited(_diskCache?.write(cacheKey, data, ttlMinutes: ttl));
+
+        return data;
+      } on ApiException catch (error) {
+        // Offline: an outdated copy is better than no data at all.
+        if (onDisk != null && error.isConnectionIssue) return onDisk.value;
         rethrow;
       } catch (e, stackTrace) {
         Error.throwWithStackTrace(
@@ -442,26 +440,28 @@ class TmdbService {
     });
   }
 
+  /// Payload of a successful call; failures become [ApiException].
+  Map<String, dynamic> _unwrap(ApiResult<Map<String, dynamic>> result) {
+    return switch (result) {
+      ApiSuccess(:final data) => data,
+      ApiFailure(:final error) =>
+        throw ApiException(error, apiErrorMessage(error)),
+    };
+  }
+
   Future<T> _dedupe<T>(String key, Future<T> Function() fetch) async {
     final existing = _inflight[key];
     if (existing != null) {
-      return await existing;
+      return await existing as T;
     }
 
-    final completer = Completer<T>();
-    _inflight[key] = completer.future;
+    // Share the fetch future itself: a separate completer would raise an
+    // unhandled async error whenever a failed request has no other waiter.
+    final future = fetch();
+    _inflight[key] = future;
 
     try {
-      final result = await fetch();
-      if (!completer.isCompleted) {
-        completer.complete(result);
-      }
-      return result;
-    } catch (e, stackTrace) {
-      if (!completer.isCompleted) {
-        completer.completeError(e, stackTrace);
-      }
-      rethrow;
+      return await future;
     } finally {
       _inflight.remove(key);
     }
@@ -469,7 +469,7 @@ class TmdbService {
 
   Map<String, String> _baseParams(Map<String, String>? extra) {
     return {
-      'language': 'en-US',
+      'language': TmdbLocale.language,
       ...?extra,
     };
   }

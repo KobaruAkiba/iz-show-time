@@ -6,6 +6,12 @@ const String kFavoriteTag = 'favorite';
 /// Reserved catalogue tag for followed TV shows (new-episode alerts).
 const String kFollowedTag = 'followed';
 
+/// Composite key for a film or TV show.
+///
+/// TMDB numbers `movie/` and `tv/` independently, so the bare id is not unique.
+String mediaKeyOf({required bool isFilm, required int id}) =>
+    '${isFilm ? 'm' : 't'}_$id';
+
 /// Base class for all catalogue items (Films and Shows)
 abstract class CatalogueItem {
   final int id;
@@ -49,6 +55,9 @@ extension CatalogueItemExtension on CatalogueItem {
 
   bool get isFilm => this is Film;
   bool get isTvShow => this is TvShow;
+
+  /// Identity of this item across catalogue, storage and UI lists.
+  String get mediaKey => mediaKeyOf(isFilm: isFilm, id: id);
 }
 
 /// Film catalogue item

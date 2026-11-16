@@ -1,15 +1,30 @@
 /// Application-wide constants for configuration
 class AppConstants {
   // API and Network settings
-  static const Duration connectionTimeout = Duration(seconds: 30);
-  static const Duration receiveTimeout = Duration(seconds: 30);
+  /// Covers DNS + TCP + TLS. Short enough that a stuck handshake is retried
+  /// quickly, long enough for slow mobile networks (EDGE, roaming).
+  static const Duration connectionTimeout = Duration(seconds: 10);
+  /// Max silence between response chunks, not a total duration: TMDB payloads
+  /// are a few KB, so 15s without data means the connection is dead.
+  static const Duration receiveTimeout = Duration(seconds: 15);
 
   /// After this delay while a request is still in flight, show slow-connection UI
   /// (banner / inline hint) so slow networks feel intentional rather than frozen.
   static const Duration slowConnectionThreshold = Duration(seconds: 4);
 
-  /// Max in-flight season fetches for a single TV show (avoids TMDb 429 bursts).
-  static const int tvSeasonsFetchConcurrency = 6;
+  /// Max shows checked in parallel by the new-episode check.
+  static const int episodeCheckConcurrency = 4;
+
+  /// Shows checked between two saves of the background episode check: a run
+  /// cut short by the OS keeps what the completed blocks found.
+  static const int episodeCheckBlockSize = 8;
+
+  /// Waits before retrying a request that timed out or could not connect.
+  /// Short, so going offline is still reported within a couple of seconds.
+  static const List<Duration> connectionRetryDelays = [
+    Duration(milliseconds: 400),
+    Duration(milliseconds: 1200),
+  ];
 
   /// Retries after the first HTTP 429 before returning [ApiErrorType.rateLimit].
   static const int tmdbMaxRateLimitRetries = 5;
@@ -28,6 +43,10 @@ class AppConstants {
 
   // Notification / background episode-check settings
   static const int notificationCheckIntervalHours = 2;
+
+  /// System notifications are raised only for episodes aired within this
+  /// many days; older ones stay in Continue Watching without notifying.
+  static const int notificationRecentAirDays = 7;
 
   /// First WorkManager run after registration (Android minimum ~15 minutes).
   static const int notificationCheckInitialDelayMinutes = 15;

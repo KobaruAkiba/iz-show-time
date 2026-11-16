@@ -155,10 +155,14 @@ class ConnectionAwareLoading extends StatefulWidget {
     super.key,
     this.slowAfter = AppConstants.slowConnectionThreshold,
     this.message,
+    this.placeholder,
   });
 
   final Duration slowAfter;
   final String? message;
+
+  /// Shown instead of the spinner, e.g. a skeleton of the content.
+  final Widget? placeholder;
 
   @override
   State<ConnectionAwareLoading> createState() => _ConnectionAwareLoadingState();
@@ -187,6 +191,25 @@ class _ConnectionAwareLoadingState extends State<ConnectionAwareLoading> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+
+    final placeholder = widget.placeholder;
+    if (placeholder != null) {
+      return Stack(
+        children: [
+          Positioned.fill(child: placeholder),
+          if (_showSlowHint)
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: ConnectionSlowStatus(
+                  message: widget.message ?? l10n.connectionSlow,
+                ),
+              ),
+            ),
+        ],
+      );
+    }
 
     return Center(
       child: Padding(

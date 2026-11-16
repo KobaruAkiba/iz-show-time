@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_file_dialog/flutter_file_dialog.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -12,12 +13,14 @@ import '../../widgets/app_page_header.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/services/app_services.dart';
 import '../../../l10n/l10n.dart';
+import 'notifications_tile.dart';
 
 /// Settings screen with app preferences
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
-  static const _appVersion = '1.0.2';
+  // Static so the platform is queried once, not on every rebuild.
+  static final Future<PackageInfo> _packageInfo = PackageInfo.fromPlatform();
   static const _authorName = 'Mirko Corba';
   static const _tmdbLogoAsset = 'assets/images/TmdbLogo.png';
   static const _paypalLogoAsset = 'assets/images/PaypalLogo.png';
@@ -37,6 +40,9 @@ class SettingsScreen extends StatelessWidget {
                 children: [
                   _buildSectionTitle(context, l10n.settingsAppearance),
                   _buildThemeSelector(context),
+                  const Divider(),
+                  _buildSectionTitle(context, l10n.settingsNotifications),
+                  const NotificationsTile(),
                   const Divider(),
                   _buildSectionTitle(context, l10n.settingsCredits),
                   _buildTmdbAttribution(context),
@@ -60,13 +66,21 @@ class SettingsScreen extends StatelessWidget {
                     onTap: () => _showClearCacheDialog(context),
                   ),
                   ListTile(
-                    leading: Icon(Icons.delete_outline, color: Colors.red[500]),
+                    leading: Icon(
+                      Icons.delete_outline,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                     title: Text(
                       l10n.settingsClearAllTitle,
-                      style: TextStyle(color: Colors.red[700]),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
                     ),
                     subtitle: Text(l10n.settingsClearAllSubtitle),
-                    trailing: Icon(Icons.chevron_right, color: Colors.red[400]),
+                    trailing: Icon(
+                      Icons.chevron_right,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                     onTap: () => _showClearDataDialog(context),
                   ),
                   const Divider(),
@@ -74,7 +88,11 @@ class SettingsScreen extends StatelessWidget {
                   ListTile(
                     leading: const Icon(Icons.info_outline),
                     title: Text(l10n.settingsVersion),
-                    subtitle: const Text(_appVersion),
+                    subtitle: FutureBuilder<PackageInfo>(
+                      future: _packageInfo,
+                      builder: (context, snapshot) =>
+                          Text(snapshot.data?.version ?? ''),
+                    ),
                   ),
                   ListTile(
                     leading: const Icon(Icons.person_outline),
@@ -144,7 +162,7 @@ class SettingsScreen extends StatelessWidget {
   Widget _buildTmdbAttribution(BuildContext context) {
     final l10n = context.l10n;
     final bodyStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: Colors.grey[700],
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
         );
 
     return Padding(
@@ -207,7 +225,7 @@ class SettingsScreen extends StatelessWidget {
   Widget _buildSupportMeSection(BuildContext context) {
     final l10n = context.l10n;
     final bodyStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: Colors.grey[700],
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
         );
 
     return Column(
@@ -432,9 +450,13 @@ class SettingsScreen extends StatelessWidget {
     await tempFile.writeAsBytes(bytes, flush: true);
 
     try {
-      final result = await Share.shareXFiles(
-        [XFile(tempFile.path, mimeType: 'application/json', name: fileName)],
-        text: l10n.settingsBackupShareSubtitle,
+      final result = await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile(tempFile.path, mimeType: 'application/json', name: fileName),
+          ],
+          text: l10n.settingsBackupShareSubtitle,
+        ),
       );
       return result.status == ShareResultStatus.success;
     } finally {
@@ -570,7 +592,10 @@ class SettingsScreen extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        icon: Icon(Icons.warning_amber_rounded, color: Colors.red[700]),
+        icon: Icon(
+          Icons.warning_amber_rounded,
+          color: Theme.of(dialogContext).colorScheme.error,
+        ),
         title: Text(l10n.settingsClearAllTitle),
         content: Text(l10n.settingsClearAllBody),
         actions: [
@@ -580,8 +605,8 @@ class SettingsScreen extends StatelessWidget {
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: Colors.red[700],
-              foregroundColor: Colors.white,
+              backgroundColor: Theme.of(dialogContext).colorScheme.error,
+              foregroundColor: Theme.of(dialogContext).colorScheme.onError,
             ),
             onPressed: () async {
               await AppServices().clearAllData();

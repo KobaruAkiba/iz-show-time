@@ -1,6 +1,7 @@
 import '../models/catalogue_item.dart';
 import '../models/new_episode_alert.dart';
 import '../models/watch_record.dart';
+import 'background_check_outbox.dart';
 
 /// Persists catalogue items and watch history on device.
 abstract class UserDataStore {
@@ -16,7 +17,7 @@ abstract class UserDataStore {
 
   Future<void> saveCatalogueItem(CatalogueItem item);
 
-  Future<void> removeCatalogueItem(int mediaId);
+  Future<void> removeCatalogueItem(CatalogueItem item);
 
   Future<List<WatchRecord>> loadWatchHistory();
 
@@ -46,6 +47,9 @@ abstract class UserDataStore {
   Future<Set<int>> loadNotifiedEpisodeIds();
 
   Future<void> saveNotifiedEpisodeIds(Set<int> episodeIds);
+
+  /// Latest result left by the background episode check, if any.
+  Future<BackgroundCheckResult?> loadBackgroundCheckResult();
 
   /// Whether the in-app notification permission rationale was already shown.
   Future<bool> loadNotificationPermissionPrePromptShown();

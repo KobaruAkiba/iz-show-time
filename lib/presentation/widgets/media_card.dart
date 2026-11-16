@@ -3,6 +3,7 @@ import '../../core/services/app_services.dart';
 import '../../data/models/catalogue_item.dart';
 import '../../core/constants/api_constants.dart';
 import '../../l10n/l10n.dart';
+import 'app_network_image.dart';
 
 /// Shared card widget for films and shows
 class MediaCard extends StatelessWidget {
@@ -45,7 +46,11 @@ class MediaCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final posterUrl = ApiConstants.posterUrl(item.posterPath);
+    // 72 dp thumbnail: a smaller TMDB size, decoded at display size.
+    final posterUrl = ApiConstants.posterUrl(
+      item.posterPath,
+      size: ApiConstants.w342Image,
+    );
     final badgeLabel = _posterBadgeLabel(l10n);
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -76,14 +81,11 @@ class MediaCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                       child: AspectRatio(
                         aspectRatio: 2 / 3,
-                        child: posterUrl.isNotEmpty
-                            ? Image.network(
-                                posterUrl,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    _placeholder(context),
-                              )
-                            : _placeholder(context),
+                        child: AppNetworkImage(
+                          url: posterUrl,
+                          logicalWidth: 72,
+                          fallback: _placeholder(context),
+                        ),
                       ),
                     ),
                     if (badgeLabel != null)
@@ -150,10 +152,13 @@ class MediaCard extends StatelessWidget {
                               : item.overview!,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: colorScheme.onSurface.withValues(alpha: 0.7),
-                          ),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
+                              ?.copyWith(
+                                color: colorScheme.onSurface
+                                    .withValues(alpha: 0.7),
+                              ),
                         ),
                       ],
                     ],
@@ -180,6 +185,9 @@ class MediaCard extends StatelessWidget {
                   size: 24,
                 ),
                 color: colorScheme.onSurface.withValues(alpha: 0.6),
+                tooltip: isBookmarked
+                    ? l10n.removeFromCatalogue
+                    : l10n.addToCatalogue,
                 onPressed: onAddRemove,
               ),
             ],
@@ -219,11 +227,10 @@ class _TypeBadge extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: colorScheme.onPrimaryContainer,
-            ),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onPrimaryContainer,
+                ),
           ),
         ],
       ),
@@ -256,11 +263,10 @@ class _RatingBadge extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             rating,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: colorScheme.onPrimaryContainer,
-            ),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onPrimaryContainer,
+                ),
           ),
         ],
       ),
@@ -332,14 +338,7 @@ class MediaPosterCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                if (posterUrl.isNotEmpty)
-                  Image.network(
-                    posterUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _fallback(context),
-                  )
-                else
-                  _fallback(context),
+                AppNetworkImage(url: posterUrl, fallback: _fallback(context)),
                 Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(

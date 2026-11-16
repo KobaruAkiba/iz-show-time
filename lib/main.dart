@@ -14,6 +14,7 @@ import 'core/routing/app_router.dart';
 import 'core/network/network_feedback.dart';
 import 'l10n/l10n.dart';
 import 'presentation/navigation/main_navigator.dart';
+import 'presentation/widgets/startup_error_app.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,11 +27,21 @@ Future<void> main() async {
     return true;
   };
 
-  final appServices = await AppBootstrap.initializeServices();
-  await appServices.userDataStore.saveAppInForeground(true);
+  await _startApp();
+}
 
-  // Native plugins can hang before an Activity exists — bootstrap after first frame.
-  runApp(MyApp(appServices: appServices));
+/// Starts the app, or an error screen with a retry when startup fails.
+Future<void> _startApp() async {
+  try {
+    final appServices = await AppBootstrap.initializeServices();
+    await appServices.userDataStore.saveAppInForeground(true);
+
+    // Native plugins can hang before an Activity exists — bootstrap after first frame.
+    runApp(MyApp(appServices: appServices));
+  } catch (error, stackTrace) {
+    debugPrint('App startup failed: $error\n$stackTrace');
+    runApp(const StartupErrorApp(onRetry: _startApp));
+  }
 }
 
 class MyApp extends StatefulWidget {

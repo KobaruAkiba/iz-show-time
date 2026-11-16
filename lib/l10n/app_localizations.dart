@@ -370,6 +370,12 @@ abstract class AppLocalizations {
   /// **'Remove \"{title}\" from your catalogue?\n\nAll watched episodes will be deleted.'**
   String confirmRemoveShowBody(String title);
 
+  /// No description provided for @addToCatalogue.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to catalogue'**
+  String get addToCatalogue;
+
   /// No description provided for @addedToCatalogue.
   ///
   /// In en, this message translates to:
@@ -639,6 +645,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Remove from catalogue'**
   String get removeFromCatalogue;
+
+  /// No description provided for @seasonSpecials.
+  ///
+  /// In en, this message translates to:
+  /// **'Specials'**
+  String get seasonSpecials;
+
+  /// No description provided for @seasonLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load episodes. Tap to retry.'**
+  String get seasonLoadFailed;
 
   /// No description provided for @seasonLabel.
   ///
@@ -1174,6 +1192,42 @@ abstract class AppLocalizations {
   /// **'{count} new episodes available. Check Continue Watching on Home.'**
   String notificationBodyOther(int count);
 
+  /// No description provided for @settingsNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get settingsNotifications;
+
+  /// No description provided for @settingsNotificationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Episode alerts'**
+  String get settingsNotificationsTitle;
+
+  /// No description provided for @settingsNotificationsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On. You are alerted when a followed show airs a new episode.'**
+  String get settingsNotificationsOn;
+
+  /// No description provided for @settingsNotificationsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off. Tap to turn on.'**
+  String get settingsNotificationsOff;
+
+  /// No description provided for @settingsNotificationsBlockedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications are blocked'**
+  String get settingsNotificationsBlockedTitle;
+
+  /// No description provided for @settingsNotificationsBlockedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on notifications for IzShowTime in your device settings.'**
+  String get settingsNotificationsBlockedBody;
+
   /// No description provided for @notificationPermissionTitle.
   ///
   /// In en, this message translates to:
@@ -1227,6 +1281,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Something went wrong'**
   String get errorGeneric;
+
+  /// No description provided for @startupErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The app could not start'**
+  String get startupErrorTitle;
+
+  /// No description provided for @startupErrorBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your data could not be opened. Try again; if the problem persists, close and reopen the app.'**
+  String get startupErrorBody;
 
   /// No description provided for @errorNoConnection.
   ///

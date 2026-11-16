@@ -4,12 +4,15 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../cache/cache_manager.dart';
+import '../cache/tmdb_disk_cache.dart';
 import '../background/background_task_runner.dart';
 import '../constants/storage_constants.dart';
 import '../network/api_error.dart';
 import '../network/network_feedback.dart';
-import '../notifications/new_episode_checker.dart';
 import '../theme/app_theme.dart';
+import 'catalogue_index.dart';
+import 'episode_alerts_service.dart';
+import 'watch_history_index.dart';
 import '../../data/repositories/hive_user_data_store.dart';
 import '../../data/repositories/user_data_store.dart';
 import '../../data/services/tmdb_service.dart';
@@ -35,69 +38,75 @@ class AppServices {
 
   final CacheManager cacheManager = CacheManager();
   TmdbService? _tmdbService;
-  TmdbService get tmdbService =>
-      _tmdbService ??= TmdbService(cacheManager: cacheManager);
+  TmdbService get tmdbService => _tmdbService ??= TmdbService(
+        cacheManager: cacheManager,
+        diskCache: tmdbDiskCache,
+      );
+
+  /// Persistent TMDB cache; set at startup, before [tmdbService] is first
+  /// used. Left null in the background isolate and in tests.
+  TmdbDiskCache? tmdbDiskCache;
 
   @visibleForTesting
   set tmdbService(TmdbService service) => _tmdbService = service;
 
   final BackgroundTaskRunner backgroundTaskRunner = BackgroundTaskRunner();
 
-  final List<CatalogueItem> _catalogue = [];
-  final Map<int, CatalogueItem> _catalogueById = {};
-  final List<WatchRecord> _watchHistory = [];
-  final Set<int> _watchedEpisodeIds = {};
-  final Set<int> _watchedFilmIds = {};
-  final Map<int, int> _episodeCountByMediaId = {};
-  final List<NewEpisodeAlert> _newEpisodeAlerts = [];
-  final ValueNotifier<List<NewEpisodeAlert>> newEpisodeAlertsListenable =
-      ValueNotifier<List<NewEpisodeAlert>>([]);
+  /// Empties the on-disk image cache; part of the TMDB cache purge.
+  /// Set at startup so this class does not depend on the image plugin.
+  Future<void> Function()? imageDiskCachePurge;
+
+  final CatalogueIndex _catalogue = CatalogueIndex();
+  final WatchHistoryIndex _history = WatchHistoryIndex();
+  late final EpisodeAlertsService _alerts = EpisodeAlertsService(
+    catalogue: _catalogue,
+    history: _history,
+    tmdbService: () => tmdbService,
+    userDataStore: () => userDataStore,
+    flushIfIdle: _maybeFlush,
+  );
+
+  ValueNotifier<List<NewEpisodeAlert>> get newEpisodeAlertsListenable =>
+      _alerts.listenable;
   final ValueNotifier<ThemeMode> themeModeListenable =
       ValueNotifier<ThemeMode>(ThemeMode.system);
 
-  /// When true, disk [UserDataStore.flush] is deferred until the outer
-  /// mutating operation completes (enables one fsync per user action).
-  bool _deferFlush = false;
+  /// While positive, disk [UserDataStore.flush] is deferred until every
+  /// mutating operation in flight completes (one fsync per user action).
+  /// A counter, not a flag: operations can overlap.
+  int _deferFlushDepth = 0;
 
-  /// Bumped when a watch-driven (per-show) Continue Watching refresh commits.
-  /// Full network scans started earlier discard their result if this changed
-  /// mid-flight, so they cannot restore a just-watched episode alert.
-  int _watchDrivenAlertEpoch = 0;
+  static const Duration _airingStatesSyncInterval = Duration(minutes: 15);
+  DateTime? _lastAiringStatesSyncAt;
 
   ThemeMode get themeMode => themeModeListenable.value;
 
-  List<CatalogueItem> get catalogue => List.unmodifiable(_catalogue);
-  List<WatchRecord> get watchHistory => List.unmodifiable(_watchHistory);
-  List<NewEpisodeAlert> get newEpisodeAlerts =>
-      List.unmodifiable(_newEpisodeAlerts);
+  List<CatalogueItem> get catalogue => _catalogue.items;
+  List<WatchRecord> get watchHistory => _history.records;
+  List<NewEpisodeAlert> get newEpisodeAlerts => _alerts.alerts;
 
-  int get totalWatchTimeMinutes =>
-      _watchHistory.fold(0, (sum, record) => sum + record.durationMinutes);
+  int get totalWatchTimeMinutes => _history.totalMinutes;
 
-  int get filmsWatchedCount => _watchedFilmIds.length;
+  int get filmsWatchedCount => _history.filmCount;
 
-  int get episodesWatchedCount => _watchedEpisodeIds.length;
+  int get episodesWatchedCount => _history.episodeCount;
 
-  List<Film> get films => _catalogue.whereType<Film>().toList(growable: false);
+  List<Film> get films => _catalogue.films;
 
-  List<TvShow> get tvShows =>
-      _catalogue.whereType<TvShow>().toList(growable: false);
+  List<TvShow> get tvShows => _catalogue.tvShows;
 
   /// TV shows marked as followed; only these feed New Episodes / notifications.
-  List<TvShow> get followedTvShows =>
-      tvShows.where((show) => show.isFollowed).toList(growable: false);
+  List<TvShow> get followedTvShows => _catalogue.followedTvShows;
 
-  bool isInCatalogue(int id) => _catalogueById.containsKey(id);
+  bool isInCatalogue(CatalogueItem item) => _catalogue.contains(item);
 
-  bool isFavorite(int id) => _catalogueById[id]?.isFavorite ?? false;
+  bool isFavorite(CatalogueItem item) =>
+      _catalogue.find(item)?.isFavorite ?? false;
 
-  bool isFollowed(int id) {
-    final item = _catalogueById[id];
-    return item is TvShow && item.isFollowed;
-  }
+  bool isFollowed(int id) => _catalogue.tvShowById(id)?.isFollowed ?? false;
 
   Future<void> addToCatalogue(CatalogueItem item) async {
-    if (isInCatalogue(item.id)) return;
+    if (isInCatalogue(item)) return;
     var localItem =
         item.overview == null ? item : catalogueItemForLocalStore(item);
     // New TV shows are followed by default so they appear in New Episodes.
@@ -105,7 +114,6 @@ class AppServices {
       localItem = localItem.withFollowed(true);
     }
     _catalogue.add(localItem);
-    _catalogueById[localItem.id] = localItem;
     await _persistCatalogueItem(localItem);
     if (localItem is TvShow) {
       unawaited(syncTvShowAiringState(localItem.id));
@@ -118,11 +126,8 @@ class AppServices {
     String? status,
     String? nextEpisodeAirDate,
   }) async {
-    final index = _catalogue.indexWhere((item) => item.id == id);
-    if (index < 0) return;
-
-    final item = _catalogue[index];
-    if (item is! TvShow) return;
+    final item = _catalogue.tvShowById(id);
+    if (item == null) return;
 
     final nextStatus = _nonEmptyTrimmed(status);
     final nextDate = _nonEmptyTrimmed(nextEpisodeAirDate);
@@ -136,8 +141,7 @@ class AppServices {
       clearStatus: nextStatus == null,
       clearNextEpisodeAirDate: nextDate == null,
     );
-    _catalogue[index] = updated;
-    _catalogueById[id] = updated;
+    _catalogue.add(updated);
     await _persistCatalogueItem(updated);
   }
 
@@ -155,8 +159,8 @@ class AppServices {
   /// Refreshes TMDB status / next-episode date for one catalogue TV show.
   Future<void> syncTvShowAiringState(int id) async {
     await NetworkFeedback.runSilent(() async {
-      final item = _catalogueById[id];
-      if (item is! TvShow) return;
+      final item = _catalogue.tvShowById(id);
+      if (item == null) return;
       try {
         final details = await tmdbService.getMediaDetails(item);
         if (details == null) return;
@@ -168,7 +172,15 @@ class AppServices {
   }
 
   /// Refreshes airing metadata for every catalogue TV show (uses TMDB cache).
+  ///
+  /// Called on every Catalogue tab activation, so it is throttled.
   Future<void> syncTvShowAiringStates() async {
+    final now = DateTime.now();
+    final last = _lastAiringStatesSyncAt;
+    if (last != null && now.difference(last) < _airingStatesSyncInterval) {
+      return;
+    }
+    _lastAiringStatesSyncAt = now;
     await NetworkFeedback.runSilent(() async {
       for (final show in List<TvShow>.from(tvShows)) {
         try {
@@ -182,25 +194,24 @@ class AppServices {
     });
   }
 
-  Future<void> removeFromCatalogue(int id) async {
+  Future<void> removeFromCatalogue(CatalogueItem item) async {
     await _withDeferredFlush(() async {
-      _catalogue.removeWhere((item) => item.id == id);
-      _catalogueById.remove(id);
-      await _persistCatalogueRemoval(id);
-      await _removeWatchHistoryForMedia(id);
-      await _removeEpisodeDataForShow(id);
+      _catalogue.remove(item);
+      await _persistCatalogueRemoval(item);
+      await _removeWatchHistoryForMedia(item);
+      if (item.isTvShow) {
+        await _alerts.removeForShow(item.id);
+      }
     });
   }
 
   /// Toggles the favorite flag on a catalogue item. No-op if not in catalogue.
-  Future<void> toggleFavorite(int id) async {
-    final index = _catalogue.indexWhere((item) => item.id == id);
-    if (index < 0) return;
+  Future<void> toggleFavorite(CatalogueItem item) async {
+    final current = _catalogue.find(item);
+    if (current == null) return;
 
-    final updated =
-        _catalogue[index].withFavorite(!_catalogue[index].isFavorite);
-    _catalogue[index] = updated;
-    _catalogueById[id] = updated;
+    final updated = current.withFavorite(!current.isFavorite);
+    _catalogue.add(updated);
     await _persistCatalogueItem(updated);
   }
 
@@ -208,27 +219,23 @@ class AppServices {
   ///
   /// Unfollowing clears that show's New Episode alerts; following rechecks it.
   Future<void> toggleFollowed(int id) async {
-    final index = _catalogue.indexWhere((item) => item.id == id);
-    if (index < 0) return;
-
-    final item = _catalogue[index];
-    if (item is! TvShow) return;
+    final item = _catalogue.tvShowById(id);
+    if (item == null) return;
 
     final updated = item.withFollowed(!item.isFollowed) as TvShow;
-    _catalogue[index] = updated;
-    _catalogueById[id] = updated;
+    _catalogue.add(updated);
     await _persistCatalogueItem(updated);
 
     if (updated.isFollowed) {
-      await _refreshNewEpisodeAlerts(forShowId: id);
+      await _alerts.refresh(forShowId: id);
     } else {
-      await _removeEpisodeDataForShow(id);
+      await _alerts.removeForShow(id);
     }
   }
 
   /// Adds a catalogue item and records watch time for films using TMDB runtime.
   Future<WatchRecord?> addToCatalogueWithWatchTime(CatalogueItem item) async {
-    if (isInCatalogue(item.id)) return null;
+    if (isInCatalogue(item)) return null;
 
     return _withDeferredFlush(() async {
       await addToCatalogue(item);
@@ -249,8 +256,8 @@ class AppServices {
 
   /// Adds or removes a catalogue item. Films record watch time on add.
   Future<void> toggleCatalogueItem(CatalogueItem item) async {
-    if (isInCatalogue(item.id)) {
-      await removeFromCatalogue(item.id);
+    if (isInCatalogue(item)) {
+      await removeFromCatalogue(item);
       return;
     }
 
@@ -261,8 +268,7 @@ class AppServices {
     }
   }
 
-  int watchedEpisodesCountFor(int mediaId) =>
-      _episodeCountByMediaId[mediaId] ?? 0;
+  int watchedEpisodesCountFor(int mediaId) => _history.episodeCountFor(mediaId);
 
   /// Whether removing [episodeIds] would leave the show with no catalogued
   /// episodes. Bookmark-only shows (zero episodes) return `false`.
@@ -282,9 +288,8 @@ class AppServices {
     return removing >= total;
   }
 
-  List<WatchRecord> watchedEpisodesFor(int mediaId) => _watchHistory
-      .where((record) => !record.isFilm && record.mediaId == mediaId)
-      .toList(growable: false);
+  List<WatchRecord> watchedEpisodesFor(int mediaId) =>
+      _history.episodesFor(mediaId);
 
   /// Adds the series to the catalogue (if needed) and records the episode.
   Future<WatchRecord?> addEpisodeToCatalogue({
@@ -342,15 +347,19 @@ class AppServices {
 
       if (toAdd.isEmpty) return 0;
 
-      if (!isInCatalogue(show.id)) {
+      if (!isInCatalogue(show)) {
         await addToCatalogue(show);
+        // A second tap may have registered episodes during the await.
+        toAdd.removeWhere(
+          (record) =>
+              isWatched(mediaId: show.id, episodeId: record.episodeId),
+        );
+        if (toAdd.isEmpty) return 0;
       }
 
-      for (final record in toAdd) {
-        _addWatchRecordInMemory(record);
-      }
+      toAdd.forEach(_history.add);
       await _persistWatchRecords(toAdd);
-      await _refreshNewEpisodeAlerts(forShowId: show.id);
+      await _alerts.refresh(forShowId: show.id);
       return toAdd.length;
     });
   }
@@ -366,7 +375,7 @@ class AppServices {
       final episodeIds = {
         for (final episode in episodes) episode.id,
       };
-      final removedRecords = _watchHistory
+      final removedRecords = _history.records
           .where(
             (record) =>
                 record.episodeId != null &&
@@ -376,21 +385,17 @@ class AppServices {
       if (removedRecords.isEmpty) return 0;
 
       final showId = removedRecords.first.mediaId;
-      _removeWatchRecordsInMemory(removedRecords);
+      _history.removeAll(removedRecords);
       await _persistWatchRecordRemovals(
         removedRecords.map((record) => record.watchKey),
       );
-      await _refreshNewEpisodeAlerts(forShowId: showId);
+      await _alerts.refresh(forShowId: showId);
       return removedRecords.length;
     });
   }
 
-  bool isWatched({required int mediaId, int? episodeId}) {
-    if (episodeId != null) {
-      return _watchedEpisodeIds.contains(episodeId);
-    }
-    return _watchedFilmIds.contains(mediaId);
-  }
+  bool isWatched({required int mediaId, int? episodeId}) =>
+      _history.isWatched(mediaId: mediaId, episodeId: episodeId);
 
   /// Adds the film to the catalogue (if needed) and records it as watched.
   /// Returns the new record, or null if already watched or duration is invalid.
@@ -401,8 +406,10 @@ class AppServices {
     if (durationMinutes <= 0 || isWatched(mediaId: film.id)) return null;
 
     return _withDeferredFlush(() async {
-      if (!isInCatalogue(film.id)) {
+      if (!isInCatalogue(film)) {
         await addToCatalogue(film);
+        // A second tap may have recorded the film during the await.
+        if (isWatched(mediaId: film.id)) return null;
       }
 
       final record = WatchRecord(
@@ -411,7 +418,7 @@ class AppServices {
         durationMinutes: durationMinutes,
         watchedAt: DateTime.now(),
       );
-      _addWatchRecordInMemory(record);
+      _history.add(record);
       await _persistWatchRecords([record]);
       return record;
     });
@@ -437,8 +444,10 @@ class AppServices {
     );
 
     return _withDeferredFlush(() async {
-      if (!isInCatalogue(show.id)) {
+      if (!isInCatalogue(show)) {
         await addToCatalogue(show);
+        // A second tap may have recorded the episode during the await.
+        if (isWatched(mediaId: show.id, episodeId: episode.id)) return null;
       }
 
       final record = WatchRecord(
@@ -450,38 +459,38 @@ class AppServices {
         durationMinutes: duration,
         watchedAt: DateTime.now(),
       );
-      _addWatchRecordInMemory(record);
+      _history.add(record);
       await _persistWatchRecords([record]);
-      _removeAlertForEpisode(episode.id);
-      await _refreshNewEpisodeAlerts(forShowId: show.id);
+      _alerts.removeForEpisode(episode.id);
+      await _alerts.refresh(forShowId: show.id);
       return record;
     });
   }
 
   Future<void> unmarkEpisodeWatched(int episodeId) async {
     await _withDeferredFlush(() async {
-      final removedRecords = _watchHistory
+      final removedRecords = _history.records
           .where((record) => record.episodeId == episodeId)
           .toList(growable: false);
       if (removedRecords.isEmpty) return;
 
       final showId = removedRecords.first.mediaId;
-      _removeWatchRecordsInMemory(removedRecords);
+      _history.removeAll(removedRecords);
       await _persistWatchRecordRemovals(
         removedRecords.map((record) => record.watchKey),
       );
-      await _refreshNewEpisodeAlerts(forShowId: showId);
+      await _alerts.refresh(forShowId: showId);
     });
   }
 
   Future<void> unmarkFilmWatched(int mediaId) async {
     await _withDeferredFlush(() async {
-      final removedRecords = _watchHistory
+      final removedRecords = _history.records
           .where((record) => record.isFilm && record.mediaId == mediaId)
           .toList(growable: false);
       if (removedRecords.isEmpty) return;
 
-      _removeWatchRecordsInMemory(removedRecords);
+      _history.removeAll(removedRecords);
       await _persistWatchRecordRemovals(
         removedRecords.map((record) => record.watchKey),
       );
@@ -498,22 +507,19 @@ class AppServices {
     final items = <CatalogueItem>[];
     final seenKeys = <String>{};
 
-    for (final item in _catalogue) {
+    for (final item in _catalogue.items) {
       if (!item.title.toLowerCase().contains(normalizedQuery)) continue;
-      if (!seenKeys.add(_mediaSeenKey(item))) continue;
+      if (!seenKeys.add(item.mediaKey)) continue;
       items.add(item);
     }
 
     for (final item in tmdbService.searchLocalCache(query: query)) {
-      if (!seenKeys.add(_mediaSeenKey(item))) continue;
+      if (!seenKeys.add(item.mediaKey)) continue;
       items.add(item);
     }
 
     return items;
   }
-
-  String _mediaSeenKey(CatalogueItem item) =>
-      '${item.isFilm ? 'm' : 't'}-${item.id}';
 
   Future<void> initialize({UserDataStore? userDataStore}) async {
     if (userDataStore != null) {
@@ -522,31 +528,9 @@ class AppServices {
 
     final store = this.userDataStore;
     await store.open();
-    _catalogue
-      ..clear()
-      ..addAll(await store.loadCatalogue());
-    _rebuildCatalogueIndex();
-    _watchHistory
-      ..clear()
-      ..addAll(await store.loadWatchHistory());
-    _rebuildWatchIndexes();
-    _newEpisodeAlerts
-      ..clear()
-      ..addAll(await store.loadNewEpisodeAlerts());
-    final alertCountBeforePrune = _newEpisodeAlerts.length;
-    _pruneAlertsToFollowedShows();
-    newEpisodeAlertsListenable.value = List<NewEpisodeAlert>.from(
-      _newEpisodeAlerts,
-    );
-    if (_newEpisodeAlerts.length != alertCountBeforePrune) {
-      try {
-        await store.saveNewEpisodeAlerts(_newEpisodeAlerts);
-      } catch (error, stackTrace) {
-        debugPrint(
-          'Failed to prune new episode alerts on init: $error\n$stackTrace',
-        );
-      }
-    }
+    _catalogue.replaceAll(await store.loadCatalogue());
+    _history.replaceAll(await store.loadWatchHistory());
+    await _alerts.loadFrom(store);
 
     try {
       themeModeListenable.value = AppTheme.themeModeFromStorage(
@@ -557,6 +541,7 @@ class AppServices {
       themeModeListenable.value = ThemeMode.system;
     }
 
+    await importBackgroundCheckResult();
     await _purgeTmdbCachesIfStale();
 
     tmdbService;
@@ -589,152 +574,29 @@ class AppServices {
     }
   }
 
-  void updateNewEpisodeAlerts(List<NewEpisodeAlert> alerts) {
-    final pruned = [
-      for (final alert in alerts)
-        if (!_watchedEpisodeIds.contains(alert.episodeId)) alert,
-    ];
-    _newEpisodeAlerts
-      ..clear()
-      ..addAll(pruned);
-    newEpisodeAlertsListenable.value = List<NewEpisodeAlert>.from(pruned);
-  }
+  void updateNewEpisodeAlerts(List<NewEpisodeAlert> alerts) =>
+      _alerts.update(alerts);
 
-  Future<void> _persistNewEpisodeAlerts() async {
-    try {
-      await userDataStore.saveNewEpisodeAlerts(_newEpisodeAlerts);
-      await userDataStore.saveLastEpisodeCheckAt(DateTime.now());
-    } catch (error, stackTrace) {
-      debugPrint(
-        'Failed to persist new episode alerts: $error\n$stackTrace',
-      );
-    }
-  }
-
-  /// Drops any Continue Watching row for [episodeId] immediately so Home
-  /// cannot keep showing a just-catalogued episode while a refresh is in flight.
-  void _removeAlertForEpisode(int episodeId) {
-    final before = _newEpisodeAlerts.length;
-    _newEpisodeAlerts.removeWhere((alert) => alert.episodeId == episodeId);
-    if (_newEpisodeAlerts.length == before) return;
-    newEpisodeAlertsListenable.value = List<NewEpisodeAlert>.from(
-      _newEpisodeAlerts,
-    );
-    _watchDrivenAlertEpoch++;
-  }
-
-  Future<void> reloadNewEpisodeAlertsFromStore() async {
-    try {
-      final alerts = await userDataStore.loadNewEpisodeAlerts();
-      updateNewEpisodeAlerts(alerts);
-    } catch (error, stackTrace) {
-      debugPrint(
-        'Failed to reload new episode alerts: $error\n$stackTrace',
-      );
-    }
-  }
-
-  /// Rebuilds New Episodes from current catalogue progress so the home
-  /// section immediately shows the next aired episode after a watch change.
-  ///
-  /// Only followed shows are considered. When [forShowId] is set, only that
-  /// show is rechecked and merged into existing alerts (avoids scanning the
-  /// whole catalogue on every toggle).
-  ///
-  /// A slow full network scan must not commit after a newer watch-driven
-  /// refresh: it may still hold a stale watch-history snapshot and would
-  /// put a just-catalogued episode back into Continue Watching.
-  Future<void> _refreshNewEpisodeAlerts({
-    int? forShowId,
-    bool forceRefresh = false,
-  }) async {
-    final watchEpochAtStart = _watchDrivenAlertEpoch;
-    final watchDriven = forShowId != null;
-    await NetworkFeedback.runSilent(() async {
-      try {
-        final shows = forShowId == null
-            ? followedTvShows
-            : followedTvShows
-                .where((show) => show.id == forShowId)
-                .toList(growable: false);
-        final historySnapshot = List<WatchRecord>.of(_watchHistory);
-
-        if (forShowId != null && shows.isEmpty) {
-          _newEpisodeAlerts.removeWhere((alert) => alert.showId == forShowId);
-          newEpisodeAlertsListenable.value = List<NewEpisodeAlert>.from(
-            _newEpisodeAlerts,
-          );
-          await _persistNewEpisodeAlerts();
-          _watchDrivenAlertEpoch++;
-          return;
-        }
-
-        final checker = NewEpisodeChecker(
-          tmdbService: tmdbService,
-          userDataStore: userDataStore,
-        );
-        final result = await checker.checkShows(
-          shows: shows,
-          watchHistory: historySnapshot,
-          forceRefresh: forceRefresh,
-          mergeWithExisting: forShowId != null,
-          existingAlerts: List<NewEpisodeAlert>.of(_newEpisodeAlerts),
-          persistAlerts: false,
-        );
-        final staleFullRefresh = !watchDriven &&
-            watchEpochAtStart != _watchDrivenAlertEpoch;
-        if (staleFullRefresh) return;
-        updateNewEpisodeAlerts(result.allAlerts);
-        await _persistNewEpisodeAlerts();
-        if (watchDriven) {
-          _watchDrivenAlertEpoch++;
-        }
-      } catch (error, stackTrace) {
-        debugPrint(
-          'Failed to refresh new episode alerts: $error\n$stackTrace',
-        );
-      }
-    });
-  }
+  /// Adopts the alerts left by the background check when they are newer than
+  /// the last check done by this isolate.
+  Future<void> importBackgroundCheckResult() =>
+      _alerts.importBackgroundCheckResult();
 
   /// Foreground network refresh of followed-show alerts (no system notify).
-  Future<void> refreshNewEpisodeAlertsFromNetwork() async {
-    await _refreshNewEpisodeAlerts(forceRefresh: true);
-  }
+  Future<void> refreshNewEpisodeAlertsFromNetwork() =>
+      _alerts.refresh(forceRefresh: true);
 
-  /// Drops persisted alerts for shows that are no longer followed.
-  void _pruneAlertsToFollowedShows() {
-    final followedIds = {for (final show in followedTvShows) show.id};
-    _newEpisodeAlerts.removeWhere(
-      (alert) => !followedIds.contains(alert.showId),
-    );
-  }
-
-  Future<void> _removeWatchHistoryForMedia(int mediaId) async {
-    final removedRecords = _watchHistory
-        .where((record) => record.mediaId == mediaId)
+  Future<void> _removeWatchHistoryForMedia(CatalogueItem item) async {
+    final key = item.mediaKey;
+    final removedRecords = _history.records
+        .where((record) => record.mediaKey == key)
         .toList(growable: false);
     if (removedRecords.isEmpty) return;
 
-    _removeWatchRecordsInMemory(removedRecords);
+    _history.removeAll(removedRecords);
     await _persistWatchRecordRemovals(
       removedRecords.map((record) => record.watchKey),
     );
-  }
-
-  Future<void> _removeEpisodeDataForShow(int showId) async {
-    _newEpisodeAlerts.removeWhere((alert) => alert.showId == showId);
-    newEpisodeAlertsListenable.value = List<NewEpisodeAlert>.from(
-      _newEpisodeAlerts,
-    );
-
-    try {
-      await userDataStore.saveNewEpisodeAlerts(_newEpisodeAlerts);
-    } catch (error, stackTrace) {
-      debugPrint(
-        'Failed to remove episode data for show $showId: $error\n$stackTrace',
-      );
-    }
   }
 
   Future<void> startBackgroundTasks() async {
@@ -749,83 +611,20 @@ class AppServices {
     cacheManager.dispose();
   }
 
-  void _rebuildCatalogueIndex() {
-    _catalogueById
-      ..clear()
-      ..addEntries(_catalogue.map((item) => MapEntry(item.id, item)));
-  }
-
-  void _rebuildWatchIndexes() {
-    _watchedEpisodeIds.clear();
-    _watchedFilmIds.clear();
-    _episodeCountByMediaId.clear();
-    for (final record in _watchHistory) {
-      _indexWatchRecord(record);
-    }
-  }
-
-  void _addWatchRecordInMemory(WatchRecord record) {
-    _watchHistory.add(record);
-    _indexWatchRecord(record);
-  }
-
-  void _removeWatchRecordsInMemory(List<WatchRecord> records) {
-    if (records.isEmpty) return;
-    final keys = {for (final record in records) record.watchKey};
-    _watchHistory.removeWhere((record) => keys.contains(record.watchKey));
-    for (final record in records) {
-      _unindexWatchRecord(record);
-    }
-  }
-
-  void _indexWatchRecord(WatchRecord record) {
-    if (record.isFilm) {
-      _watchedFilmIds.add(record.mediaId);
-      return;
-    }
-    final episodeId = record.episodeId;
-    if (episodeId == null) return;
-    if (_watchedEpisodeIds.add(episodeId)) {
-      _episodeCountByMediaId.update(
-        record.mediaId,
-        (count) => count + 1,
-        ifAbsent: () => 1,
-      );
-    }
-  }
-
-  void _unindexWatchRecord(WatchRecord record) {
-    if (record.isFilm) {
-      _watchedFilmIds.remove(record.mediaId);
-      return;
-    }
-    final episodeId = record.episodeId;
-    if (episodeId == null) return;
-    if (!_watchedEpisodeIds.remove(episodeId)) return;
-    final remaining = (_episodeCountByMediaId[record.mediaId] ?? 1) - 1;
-    if (remaining <= 0) {
-      _episodeCountByMediaId.remove(record.mediaId);
-    } else {
-      _episodeCountByMediaId[record.mediaId] = remaining;
-    }
-  }
-
   Future<T> _withDeferredFlush<T>(Future<T> Function() action) async {
-    final wasDeferring = _deferFlush;
-    _deferFlush = true;
+    _deferFlushDepth++;
     try {
-      final result = await action();
-      return result;
+      return await action();
     } finally {
-      _deferFlush = wasDeferring;
-      if (!_deferFlush) {
+      _deferFlushDepth--;
+      if (_deferFlushDepth == 0) {
         await _flushUserData();
       }
     }
   }
 
   Future<void> _maybeFlush() async {
-    if (!_deferFlush) {
+    if (_deferFlushDepth == 0) {
       await _flushUserData();
     }
   }
@@ -849,13 +648,13 @@ class AppServices {
     }
   }
 
-  Future<void> _persistCatalogueRemoval(int mediaId) async {
+  Future<void> _persistCatalogueRemoval(CatalogueItem item) async {
     try {
-      await userDataStore.removeCatalogueItem(mediaId);
+      await userDataStore.removeCatalogueItem(item);
       await _maybeFlush();
     } catch (error, stackTrace) {
       debugPrint(
-        'Failed to remove catalogue item $mediaId: $error\n$stackTrace',
+        'Failed to remove catalogue item ${item.mediaKey}: $error\n$stackTrace',
       );
     }
   }
@@ -884,6 +683,12 @@ class AppServices {
     cacheManager.clearAll();
     _clearFlutterImageCache();
     try {
+      await tmdbDiskCache?.clear();
+      await imageDiskCachePurge?.call();
+    } catch (error, stackTrace) {
+      debugPrint('Failed to empty the disk caches: $error\n$stackTrace');
+    }
+    try {
       await userDataStore.saveLastTmdbCachePurgeAt(DateTime.now().toUtc());
       await _maybeFlush();
     } catch (error, stackTrace) {
@@ -905,14 +710,9 @@ class AppServices {
   Future<void> clearAllData() async {
     await clearCacheData();
     _catalogue.clear();
-    _catalogueById.clear();
-    _watchHistory.clear();
-    _watchedEpisodeIds.clear();
-    _watchedFilmIds.clear();
-    _episodeCountByMediaId.clear();
-    _newEpisodeAlerts.clear();
-    newEpisodeAlertsListenable.value = const [];
-    _watchDrivenAlertEpoch = 0;
+    _history.clear();
+    _alerts.clear();
+    _lastAiringStatesSyncAt = null;
     await userDataStore.clearAll();
     // clearAll removes the purge stamp; re-record so the next launch is not forced.
     try {

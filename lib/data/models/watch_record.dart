@@ -1,3 +1,5 @@
+import 'catalogue_item.dart';
+
 /// A single watched film or TV episode entry used to accumulate watch time.
 class WatchRecord {
   final int mediaId;
@@ -21,6 +23,9 @@ class WatchRecord {
   /// Unique key to prevent counting the same film or episode twice.
   String get watchKey =>
       isFilm ? 'film_$mediaId' : 'episode_${episodeId ?? '$mediaId-$seasonNumber-$episodeNumber'}';
+
+  /// Key of the film or show this record belongs to.
+  String get mediaKey => mediaKeyOf(isFilm: isFilm, id: mediaId);
 
   Map<String, dynamic> toJson() => {
         'media_id': mediaId,

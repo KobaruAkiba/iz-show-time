@@ -2,11 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive/hive.dart';
+import 'package:hive_ce/hive.dart';
 import 'package:iz_show_time_tracker/core/constants/storage_constants.dart';
 import 'package:iz_show_time_tracker/data/models/catalogue_item.dart';
 import 'package:iz_show_time_tracker/data/models/new_episode_alert.dart';
 import 'package:iz_show_time_tracker/data/models/watch_record.dart';
+import 'package:iz_show_time_tracker/data/repositories/background_check_outbox.dart';
 import 'package:iz_show_time_tracker/data/repositories/hive_user_data_store.dart';
 
 void main() {
@@ -80,7 +81,7 @@ void main() {
       );
       expect(loadedCatalogue.firstWhere((item) => item.id == 550).overview,
           isNull);
-      final rawFilm = store.catalogueBox.get(550) as String;
+      final rawFilm = store.catalogueBox.get(film.mediaKey) as String;
       expect(rawFilm.contains('overview'), isFalse);
       final rawWatch = store.watchHistoryBox.get(filmRecord.watchKey) as String;
       expect(rawWatch.contains('media_title'), isFalse);
@@ -188,7 +189,7 @@ void main() {
 
       await store.saveCatalogueItem(film);
       await store.saveWatchRecord(record);
-      await store.removeCatalogueItem(film.id);
+      await store.removeCatalogueItem(film);
       await store.removeWatchRecord(record.watchKey);
       await store.flush();
 
@@ -226,8 +227,170 @@ void main() {
       const film = Film(id: 7, title: 'Encoded Film');
       await store.saveCatalogueItem(film);
 
-      final raw = store.catalogueBox.get(film.id);
+      final raw = store.catalogueBox.get(film.mediaKey);
       expect(raw, isA<String>());
+    });
+
+    test('keeps a film and a TV show that share a TMDB id', () async {
+      const film = Film(id: 1402, title: 'Same Id Film');
+      const show = TvShow(id: 1402, title: 'Same Id Show');
+
+      await store.saveCatalogueItem(show);
+      await store.saveCatalogueItem(film);
+
+      expect(await store.loadCatalogue(), hasLength(2));
+
+      await store.removeCatalogueItem(film);
+
+      final remaining = await store.loadCatalogue();
+      expect(remaining.single, isA<TvShow>());
+    });
+
+    test('migrates bare-id catalogue keys to media keys (schema v3)',
+        () async {
+      await store.catalogueBox.put(
+        1402,
+        jsonEncode({'type': 'tv', 'id': 1402, 'name': 'Legacy Show'}),
+      );
+      await store.catalogueBox.put(
+        550,
+        jsonEncode({'type': 'film', 'id': 550, 'title': 'Legacy Film'}),
+      );
+      await store.metaBox.put(StorageConstants.schemaVersionKey, 2);
+      await store.flush();
+      await store.close();
+
+      store = HiveUserDataStore();
+      await store.open();
+
+      expect(store.catalogueBox.keys.toSet(), {'t_1402', 'm_550'});
+      expect(
+        store.metaBox.get(StorageConstants.schemaVersionKey),
+        StorageConstants.storageSchemaVersion,
+      );
+      final loaded = await store.loadCatalogue();
+      expect(loaded.map((item) => item.title).toSet(),
+          {'Legacy Show', 'Legacy Film'});
+    });
+
+    test('readSnapshot copies user data without owning the boxes', () async {
+      const show = TvShow(id: 9, title: 'Snapshot Show', tags: [kFollowedTag]);
+      await store.saveCatalogueItem(show);
+      await store.saveAppInForeground(true);
+      await store.saveNotifiedEpisodeIds({5, 6});
+      await store.flush();
+      await store.close();
+
+      final snapshot = await HiveUserDataStore.readSnapshot();
+
+      expect(snapshot, isNotNull);
+      expect(snapshot!.catalogue.single.title, 'Snapshot Show');
+      expect(snapshot.appInForeground, isTrue);
+      expect(snapshot.notifiedEpisodeIds, {5, 6});
+      expect(Hive.isBoxOpen(StorageConstants.catalogueBoxName), isFalse);
+    });
+
+    test('readSnapshot leaves an outdated schema to the owner', () async {
+      await store.catalogueBox.put(
+        3,
+        jsonEncode({'type': 'film', 'id': 3, 'title': 'Legacy'}),
+      );
+      await store.metaBox.put(StorageConstants.schemaVersionKey, 2);
+      await store.flush();
+      await store.close();
+
+      expect(await HiveUserDataStore.readSnapshot(), isNull);
+
+      await store.open();
+      expect(store.catalogueBox.keys.toList(), ['m_3']);
+    });
+
+    test('background check outbox round-trips and is cleared with the data',
+        () async {
+      expect(await store.loadBackgroundCheckResult(), isNull);
+
+      final outbox = await BackgroundCheckOutbox.openForWriting();
+      expect(outbox.notifiedEpisodeIds, isNull);
+      await outbox.save(
+        alerts: [
+          NewEpisodeAlert(
+            showId: 42,
+            showTitle: 'Sample Show',
+            episodeId: 901,
+            seasonNumber: 3,
+            episodeNumber: 9,
+            episodeName: 'New One',
+            detectedAt: DateTime(2026, 5, 2, 8),
+          ),
+        ],
+        checkedAt: DateTime(2026, 5, 2, 9),
+        notifiedEpisodeIds: {901},
+      );
+      await outbox.close();
+
+      final result = await store.loadBackgroundCheckResult();
+      expect(result!.checkedAt, DateTime(2026, 5, 2, 9));
+      expect(result.alerts.single.episodeId, 901);
+      expect(Hive.isBoxOpen(BackgroundCheckOutbox.boxName), isFalse);
+
+      final reopened = await BackgroundCheckOutbox.openForWriting();
+      expect(reopened.notifiedEpisodeIds, {901});
+      await reopened.close();
+
+      await store.clearAll();
+      expect(await store.loadBackgroundCheckResult(), isNull);
+    });
+
+    test('rejects a backup with unreadable entries and keeps current data',
+        () async {
+      await store.saveCatalogueItem(const Film(id: 5, title: 'Kept Film'));
+      await store.saveThemeMode('dark');
+
+      Future<void> importWith({
+        required Map<String, dynamic> catalogue,
+        required Map<String, dynamic> watchHistory,
+      }) {
+        return store.importBackupData({
+          'format': 'iz_show_time_backup',
+          'version': 2,
+          'catalogue': catalogue,
+          'watchHistory': watchHistory,
+          'meta': <String, dynamic>{},
+        });
+      }
+
+      await expectLater(
+        importWith(
+          catalogue: {'m_1': jsonEncode({'type': 'person', 'id': 1})},
+          watchHistory: {},
+        ),
+        throwsFormatException,
+      );
+      await expectLater(
+        importWith(
+          catalogue: {},
+          watchHistory: {'film_1': jsonEncode({'media_id': 'not a number'})},
+        ),
+        throwsFormatException,
+      );
+
+      expect((await store.loadCatalogue()).single.title, 'Kept Film');
+      expect(await store.loadThemeMode(), 'dark');
+    });
+
+    test('imports a version 1 backup keyed by bare id', () async {
+      await store.importBackupData({
+        'format': 'iz_show_time_backup',
+        'version': 1,
+        'catalogue': {
+          '550': jsonEncode({'type': 'film', 'id': 550, 'title': 'Old Film'}),
+        },
+        'watchHistory': <String, dynamic>{},
+        'meta': <String, dynamic>{},
+      });
+
+      expect(store.catalogueBox.keys.toList(), ['m_550']);
+      expect((await store.loadCatalogue()).single.title, 'Old Film');
     });
 
     test('exports and imports portable backup payloads', () async {
@@ -316,7 +479,7 @@ void main() {
       store = HiveUserDataStore();
       await store.open();
 
-      final catalogueRaw = store.catalogueBox.get(1) as String;
+      final catalogueRaw = store.catalogueBox.get('m_1') as String;
       expect(catalogueRaw.contains('overview'), isFalse);
       final watchRaw = store.watchHistoryBox.get('film_1') as String;
       expect(watchRaw.contains('media_title'), isFalse);

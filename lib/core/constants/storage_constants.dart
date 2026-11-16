@@ -6,7 +6,8 @@ class StorageConstants {
 
   static const String schemaVersionKey = 'schema_version';
   /// v2: catalogue without overview; watch records without media_title.
-  static const int storageSchemaVersion = 2;
+  /// v3: catalogue keyed by media key (film/TV + id) instead of bare TMDB id.
+  static const int storageSchemaVersion = 3;
 
   static const String newEpisodeAlertsKey = 'new_episode_alerts';
   static const String lastEpisodeCheckKey = 'last_episode_check_at';

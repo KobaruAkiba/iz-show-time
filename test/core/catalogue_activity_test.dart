@@ -35,8 +35,31 @@ void main() {
         ),
       ]);
 
-      expect(map[1], DateTime(2026, 2, 1));
-      expect(map[2], DateTime(2026, 1, 15));
+      expect(map['t_1'], DateTime(2026, 2, 1));
+      expect(map['m_2'], DateTime(2026, 1, 15));
+    });
+
+    test('keeps a film and a show with the same id apart', () {
+      final map = lastCatalogueActivityByMediaId([
+        WatchRecord(
+          mediaId: 7,
+          isFilm: false,
+          episodeId: 70,
+          seasonNumber: 1,
+          episodeNumber: 1,
+          durationMinutes: 40,
+          watchedAt: DateTime(2026, 1, 1),
+        ),
+        WatchRecord(
+          mediaId: 7,
+          isFilm: true,
+          durationMinutes: 120,
+          watchedAt: DateTime(2026, 3, 1),
+        ),
+      ]);
+
+      expect(map['t_7'], DateTime(2026, 1, 1));
+      expect(map['m_7'], DateTime(2026, 3, 1));
     });
   });
 
@@ -63,7 +86,7 @@ void main() {
     test('orders by airDate descending', () {
       final a = alert(showId: 1, airDate: DateTime(2026, 1, 1));
       final b = alert(showId: 2, airDate: DateTime(2026, 2, 1));
-      final activity = <int, DateTime>{};
+      final activity = <String, DateTime>{};
 
       expect(compareContinueWatchingAlerts(b, a, activity), lessThan(0));
       expect(compareContinueWatchingAlerts(a, b, activity), greaterThan(0));
@@ -72,7 +95,7 @@ void main() {
     test('null airDate sorts after dated alerts', () {
       final dated = alert(showId: 1, airDate: DateTime(2026, 1, 1));
       final undated = alert(showId: 2, airDate: null);
-      final activity = <int, DateTime>{};
+      final activity = <String, DateTime>{};
 
       expect(
         compareContinueWatchingAlerts(dated, undated, activity),
@@ -84,15 +107,15 @@ void main() {
       final a = alert(showId: 1, airDate: DateTime(2026, 1, 1));
       final b = alert(showId: 2, airDate: DateTime(2026, 1, 1));
       final activity = {
-        1: DateTime(2026, 1, 10),
-        2: DateTime(2026, 1, 20),
+        't_1': DateTime(2026, 1, 10),
+        't_2': DateTime(2026, 1, 20),
       };
 
       expect(compareContinueWatchingAlerts(b, a, activity), lessThan(0));
 
       final sameActivity = {
-        1: DateTime(2026, 1, 10),
-        2: DateTime(2026, 1, 10),
+        't_1': DateTime(2026, 1, 10),
+        't_2': DateTime(2026, 1, 10),
       };
       expect(
         compareContinueWatchingAlerts(a, b, sameActivity),
@@ -110,9 +133,9 @@ void main() {
       const orphan = Film(id: 4, title: 'Orphan Film');
 
       final activity = {
-        1: DateTime(2026, 3, 1),
-        2: DateTime(2026, 1, 1),
-        3: DateTime(2026, 2, 1),
+        'm_1': DateTime(2026, 3, 1),
+        'm_2': DateTime(2026, 1, 1),
+        't_3': DateTime(2026, 2, 1),
       };
 
       final sorted = applyMediaFilters(
@@ -134,7 +157,7 @@ void main() {
         [a, b],
         mediaFilter: MediaFilter.all,
         sortOption: MediaSortOption.none,
-        lastCatalogueActivityByMediaId: {10: sameDay, 11: sameDay},
+        lastCatalogueActivityByMediaId: {'m_10': sameDay, 'm_11': sameDay},
       );
 
       expect(sorted.map((item) => item.id).toList(), [11, 10]);

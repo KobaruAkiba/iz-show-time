@@ -28,7 +28,7 @@ void main() {
 
     test('formats years and lower units', () {
       // 1y 2M 3d 4h 5m
-      final minutes =
+      const minutes =
           (1 * 12 * 30 * 24 * 60) + (2 * 30 * 24 * 60) + (3 * 24 * 60) + (4 * 60) + 5;
       expect(formatDurationMinutes(minutes), '1y 2M 3d 4h 5m');
     });

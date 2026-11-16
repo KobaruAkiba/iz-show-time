@@ -4,7 +4,9 @@ import 'package:iz_show_time_tracker/data/models/catalogue_item.dart';
 import 'package:iz_show_time_tracker/data/models/episode_model.dart';
 import 'package:iz_show_time_tracker/data/models/media_details.dart';
 import 'package:iz_show_time_tracker/data/models/new_episode_alert.dart';
+import 'package:iz_show_time_tracker/data/models/tv_show_summary.dart';
 import 'package:iz_show_time_tracker/data/models/watch_record.dart';
+import 'package:iz_show_time_tracker/data/repositories/background_check_outbox.dart';
 import 'package:iz_show_time_tracker/data/repositories/user_data_store.dart';
 import 'package:iz_show_time_tracker/data/services/tmdb_service.dart';
 
@@ -23,7 +25,7 @@ class FakeEpisodeCheckStore implements UserDataStore {
   Future<void> saveCatalogueItem(CatalogueItem item) async {}
 
   @override
-  Future<void> removeCatalogueItem(int mediaId) async {}
+  Future<void> removeCatalogueItem(CatalogueItem item) async {}
 
   @override
   Future<List<WatchRecord>> loadWatchHistory() async => [];
@@ -78,6 +80,9 @@ class FakeEpisodeCheckStore implements UserDataStore {
   Future<void> saveNotifiedEpisodeIds(Set<int> episodeIds) async {
     notifiedEpisodeIds = Set<int>.from(episodeIds);
   }
+
+  @override
+  Future<BackgroundCheckResult?> loadBackgroundCheckResult() async => null;
 
   bool notificationPermissionPrePromptShown = false;
 
@@ -139,6 +144,7 @@ class StubTmdbService extends TmdbService {
     this.detailsNextEpisodeAirDate,
     this.detailsPosterPath,
     this.averageEpisodeRuntimeMinutes = 45,
+    this.lastAiredEpisode,
   }) : super(cacheManager: null);
 
   final int seasonCount;
@@ -147,7 +153,22 @@ class StubTmdbService extends TmdbService {
   final String? detailsNextEpisodeAirDate;
   final String? detailsPosterPath;
   final int? averageEpisodeRuntimeMinutes;
+  final ({int seasonNumber, int episodeNumber})? lastAiredEpisode;
   int seasonFetchCount = 0;
+
+  @override
+  Future<TvShowSummary?> getTvShowSummary(
+    int tvId, {
+    bool forceRefresh = false,
+  }) async {
+    return TvShowSummary(
+      numberOfSeasons: seasonCount,
+      posterPath: detailsPosterPath,
+      averageEpisodeRuntimeMinutes: averageEpisodeRuntimeMinutes,
+      lastAiredEpisode: lastAiredEpisode,
+      nextEpisodeAirDate: detailsNextEpisodeAirDate,
+    );
+  }
 
   @override
   Future<MediaDetails?> getMediaDetails(CatalogueItem item) async {
@@ -184,6 +205,17 @@ class MultiShowStubTmdbService extends TmdbService {
         int seasonCount,
         Map<int, List<EpisodeModel>> episodesBySeason,
       })> byShowId;
+
+  @override
+  Future<TvShowSummary?> getTvShowSummary(
+    int tvId, {
+    bool forceRefresh = false,
+  }) async {
+    return TvShowSummary(
+      numberOfSeasons: byShowId[tvId]!.seasonCount,
+      averageEpisodeRuntimeMinutes: 45,
+    );
+  }
 
   @override
   Future<MediaDetails?> getMediaDetails(CatalogueItem item) async {
@@ -264,6 +296,96 @@ void main() {
       expect(result.newlyDetected.first.episodeNumber, 3);
       expect(result.newlyDetected.first.runtimeMinutes, 45);
       expect(result.allAlerts, hasLength(1));
+    });
+
+    group('caught-up shortcut', () {
+      const show = TvShow(id: 42, title: 'Sample Show');
+      final watchHistory = [
+        WatchRecord(
+          mediaId: 42,
+          isFilm: false,
+          episodeId: 100,
+          seasonNumber: 1,
+          episodeNumber: 2,
+          durationMinutes: 45,
+          watchedAt: DateTime(2026, 1, 1),
+        ),
+      ];
+      final nextEpisode = EpisodeModel.fromJson({
+        'id': 101,
+        'season_number': 1,
+        'episode_number': 3,
+        'name': 'New One',
+        'air_date': '2026-01-08',
+      });
+
+      Future<({NewEpisodeCheckResult result, int seasonFetches})> check({
+        required int seasonCount,
+        ({int seasonNumber, int episodeNumber})? lastAired,
+        String? nextAirDate,
+      }) async {
+        final tmdb = StubTmdbService(
+          seasonCount: seasonCount,
+          episodesBySeason: {
+            1: [nextEpisode],
+          },
+          lastAiredEpisode: lastAired,
+          detailsNextEpisodeAirDate: nextAirDate,
+        );
+        final result = await NewEpisodeChecker(tmdbService: tmdb).checkShows(
+          shows: [show],
+          watchHistory: watchHistory,
+          existingAlerts: const [],
+        );
+        return (result: result, seasonFetches: tmdb.seasonFetchCount);
+      }
+
+      test('skips season requests when nothing aired after progress',
+          () async {
+        final outcome = await check(
+          seasonCount: 1,
+          lastAired: (seasonNumber: 1, episodeNumber: 2),
+          nextAirDate: '2999-01-01',
+        );
+
+        expect(outcome.result.allAlerts, isEmpty);
+        expect(outcome.seasonFetches, 0);
+      });
+
+      test('still checks when a later episode aired', () async {
+        final outcome = await check(
+          seasonCount: 1,
+          lastAired: (seasonNumber: 1, episodeNumber: 3),
+        );
+
+        expect(outcome.result.allAlerts.single.episodeNumber, 3);
+      });
+
+      test('still checks when the next episode airs today', () async {
+        final today = DateTime.now().toIso8601String().substring(0, 10);
+        final outcome = await check(
+          seasonCount: 1,
+          lastAired: (seasonNumber: 1, episodeNumber: 2),
+          nextAirDate: today,
+        );
+
+        expect(outcome.seasonFetches, greaterThan(0));
+      });
+
+      test('still checks when a later season exists', () async {
+        final outcome = await check(
+          seasonCount: 2,
+          lastAired: (seasonNumber: 1, episodeNumber: 2),
+        );
+
+        expect(outcome.seasonFetches, greaterThan(0));
+      });
+
+      test('still checks when TMDB gives no last aired episode', () async {
+        final outcome = await check(seasonCount: 1);
+
+        expect(outcome.result.allAlerts.single.episodeNumber, 3);
+      });
     });
 
     test('skips aired next episode when runtime cannot be resolved', () async {

@@ -6,7 +6,9 @@ import 'package:iz_show_time_tracker/data/models/catalogue_item.dart';
 import 'package:iz_show_time_tracker/data/models/episode_model.dart';
 import 'package:iz_show_time_tracker/data/models/media_details.dart';
 import 'package:iz_show_time_tracker/data/models/new_episode_alert.dart';
+import 'package:iz_show_time_tracker/data/models/tv_show_summary.dart';
 import 'package:iz_show_time_tracker/data/models/watch_record.dart';
+import 'package:iz_show_time_tracker/data/repositories/background_check_outbox.dart';
 import 'package:iz_show_time_tracker/data/repositories/user_data_store.dart';
 import 'package:iz_show_time_tracker/data/services/tmdb_service.dart';
 
@@ -72,7 +74,8 @@ class FakeUserDataStore implements UserDataStore {
   @override
   Future<void> saveCatalogueItem(CatalogueItem item) async {
     savedCatalogueItems.add(item);
-    final index = catalogue.indexWhere((entry) => entry.id == item.id);
+    final index =
+        catalogue.indexWhere((entry) => entry.mediaKey == item.mediaKey);
     if (index >= 0) {
       catalogue[index] = item;
     } else {
@@ -81,9 +84,9 @@ class FakeUserDataStore implements UserDataStore {
   }
 
   @override
-  Future<void> removeCatalogueItem(int mediaId) async {
-    removedCatalogueIds.add(mediaId);
-    catalogue.removeWhere((item) => item.id == mediaId);
+  Future<void> removeCatalogueItem(CatalogueItem item) async {
+    removedCatalogueIds.add(item.id);
+    catalogue.removeWhere((entry) => entry.mediaKey == item.mediaKey);
   }
 
   @override
@@ -163,6 +166,12 @@ class FakeUserDataStore implements UserDataStore {
     notifiedEpisodeIds = Set<int>.from(episodeIds);
   }
 
+  BackgroundCheckResult? backgroundCheckResult;
+
+  @override
+  Future<BackgroundCheckResult?> loadBackgroundCheckResult() async =>
+      backgroundCheckResult;
+
   bool notificationPermissionPrePromptShown = false;
 
   @override
@@ -220,6 +229,14 @@ class StubTmdbService extends TmdbService {
   final Map<int, List<EpisodeModel>> episodesBySeason;
 
   @override
+  Future<TvShowSummary?> getTvShowSummary(
+    int tvId, {
+    bool forceRefresh = false,
+  }) async {
+    return TvShowSummary(numberOfSeasons: seasonCount);
+  }
+
+  @override
   Future<MediaDetails?> getMediaDetails(CatalogueItem item) async {
     return MediaDetails(
       title: item.title,
@@ -268,6 +285,42 @@ class DelayedStubTmdbService extends StubTmdbService {
   }
 }
 
+/// Per-show episodes; shows listed in [slowShowIds] answer after a delay.
+class PerShowStubTmdbService extends TmdbService {
+  PerShowStubTmdbService({
+    required this.episodesByShowId,
+    this.slowShowIds = const {},
+  }) : super(cacheManager: null);
+
+  final Map<int, List<EpisodeModel>> episodesByShowId;
+  final Set<int> slowShowIds;
+
+  @override
+  Future<TvShowSummary?> getTvShowSummary(
+    int tvId, {
+    bool forceRefresh = false,
+  }) async {
+    return const TvShowSummary(numberOfSeasons: 1);
+  }
+
+  @override
+  Future<MediaDetails?> getMediaDetails(CatalogueItem item) async {
+    return MediaDetails(title: item.title, numberOfSeasons: 1, isFilm: false);
+  }
+
+  @override
+  Future<List<EpisodeModel>> getSeasonEpisodes({
+    required int tvId,
+    required int seasonNumber,
+    bool forceRefresh = false,
+  }) async {
+    if (slowShowIds.contains(tvId)) {
+      await Future<void>.delayed(const Duration(milliseconds: 60));
+    }
+    return episodesByShowId[tvId] ?? const [];
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -294,7 +347,7 @@ void main() {
       await appServices.addToCatalogue(film);
       store.savedCatalogueItems.clear();
 
-      await appServices.removeFromCatalogue(film.id);
+      await appServices.removeFromCatalogue(film);
 
       expect(store.removedCatalogueIds, [film.id]);
     });
@@ -304,31 +357,198 @@ void main() {
       await appServices.addToCatalogue(film);
       store.savedCatalogueItems.clear();
 
-      expect(appServices.isFavorite(film.id), isFalse);
+      expect(appServices.isFavorite(film), isFalse);
 
-      await appServices.toggleFavorite(film.id);
+      await appServices.toggleFavorite(film);
 
-      expect(appServices.isFavorite(film.id), isTrue);
+      expect(appServices.isFavorite(film), isTrue);
       expect(store.savedCatalogueItems, hasLength(1));
       expect(store.savedCatalogueItems.single.isFavorite, isTrue);
       expect(store.savedCatalogueItems.single.tags, contains(kFavoriteTag));
 
-      await appServices.toggleFavorite(film.id);
-      expect(appServices.isFavorite(film.id), isFalse);
+      await appServices.toggleFavorite(film);
+      expect(appServices.isFavorite(film), isFalse);
 
-      await appServices.toggleFavorite(film.id);
+      await appServices.toggleFavorite(film);
       store.removedCatalogueIds.clear();
-      await appServices.removeFromCatalogue(film.id);
+      await appServices.removeFromCatalogue(film);
 
-      expect(appServices.isFavorite(film.id), isFalse);
+      expect(appServices.isFavorite(film), isFalse);
       expect(store.removedCatalogueIds, [film.id]);
     });
 
     test('toggleFavorite is no-op when item is not in catalogue', () async {
-      await appServices.toggleFavorite(404);
+      const missing = Film(id: 404, title: 'Missing Film');
+
+      await appServices.toggleFavorite(missing);
 
       expect(store.savedCatalogueItems, isEmpty);
-      expect(appServices.isFavorite(404), isFalse);
+      expect(appServices.isFavorite(missing), isFalse);
+    });
+
+    group('importBackgroundCheckResult', () {
+      const show = TvShow(id: 77, title: 'Followed Show');
+
+      NewEpisodeAlert alert({required int showId, required int episodeId}) {
+        return NewEpisodeAlert(
+          showId: showId,
+          showTitle: 'Show $showId',
+          episodeId: episodeId,
+          seasonNumber: 1,
+          episodeNumber: 2,
+          episodeName: 'Episode',
+          detectedAt: DateTime(2026, 5, 2),
+        );
+      }
+
+      setUp(() async {
+        store.catalogue.add(show.withFollowed(true));
+        await appServices.initialize(userDataStore: store);
+      });
+
+      test('adopts a newer result, dropping unfollowed shows', () async {
+        store.lastEpisodeCheckAt = DateTime(2026, 5, 1);
+        store.backgroundCheckResult = BackgroundCheckResult(
+          checkedAt: DateTime(2026, 5, 2),
+          alerts: [
+            alert(showId: show.id, episodeId: 701),
+            alert(showId: 999, episodeId: 9991),
+          ],
+        );
+
+        await appServices.importBackgroundCheckResult();
+
+        expect(
+          appServices.newEpisodeAlerts.map((entry) => entry.episodeId),
+          [701],
+        );
+        expect(store.alerts.map((entry) => entry.episodeId), [701]);
+        expect(store.lastEpisodeCheckAt, DateTime(2026, 5, 2));
+      });
+
+      test('ignores a result older than the last local check', () async {
+        store.lastEpisodeCheckAt = DateTime(2026, 5, 3);
+        store.backgroundCheckResult = BackgroundCheckResult(
+          checkedAt: DateTime(2026, 5, 2),
+          alerts: [alert(showId: show.id, episodeId: 701)],
+        );
+
+        await appServices.importBackgroundCheckResult();
+
+        expect(appServices.newEpisodeAlerts, isEmpty);
+        expect(store.lastEpisodeCheckAt, DateTime(2026, 5, 3));
+      });
+    });
+
+    test('overlapping refreshes of two shows keep both next episodes',
+        () async {
+      await appServices.clearAllData();
+      List<EpisodeModel> episodes(int showId) => [
+            for (var number = 1; number <= 3; number++)
+              EpisodeModel.fromJson({
+                'id': showId * 10 + number,
+                'season_number': 1,
+                'episode_number': number,
+                'name': 'E$number',
+                'air_date': '2020-01-0$number',
+                'runtime': 40,
+              }),
+          ];
+      const fast = TvShow(id: 801, title: 'Fast Show');
+      const slow = TvShow(id: 802, title: 'Slow Show');
+      final previousTmdb = appServices.tmdbService;
+      addTearDown(() => appServices.tmdbService = previousTmdb);
+      appServices.tmdbService = PerShowStubTmdbService(
+        episodesByShowId: {801: episodes(801), 802: episodes(802)},
+        slowShowIds: {802},
+      );
+
+      await appServices.markEpisodeWatched(
+        show: fast,
+        episode: episodes(801)[0],
+      );
+      await appServices.markEpisodeWatched(
+        show: slow,
+        episode: episodes(802)[0],
+      );
+
+      // The slow show's refresh starts first and commits last.
+      await Future.wait([
+        appServices.markEpisodeWatched(show: slow, episode: episodes(802)[1]),
+        appServices.markEpisodeWatched(show: fast, episode: episodes(801)[1]),
+      ]);
+
+      expect(
+        appServices.newEpisodeAlerts.map((alert) => alert.episodeId).toSet(),
+        {8013, 8023},
+      );
+    });
+
+    test('a double tap records a film or an episode only once', () async {
+      await appServices.initialize(userDataStore: store);
+      const film = Film(id: 610, title: 'Double Tap Film');
+      const show = TvShow(id: 611, title: 'Double Tap Show');
+      final episode = EpisodeModel.fromJson({
+        'id': 6111,
+        'season_number': 1,
+        'episode_number': 1,
+        'name': 'Pilot',
+        'air_date': '2020-01-01',
+        'runtime': 30,
+      });
+
+      final filmResults = await Future.wait([
+        appServices.markFilmWatched(film: film, durationMinutes: 100),
+        appServices.markFilmWatched(film: film, durationMinutes: 100),
+      ]);
+      final episodeResults = await Future.wait([
+        appServices.markEpisodeWatched(show: show, episode: episode),
+        appServices.markEpisodeWatched(show: show, episode: episode),
+      ]);
+
+      expect(filmResults.whereType<WatchRecord>(), hasLength(1));
+      expect(episodeResults.whereType<WatchRecord>(), hasLength(1));
+      expect(appServices.watchHistory, hasLength(2));
+      expect(appServices.totalWatchTimeMinutes, 130);
+    });
+
+    test('film and TV show sharing a TMDB id stay independent', () async {
+      await appServices.initialize(userDataStore: store);
+      const show = TvShow(id: 1402, title: 'Same Id Show');
+      const film = Film(id: 1402, title: 'Same Id Film');
+      final episodeRecord = WatchRecord(
+        mediaId: show.id,
+        isFilm: false,
+        episodeId: 9001,
+        seasonNumber: 1,
+        episodeNumber: 1,
+        durationMinutes: 45,
+        watchedAt: DateTime(2026, 1, 1),
+      );
+      store.catalogue.add(show.withFollowed(true));
+      store.history.add(episodeRecord);
+      await appServices.initialize(userDataStore: store);
+
+      expect(appServices.isInCatalogue(show), isTrue);
+      expect(appServices.isInCatalogue(film), isFalse);
+      expect(appServices.isFavorite(film), isFalse);
+
+      await appServices.markFilmWatched(film: film, durationMinutes: 117);
+      await appServices.toggleFavorite(film);
+
+      expect(appServices.catalogue, hasLength(2));
+      expect(appServices.isFavorite(film), isTrue);
+      expect(appServices.isFavorite(show), isFalse);
+
+      await appServices.removeFromCatalogue(film);
+
+      expect(appServices.isInCatalogue(film), isFalse);
+      expect(appServices.isInCatalogue(show), isTrue);
+      expect(appServices.isFollowed(show.id), isTrue);
+      expect(appServices.watchedEpisodesCountFor(show.id), 1);
+      expect(store.history.map((record) => record.watchKey),
+          [episodeRecord.watchKey]);
+      expect(store.catalogue.single, isA<TvShow>());
     });
 
     test('addToCatalogue marks new TV shows as followed by default', () async {
@@ -729,7 +949,7 @@ void main() {
       );
 
       expect(addedCount, 2);
-      expect(appServices.isInCatalogue(show.id), isTrue);
+      expect(appServices.isInCatalogue(show), isTrue);
       expect(appServices.tvShows, hasLength(1));
       expect(
         appServices.isWatched(mediaId: show.id, episodeId: aired.id),
@@ -752,7 +972,8 @@ void main() {
       expect(store.flushCount, 1);
     });
 
-    test('skips airing-soon episodes without resolvable runtime', () async {
+    test('uses the season average for an aired episode without runtime',
+        () async {
       const show = TvShow(id: 71, title: 'Airing Soon Show');
       final ready = EpisodeModel.fromJson({
         'id': 211,
@@ -777,15 +998,38 @@ void main() {
         episodes: [ready, airingSoon],
       );
 
-      expect(addedCount, 1);
+      expect(addedCount, 2);
       expect(
         appServices.isWatched(mediaId: show.id, episodeId: ready.id),
         isTrue,
       );
-      expect(
-        appServices.isWatched(mediaId: show.id, episodeId: airingSoon.id),
-        isFalse,
+      final fallbackRecord = appServices.watchedEpisodesFor(show.id).firstWhere(
+            (record) => record.episodeId == airingSoon.id,
+          );
+      expect(fallbackRecord.durationMinutes, 42);
+    });
+
+    test('skips airing-soon episodes when no runtime can be resolved',
+        () async {
+      const show = TvShow(id: 72, title: 'No Runtime Show');
+      final episodes = [
+        for (var number = 1; number <= 2; number++)
+          EpisodeModel.fromJson({
+            'id': 220 + number,
+            'season_number': 1,
+            'episode_number': number,
+            'name': 'No Runtime $number',
+            'air_date': '2020-01-0$number',
+          }),
+      ];
+
+      final addedCount = await appServices.addSeasonToCatalogue(
+        show: show,
+        episodes: episodes,
       );
+
+      expect(addedCount, 0);
+      expect(appServices.isInCatalogue(show), isFalse);
     });
 
     test('persists a season in one batch write and one flush', () async {
@@ -808,7 +1052,7 @@ void main() {
       );
 
       expect(addedCount, 20);
-      expect(appServices.isInCatalogue(show.id), isTrue);
+      expect(appServices.isInCatalogue(show), isTrue);
       expect(store.savedWatchRecords, hasLength(20));
       expect(store.saveWatchRecordsCalls, 1);
       expect(store.flushCount, 1);
@@ -831,7 +1075,7 @@ void main() {
       );
 
       expect(addedCount, 0);
-      expect(appServices.isInCatalogue(show.id), isFalse);
+      expect(appServices.isInCatalogue(show), isFalse);
       expect(store.savedCatalogueItems, isEmpty);
     });
 
@@ -960,7 +1204,7 @@ void main() {
         'runtime': 45,
       });
 
-      expect(appServices.isInCatalogue(show.id), isFalse);
+      expect(appServices.isInCatalogue(show), isFalse);
 
       final record = await appServices.addEpisodeToCatalogue(
         show: show,
@@ -968,7 +1212,7 @@ void main() {
       );
 
       expect(record, isNotNull);
-      expect(appServices.isInCatalogue(show.id), isTrue);
+      expect(appServices.isInCatalogue(show), isTrue);
       expect(appServices.tvShows.single.id, show.id);
       expect(store.savedCatalogueItems.single.id, show.id);
       expect(
@@ -993,7 +1237,7 @@ void main() {
       );
 
       expect(record, isNull);
-      expect(appServices.isInCatalogue(show.id), isFalse);
+      expect(appServices.isInCatalogue(show), isFalse);
       expect(store.savedCatalogueItems, isEmpty);
     });
   });
@@ -1112,11 +1356,11 @@ void main() {
           );
       store.lastTmdbCachePurgeAt = stale;
       appServices.cacheManager.put('tmdb:stale', {'ok': true}, ttlMinutes: 60);
-      expect(appServices.cacheManager.get<Map>('tmdb:stale'), isNotNull);
+      expect(appServices.cacheManager.get<Map<String, dynamic>>('tmdb:stale'), isNotNull);
 
       await appServices.initialize(userDataStore: store);
 
-      expect(appServices.cacheManager.get<Map>('tmdb:stale'), isNull);
+      expect(appServices.cacheManager.get<Map<String, dynamic>>('tmdb:stale'), isNull);
       expect(store.lastTmdbCachePurgeAt!.isAfter(stale), isTrue);
       expect(appServices.catalogue, isEmpty);
     });
@@ -1128,7 +1372,7 @@ void main() {
 
       await appServices.initialize(userDataStore: store);
 
-      expect(appServices.cacheManager.get<Map>('tmdb:fresh'), isNotNull);
+      expect(appServices.cacheManager.get<Map<String, dynamic>>('tmdb:fresh'), isNotNull);
       expect(store.lastTmdbCachePurgeAt, recent);
     });
 
@@ -1149,7 +1393,10 @@ void main() {
       await appServices.clearCacheData();
 
       expect(appServices.cacheManager.get<dynamic>('tmdb:x'), isNull);
-      expect(appServices.isInCatalogue(1), isTrue);
+      expect(
+        appServices.isInCatalogue(const Film(id: 1, title: 'Kept')),
+        isTrue,
+      );
       expect(store.lastTmdbCachePurgeAt!.isAfter(before), isTrue);
     });
   });

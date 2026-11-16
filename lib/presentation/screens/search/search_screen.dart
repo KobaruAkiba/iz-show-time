@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart' show CancelToken;
 import 'package:flutter/material.dart';
 import '../../widgets/media_card.dart';
 import '../../widgets/media_detail_sheet.dart';
 import '../../widgets/media_filters.dart';
+import '../../widgets/skeleton.dart';
 import '../../widgets/app_page_header.dart';
 import '../../widgets/confirm_remove_from_catalogue.dart';
 import '../../widgets/connection_error_view.dart';
@@ -35,6 +37,8 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   late TextEditingController _controller;
   Timer? _debounceTimer;
+  CancelToken? _searchCancel;
+  String? _searchCancelQuery;
   bool _hasSearched = false;
   bool _isLoading = false;
   bool _isLoadingMore = false;
@@ -69,8 +73,23 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
+  /// Token for the query in flight. A new query cancels the previous
+  /// request; repeating the same one keeps it, so the request is shared.
+  CancelToken _searchTokenFor(String query) {
+    final current = _searchCancel;
+    if (current != null &&
+        !current.isCancelled &&
+        _searchCancelQuery == query) {
+      return current;
+    }
+    current?.cancel();
+    _searchCancelQuery = query;
+    return _searchCancel = CancelToken();
+  }
+
   @override
   void dispose() {
+    _searchCancel?.cancel();
     _debounceTimer?.cancel();
     _controller.dispose();
     super.dispose();
@@ -115,6 +134,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _resetToIdle({required bool clearController}) {
+    _searchCancel?.cancel();
     setState(() {
       _hasSearched = false;
       _isLoading = false;
@@ -146,12 +166,9 @@ class _SearchScreenState extends State<SearchScreen> {
     _remoteTotalPages = 0;
   }
 
-  String _mediaSeenKey(CatalogueItem item) =>
-      '${item.isFilm ? 'm' : 't'}-${item.id}';
-
   void _appendUnique(Iterable<CatalogueItem> items) {
     for (final item in items) {
-      if (_seenKeys.add(_mediaSeenKey(item))) {
+      if (_seenKeys.add(item.mediaKey)) {
         _results.add(item);
       }
     }
@@ -171,12 +188,14 @@ class _SearchScreenState extends State<SearchScreen> {
       _resetResultBuffers();
     });
 
+    final cancelToken = _searchTokenFor(trimmedQuery);
     try {
       _appendUnique(_appServices.searchLocal(trimmedQuery));
 
       final remoteResults = await _appServices.tmdbService.searchMulti(
         query: trimmedQuery,
         page: 1,
+        cancelToken: cancelToken,
       );
 
       if (!mounted || _lastQuery != trimmedQuery) return;
@@ -189,6 +208,7 @@ class _SearchScreenState extends State<SearchScreen> {
         _isLoading = false;
       });
     } on ApiException catch (e) {
+      if (e.type == ApiErrorType.cancelled) return;
       if (!mounted || _lastQuery != trimmedQuery) return;
       setState(() {
         _isLoading = false;
@@ -217,6 +237,7 @@ class _SearchScreenState extends State<SearchScreen> {
       final remoteResults = await _appServices.tmdbService.searchMulti(
         query: query,
         page: nextPage,
+        cancelToken: _searchTokenFor(query),
       );
 
       if (!mounted || _lastQuery != query) return;
@@ -229,6 +250,7 @@ class _SearchScreenState extends State<SearchScreen> {
         _isLoadingMore = false;
       });
     } on ApiException catch (e) {
+      if (e.type == ApiErrorType.cancelled) return;
       if (!mounted || _lastQuery != query) return;
       setState(() => _isLoadingMore = false);
       NetworkFeedback.showError(e.type, message: e.message);
@@ -296,7 +318,7 @@ class _SearchScreenState extends State<SearchScreen> {
     }
 
     if (_isLoading) {
-      return const ConnectionAwareLoading();
+      return const ConnectionAwareLoading(placeholder: MediaListSkeleton());
     }
 
     if (_errorMessage != null) {
@@ -351,14 +373,14 @@ class _SearchScreenState extends State<SearchScreen> {
             onRefresh: () => _performSearch(_lastQuery),
             itemBuilder: (context, index) {
               final item = results[index];
-              final inCatalogue = _appServices.isInCatalogue(item.id);
+              final inCatalogue = _appServices.isInCatalogue(item);
               return Padding(
-                key: ValueKey(_mediaSeenKey(item)),
+                key: ValueKey(item.mediaKey),
                 padding: const EdgeInsets.only(bottom: 8),
                 child: MediaCard(
                   item: item,
                   isBookmarked: inCatalogue,
-                  isFavorite: inCatalogue && _appServices.isFavorite(item.id),
+                  isFavorite: inCatalogue && _appServices.isFavorite(item),
                   onTap: () => _openDetails(item),
                   onToggleFavorite:
                       inCatalogue ? () => _toggleFavorite(item) : null,
@@ -427,14 +449,14 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _toggleFavorite(CatalogueItem item) async {
-    await _appServices.toggleFavorite(item.id);
+    await _appServices.toggleFavorite(item);
     if (!mounted) return;
     setState(() {});
   }
 
   Future<void> _toggleItem(CatalogueItem item) async {
     final l10n = context.l10n;
-    final wasInCatalogue = _appServices.isInCatalogue(item.id);
+    final wasInCatalogue = _appServices.isInCatalogue(item);
     if (wasInCatalogue) {
       final confirmed = await confirmRemoveFromCatalogue(context, item);
       if (!confirmed || !mounted) return;

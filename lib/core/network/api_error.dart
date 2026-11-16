@@ -8,6 +8,9 @@ enum ApiErrorType {
   invalidResponse,
   networkError,
   timeout,
+
+  /// The caller cancelled the request: not a failure to show.
+  cancelled,
 }
 
 /// Typed failure from the HTTP client / TMDB service for presentation handling.
@@ -40,5 +43,7 @@ String apiErrorMessage(ApiErrorType type, [AppLocalizations? l10n]) {
       return loc.errorAccessDenied;
     case ApiErrorType.invalidResponse:
       return loc.errorInvalidResponse;
+    case ApiErrorType.cancelled:
+      return loc.errorGeneric;
   }
 }

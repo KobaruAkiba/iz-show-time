@@ -11,13 +11,6 @@ class AppRouter {
   static const String catalogueRoute = '/catalogue';
   static const String settingsRoute = '/settings';
 
-  static final Map<String, WidgetBuilder> routes = <String, WidgetBuilder>{
-    homeRoute: (context) => const MainNavigator(),
-    searchRoute: (context) => const SearchScreen(initialQuery: ''),
-    catalogueRoute: (context) => const CatalogueScreen(),
-    settingsRoute: (context) => const SettingsScreen(),
-  };
-
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
       case searchRoute:

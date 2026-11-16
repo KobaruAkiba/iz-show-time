@@ -3,6 +3,48 @@ import 'package:iz_show_time_tracker/data/models/episode_model.dart';
 import 'package:iz_show_time_tracker/data/models/season_model.dart';
 
 void main() {
+  group('SeasonSummary', () {
+    test('keeps real season numbers and puts specials last', () {
+      final summaries = SeasonSummary.listFromTmdbJson([
+        {'season_number': 0, 'episode_count': 3, 'air_date': '2019-12-01'},
+        {'season_number': 1, 'episode_count': 10, 'air_date': '2020-01-01'},
+        {'season_number': 3, 'episode_count': 8, 'air_date': null},
+        {'name': 'no number'},
+      ]);
+
+      expect(summaries.map((season) => season.seasonNumber), [1, 3, 0]);
+      expect(summaries.first.episodeCount, 10);
+      expect(summaries.first.airDate, DateTime(2020));
+      expect(summaries.last.isSpecials, isTrue);
+    });
+
+    test('drops empty specials and tolerates a missing list', () {
+      expect(
+        SeasonSummary.listFromTmdbJson([
+          {'season_number': 0, 'episode_count': 0},
+        ]),
+        isEmpty,
+      );
+      expect(SeasonSummary.listFromTmdbJson(null), isEmpty);
+    });
+
+    test('is upcoming without episodes or with a future air date', () {
+      expect(const SeasonSummary(seasonNumber: 2).isUpcoming, isTrue);
+      expect(
+        SeasonSummary(
+          seasonNumber: 2,
+          episodeCount: 5,
+          airDate: DateTime(2999),
+        ).isUpcoming,
+        isTrue,
+      );
+      expect(
+        const SeasonSummary(seasonNumber: 1, episodeCount: 5).isUpcoming,
+        isFalse,
+      );
+    });
+  });
+
   group('SeasonModel', () {
     test('parses season payload with air date and episodes', () {
       final season = SeasonModel.fromTmdbSeasonJson({

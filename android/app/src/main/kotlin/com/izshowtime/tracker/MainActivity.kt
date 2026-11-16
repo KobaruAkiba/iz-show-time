@@ -1,4 +1,4 @@
-package com.example.iz_show_time_tracker
+package com.izshowtime.tracker
 
 import io.flutter.embedding.android.FlutterActivity
 

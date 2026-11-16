@@ -1,6 +1,8 @@
 # Miscellaneous
 *.class
 *.lock
+# The app lockfile is versioned so CI and release builds resolve the same deps.
+!/pubspec.lock
 *.log
 *.pyc
 *.swp
@@ -121,3 +123,5 @@ app.*.symbols
 !**/ios/**/default.perspectivev3
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 !/dev/ci/**/Gemfile.lock
+# IDE per-user state
+.idea/workspace.xml

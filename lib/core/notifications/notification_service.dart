@@ -28,6 +28,7 @@ class NotificationService {
   Future<void> initialize({
     UserDataStore? userDataStore,
     GlobalKey<NavigatorState>? navigatorKey,
+    bool requestPermissions = true,
   }) async {
     if (_initialized) return;
 
@@ -52,6 +53,7 @@ class NotificationService {
 
     await _plugin.initialize(settings: initSettings);
     _initialized = true;
+    if (!requestPermissions) return;
     // Do not await permission prompts before/during early startup.
     unawaited(
       _requestPermissions(
@@ -59,6 +61,25 @@ class NotificationService {
         navigatorKey: navigatorKey,
       ),
     );
+  }
+
+  /// Whether the OS currently lets the app post notifications.
+  Future<bool> areNotificationsEnabled() {
+    return _notificationsAlreadyEnabled(
+      android: _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>(),
+      ios: _plugin.resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin>(),
+      macOs: _plugin.resolvePlatformSpecificImplementation<
+          MacOSFlutterLocalNotificationsPlugin>(),
+    );
+  }
+
+  /// Shows the OS permission prompt (no in-app rationale) and returns the
+  /// resulting state. The OS may skip the prompt after an earlier denial.
+  Future<bool> requestPermission() async {
+    await _requestPermissions();
+    return areNotificationsEnabled();
   }
 
   Future<void> _requestPermissions({

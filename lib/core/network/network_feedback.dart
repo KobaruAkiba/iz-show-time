@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../l10n/l10n.dart';
@@ -16,22 +18,20 @@ abstract final class NetworkFeedback {
   static final GlobalKey<ScaffoldMessengerState> messengerKey =
       GlobalKey<ScaffoldMessengerState>();
 
-  static int _silentDepth = 0;
+  static const Object _silentZoneKey = #networkFeedbackSilent;
   static int _slowRequestCount = 0;
   static int _inlineSlowOwners = 0;
   static bool _slowBannerVisible = false;
 
-  static bool get isSilent => _silentDepth > 0;
+  static bool get isSilent => Zone.current[_silentZoneKey] == true;
 
   /// Suppresses transient connection UI while [action] runs (episode checks,
   /// background refresh, etc.).
-  static Future<T> runSilent<T>(Future<T> Function() action) async {
-    _silentDepth++;
-    try {
-      return await action();
-    } finally {
-      _silentDepth--;
-    }
+  ///
+  /// Scoped to the zone of [action]: requests started by the user while a
+  /// silent task is in flight still report their errors.
+  static Future<T> runSilent<T>(Future<T> Function() action) {
+    return runZoned(action, zoneValues: {_silentZoneKey: true});
   }
 
   /// Registers a full-screen loading UI that shows its own slow-connection hint.
@@ -74,7 +74,7 @@ abstract final class NetworkFeedback {
     String? message,
     VoidCallback? onRetry,
   }) {
-    if (isSilent) return;
+    if (isSilent || type == ApiErrorType.cancelled) return;
 
     final messenger = messengerKey.currentState;
     if (messenger == null) return;

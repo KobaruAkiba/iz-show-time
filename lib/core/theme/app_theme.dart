@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// Brand colors sampled from `assets/images/IzShowTimeTitle.png`.
 class AppTheme {
+  /// Bundled in assets/fonts (see pubspec.yaml).
+  static const String _fontFamily = 'Roboto';
+
   static const Color _brandYellow = Color(0xFFFDDC15);
   static const Color _brandGold = Color(0xFFFEB40E);
   static const Color _brandInk = Color(0xFF01000C);
@@ -51,7 +53,7 @@ class AppTheme {
       inversePrimary: _brandYellow,
     ),
     textTheme: _textThemeWithPrimarySectionTitles(
-      GoogleFonts.robotoTextTheme(),
+      ThemeData.light().textTheme.apply(fontFamily: _fontFamily),
       _lightPrimary,
     ),
     scaffoldBackgroundColor: _lightScaffold,
@@ -141,7 +143,7 @@ class AppTheme {
       inversePrimary: _lightPrimary,
     ),
     textTheme: _textThemeWithPrimarySectionTitles(
-      GoogleFonts.robotoTextTheme(ThemeData.dark().textTheme),
+      ThemeData.dark().textTheme.apply(fontFamily: _fontFamily),
       _brandYellow,
     ),
     scaffoldBackgroundColor: const Color(0xFF121110),
@@ -200,12 +202,6 @@ class AppTheme {
       ),
     );
   }
-
-  // Extended color palette (brand reference hex strings)
-  static const String primaryColor = '#8A6500';
-  static const String accentColor = '#FEB40E';
-  static const String warningColor = '#FB7185';
-  static const String successColor = '#34D399';
 
   /// Parses a persisted theme preference. Unknown / missing → [ThemeMode.system].
   static ThemeMode themeModeFromStorage(String? raw) {

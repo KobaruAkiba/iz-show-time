@@ -155,6 +155,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get addToCatalogue => 'Add to catalogue';
+
+  @override
   String get addedToCatalogue => 'Added to catalogue';
 
   @override
@@ -302,6 +305,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get removeFromCatalogue => 'Remove from catalogue';
+
+  @override
+  String get seasonSpecials => 'Specials';
+
+  @override
+  String get seasonLoadFailed => 'Could not load episodes. Tap to retry.';
 
   @override
   String seasonLabel(int number) {
@@ -636,6 +645,26 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get settingsNotifications => 'Notifications';
+
+  @override
+  String get settingsNotificationsTitle => 'Episode alerts';
+
+  @override
+  String get settingsNotificationsOn =>
+      'On. You are alerted when a followed show airs a new episode.';
+
+  @override
+  String get settingsNotificationsOff => 'Off. Tap to turn on.';
+
+  @override
+  String get settingsNotificationsBlockedTitle => 'Notifications are blocked';
+
+  @override
+  String get settingsNotificationsBlockedBody =>
+      'Turn on notifications for IzShowTime in your device settings.';
+
+  @override
   String get notificationPermissionTitle => 'Episode alerts';
 
   @override
@@ -663,6 +692,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorGeneric => 'Something went wrong';
+
+  @override
+  String get startupErrorTitle => 'The app could not start';
+
+  @override
+  String get startupErrorBody =>
+      'Your data could not be opened. Try again; if the problem persists, close and reopen the app.';
 
   @override
   String get errorNoConnection =>
