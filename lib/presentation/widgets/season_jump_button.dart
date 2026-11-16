@@ -61,11 +61,17 @@ int? latestAiredEpisodeIndex(List<EpisodeModel> episodes) {
   return undatedFallback;
 }
 
+/// Visible height a season must gain over the active one to take over.
+const double seasonJumpSwitchMargin = 48;
+
 /// Picks the season and direction for the jump button; null hides it.
 ///
 /// Rules:
 /// 1. Seasons whose episodes fit above [bottomInset] are ignored.
 /// 2. Among the rest, the one with the largest visible part is active.
+///    [currentSeason] stays active until another season shows at least
+///    [seasonJumpSwitchMargin] more: slow scrolling between two expanded
+///    seasons does not flip the button back and forth.
 /// 3. Latest episode below the usable area → [SeasonJumpDirection.toLatest].
 /// 4. Otherwise, first episode above the top edge →
 ///    [SeasonJumpDirection.toFirst].
@@ -77,21 +83,33 @@ SeasonJumpTarget? resolveSeasonJumpTarget(
   required double viewportHeight,
   required double bottomInset,
   bool scrolledToEnd = false,
+  int? currentSeason,
 }) {
   const tolerance = 1.0;
   final usableBottom = viewportHeight - bottomInset;
   if (usableBottom <= 0) return null;
 
   SeasonJumpSpan? active;
+  SeasonJumpSpan? current;
   var bestVisible = 0.0;
+  var currentVisible = 0.0;
   for (final span in spans) {
     if (span.latestBottom - span.firstTop <= usableBottom) continue;
     final visible = (span.latestBottom.clamp(0.0, viewportHeight)) -
         (span.firstTop.clamp(0.0, viewportHeight));
+    if (visible <= 0) continue;
+    if (span.seasonNumber == currentSeason) {
+      current = span;
+      currentVisible = visible;
+    }
     if (visible > bestVisible) {
       bestVisible = visible;
       active = span;
     }
+  }
+  if (current != null &&
+      bestVisible < currentVisible + seasonJumpSwitchMargin) {
+    active = current;
   }
   if (active == null) return null;
 
@@ -113,20 +131,18 @@ SeasonJumpTarget? resolveSeasonJumpTarget(
 /// Floating pill that jumps to the latest aired episode of a long season,
 /// or back to its first episode.
 ///
+/// The label names the season ("S3 · Jump to latest"), so the target is
+/// clear even when the season header is off screen.
 /// Fades and slides in and out; with reduced motion it appears instantly.
 class SeasonJumpButton extends StatelessWidget {
   /// Null hides the button.
   final SeasonJumpTarget? target;
-
-  /// Display name of the target season, read by screen readers.
-  final String Function(int seasonNumber) seasonName;
 
   final ValueChanged<SeasonJumpTarget> onPressed;
 
   const SeasonJumpButton({
     super.key,
     required this.target,
-    required this.seasonName,
     required this.onPressed,
   });
 
@@ -161,15 +177,21 @@ class SeasonJumpButton extends StatelessWidget {
   Widget _buildPill(BuildContext context, SeasonJumpTarget current) {
     final l10n = context.l10n;
     final toLatest = current.direction == SeasonJumpDirection.toLatest;
-    final season = seasonName(current.seasonNumber);
+    final isSpecials = current.seasonNumber == 0;
+    final shortSeason = isSpecials
+        ? l10n.seasonSpecials
+        : l10n.seasonShortLabel(current.seasonNumber);
+    final fullSeason = isSpecials
+        ? l10n.seasonSpecials
+        : l10n.seasonLabel(current.seasonNumber);
 
-    // The visible label stays short; screen readers also hear the season.
+    // Visible label abbreviates the season; screen readers get it in full.
     return Semantics(
       key: ValueKey(current),
       button: true,
       label: toLatest
-          ? l10n.jumpToLatestEpisodeSemantics(season)
-          : l10n.backToFirstEpisodeSemantics(season),
+          ? l10n.jumpToLatestEpisodeSemantics(fullSeason)
+          : l10n.backToFirstEpisodeSemantics(fullSeason),
       onTap: () => onPressed(current),
       excludeSemantics: true,
       child: FloatingActionButton.extended(
@@ -177,7 +199,9 @@ class SeasonJumpButton extends StatelessWidget {
         onPressed: () => onPressed(current),
         icon: Icon(toLatest ? Icons.arrow_downward : Icons.arrow_upward),
         label: Text(
-          toLatest ? l10n.jumpToLatestEpisode : l10n.backToFirstEpisode,
+          toLatest
+              ? l10n.jumpToLatestEpisode(shortSeason)
+              : l10n.backToFirstEpisode(shortSeason),
         ),
       ),
     );

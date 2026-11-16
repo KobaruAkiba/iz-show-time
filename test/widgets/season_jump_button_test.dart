@@ -128,5 +128,45 @@ void main() {
         2,
       );
     });
+
+    group('switching between two expanded seasons', () {
+      // Season 1 shows 200px, season 2 shows 230px: 30px more.
+      const spans = [
+        SeasonJumpSpan(seasonNumber: 1, firstTop: -1500, latestBottom: 200),
+        SeasonJumpSpan(seasonNumber: 2, firstTop: 270, latestBottom: 1800),
+      ];
+
+      test('keeps the current season while the other leads by little', () {
+        expect(
+          resolveSeasonJumpTarget(
+            spans,
+            viewportHeight: viewport,
+            bottomInset: inset,
+            currentSeason: 1,
+          )?.seasonNumber,
+          1,
+        );
+      });
+
+      test('switches once the other season leads by the margin', () {
+        const further = [
+          SeasonJumpSpan(seasonNumber: 1, firstTop: -1500, latestBottom: 150),
+          SeasonJumpSpan(seasonNumber: 2, firstTop: 220, latestBottom: 1800),
+        ];
+        expect(
+          resolveSeasonJumpTarget(
+            further,
+            viewportHeight: viewport,
+            bottomInset: inset,
+            currentSeason: 1,
+          )?.seasonNumber,
+          2,
+        );
+      });
+
+      test('without a current season the largest visible part wins', () {
+        expect(resolve(spans)?.seasonNumber, 2);
+      });
+    });
   });
 }

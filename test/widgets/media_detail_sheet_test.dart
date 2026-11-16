@@ -203,23 +203,23 @@ void main() {
 
       await tester.tap(find.text('Season 1'));
       await tester.pumpAndSettle();
-      expect(find.text('Jump to latest'), findsOneWidget);
+      expect(find.text('S1 · Jump to latest'), findsOneWidget);
       expect(
-        find.bySemanticsLabel('Jump to latest episode of Season 1'),
+        find.bySemanticsLabel('Season 1, jump to latest episode'),
         findsOneWidget,
       );
 
-      await tester.tap(find.text('Jump to latest'));
+      await tester.tap(find.text('S1 · Jump to latest'));
       await tester.pumpAndSettle();
-      expect(find.text('Back to first'), findsOneWidget);
+      expect(find.text('S1 · Back to first'), findsOneWidget);
       // The latest episode sits above the button, not behind it.
       final latest = tester.getRect(find.text('Episode 30'));
       expect(latest.top, greaterThanOrEqualTo(sheetRect(tester).top));
       expect(latest.bottom, lessThanOrEqualTo(buttonRect(tester).top));
 
-      await tester.tap(find.text('Back to first'));
+      await tester.tap(find.text('S1 · Back to first'));
       await tester.pumpAndSettle();
-      expect(find.text('Jump to latest'), findsOneWidget);
+      expect(find.text('S1 · Jump to latest'), findsOneWidget);
       final header = tester.getRect(find.text('Season 1'));
       final first = tester.getRect(find.text('Episode 1'));
       expect(header.top, greaterThanOrEqualTo(sheetRect(tester).top));
@@ -234,10 +234,10 @@ void main() {
 
       await tester.tap(find.text('Season 1'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Jump to latest'));
+      await tester.tap(find.text('S1 · Jump to latest'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Back to first'), findsOneWidget);
+      expect(find.text('S1 · Back to first'), findsOneWidget);
       final latestAired = tester.getRect(find.text('Episode 25'));
       expect(latestAired.bottom, lessThanOrEqualTo(buttonRect(tester).top));
       expect(latestAired.top, greaterThanOrEqualTo(sheetRect(tester).top));
@@ -259,13 +259,45 @@ void main() {
       await tester.tap(find.text('Season 1'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Jump to latest'));
+      await tester.tap(find.text('S1 · Jump to latest'));
       // One frame to scroll and re-measure, one to show the new label.
       await tester.pump();
       await tester.pump();
 
-      expect(find.text('Back to first'), findsOneWidget);
+      expect(find.text('S1 · Back to first'), findsOneWidget);
       expect(tester.hasRunningAnimations, isFalse);
+    });
+
+    testWidgets('outlines the targeted season only while the button shows',
+        (tester) async {
+      appServices.tmdbService = _LongSeasonTmdbService();
+      await pumpSheet(tester);
+
+      Color outlineColor() {
+        final container = tester.widget<AnimatedContainer>(
+          find.ancestor(
+            of: find.text('Season 1'),
+            matching: find.byType(AnimatedContainer),
+          ),
+        );
+        final decoration = container.foregroundDecoration! as BoxDecoration;
+        return (decoration.border! as Border).top.color;
+      }
+
+      final primary = Theme.of(tester.element(find.text('Season 1')))
+          .colorScheme
+          .primary;
+      expect(outlineColor().a, 0);
+
+      await tester.tap(find.text('Season 1'));
+      await tester.pumpAndSettle();
+      expect(find.text('S1 · Jump to latest'), findsOneWidget);
+      expect(outlineColor(), primary);
+
+      await tester.tap(find.text('Season 1'));
+      await tester.pumpAndSettle();
+      expect(find.byType(FloatingActionButton), findsNothing);
+      expect(outlineColor().a, 0);
     });
   });
 }

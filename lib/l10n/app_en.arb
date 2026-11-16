@@ -165,15 +165,31 @@
   "removeFromCatalogue": "Remove from catalogue",
   "seasonSpecials": "Specials",
   "seasonLoadFailed": "Could not load episodes. Tap to retry.",
-  "jumpToLatestEpisode": "Jump to latest",
-  "backToFirstEpisode": "Back to first",
-  "jumpToLatestEpisodeSemantics": "Jump to latest episode of {season}",
+  "seasonShortLabel": "S{number}",
+  "@seasonShortLabel": {
+    "placeholders": {
+      "number": {"type": "int"}
+    }
+  },
+  "jumpToLatestEpisode": "{season} · Jump to latest",
+  "@jumpToLatestEpisode": {
+    "placeholders": {
+      "season": {"type": "String"}
+    }
+  },
+  "backToFirstEpisode": "{season} · Back to first",
+  "@backToFirstEpisode": {
+    "placeholders": {
+      "season": {"type": "String"}
+    }
+  },
+  "jumpToLatestEpisodeSemantics": "{season}, jump to latest episode",
   "@jumpToLatestEpisodeSemantics": {
     "placeholders": {
       "season": {"type": "String"}
     }
   },
-  "backToFirstEpisodeSemantics": "Back to first episode of {season}",
+  "backToFirstEpisodeSemantics": "{season}, back to first episode",
   "@backToFirstEpisodeSemantics": {
     "placeholders": {
       "season": {"type": "String"}

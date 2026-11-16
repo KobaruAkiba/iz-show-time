@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../core/constants/api_constants.dart';
@@ -471,6 +472,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
       viewportHeight: viewport.size.height,
       bottomInset: SeasonJumpButton.coveredHeight(context),
       scrolledToEnd: position.pixels >= position.maxScrollExtent - 0.5,
+      currentSeason: _jumpTarget.value?.seasonNumber,
     );
   }
 
@@ -511,13 +513,6 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
         curve: Curves.easeInOutCubic,
       );
     }
-  }
-
-  String _seasonName(int seasonNumber) {
-    final l10n = context.l10n;
-    return seasonNumber == 0
-        ? l10n.seasonSpecials
-        : l10n.seasonLabel(seasonNumber);
   }
 
   @override
@@ -583,7 +578,6 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                       valueListenable: _jumpTarget,
                       builder: (context, target, _) => SeasonJumpButton(
                         target: target,
-                        seasonName: _seasonName,
                         onPressed: _jumpWithinSeason,
                       ),
                     ),
@@ -1062,9 +1056,9 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     final latestIndex =
         season != null ? latestAiredEpisodeIndex(season.episodes) : null;
 
-    return Card(
+    final card = Card(
       key: anchors.season,
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.zero,
       elevation: 0,
       color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
       child: Column(
@@ -1131,6 +1125,11 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
             ),
         ],
       ),
+    );
+    return _SeasonJumpHighlight(
+      seasonNumber: seasonNumber,
+      jumpTarget: _jumpTarget,
+      child: card,
     );
   }
 
@@ -1261,6 +1260,52 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
         widget.item is Film ? Icons.movie : Icons.tv,
         size: 40,
       ),
+    );
+  }
+}
+
+/// Outlines a season card in primary while the jump button targets it.
+///
+/// A 2dp outline reads as "selected", unlike the primary tint used for
+/// "in catalogue". It rebuilds only the outline, not the card, and switches
+/// instantly with reduced motion.
+class _SeasonJumpHighlight extends StatelessWidget {
+  final int seasonNumber;
+  final ValueListenable<SeasonJumpTarget?> jumpTarget;
+  final Widget child;
+
+  const _SeasonJumpHighlight({
+    required this.seasonNumber,
+    required this.jumpTarget,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    return ValueListenableBuilder<SeasonJumpTarget?>(
+      valueListenable: jumpTarget,
+      child: child,
+      builder: (context, target, card) {
+        final active = target?.seasonNumber == seasonNumber;
+        return AnimatedContainer(
+          duration:
+              reduceMotion ? Duration.zero : const Duration(milliseconds: 150),
+          curve: Curves.easeOut,
+          margin: const EdgeInsets.only(bottom: 8),
+          foregroundDecoration: BoxDecoration(
+            // Same radius as the Material 3 card underneath.
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: active ? primary : primary.withValues(alpha: 0),
+              width: 2,
+            ),
+          ),
+          child: card,
+        );
+      },
     );
   }
 }
