@@ -17,7 +17,9 @@ import 'notifications_tile.dart';
 
 /// Settings screen with app preferences
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.isActive = true});
+
+  final bool isActive;
 
   // Static so the platform is queried once, not on every rebuild.
   static final Future<PackageInfo> _packageInfo = PackageInfo.fromPlatform();
@@ -45,7 +47,7 @@ class SettingsScreen extends StatelessWidget {
                   _buildHideWatchTimeToggle(context),
                   const Divider(),
                   _buildSectionTitle(context, l10n.settingsNotifications),
-                  const NotificationsTile(),
+                  NotificationsTile(isActive: isActive),
                   const Divider(),
                   _buildSectionTitle(context, l10n.settingsCredits),
                   _buildTmdbAttribution(context),

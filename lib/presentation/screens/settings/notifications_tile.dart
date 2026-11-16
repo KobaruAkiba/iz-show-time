@@ -8,7 +8,9 @@ import '../../../l10n/l10n.dart';
 /// The only way back for users who dismissed the first-launch rationale:
 /// shows the current permission state and asks for it when off.
 class NotificationsTile extends StatefulWidget {
-  const NotificationsTile({super.key});
+  const NotificationsTile({super.key, this.isActive = true});
+
+  final bool isActive;
 
   @override
   State<NotificationsTile> createState() => _NotificationsTileState();
@@ -17,13 +19,28 @@ class NotificationsTile extends StatefulWidget {
 class _NotificationsTileState extends State<NotificationsTile> {
   final _notifications = NotificationService();
 
+  late final AppLifecycleListener _lifecycleListener;
+
   /// Null while the permission state is being read.
   bool? _enabled;
 
   @override
   void initState() {
     super.initState();
+    _lifecycleListener = AppLifecycleListener(onResume: _refresh);
     _refresh();
+  }
+
+  @override
+  void didUpdateWidget(covariant NotificationsTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !oldWidget.isActive) _refresh();
+  }
+
+  @override
+  void dispose() {
+    _lifecycleListener.dispose();
+    super.dispose();
   }
 
   Future<void> _refresh() async {

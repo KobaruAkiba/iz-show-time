@@ -34,7 +34,9 @@ class _MainNavigatorState extends State<MainNavigator> {
           isActive: _currentTab == MainTab.catalogue,
         );
       case MainTab.settings:
-        return const SettingsScreen();
+        return SettingsScreen(
+          isActive: _currentTab == MainTab.settings,
+        );
     }
   }
 
