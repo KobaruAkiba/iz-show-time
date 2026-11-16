@@ -68,6 +68,10 @@ class MediaDetails {
   final List<String> networkNames;
   final String? lastAirDate;
   final String? nextEpisodeAirDate;
+  /// Season number of TMDB `last_episode_to_air` (TV only).
+  final int? lastAiredSeasonNumber;
+  /// Episode number of TMDB `last_episode_to_air` (TV only).
+  final int? lastAiredEpisodeNumber;
   final List<MediaCastMember> cast;
   final String? certification;
   final List<String> keywordNames;
@@ -102,6 +106,8 @@ class MediaDetails {
     this.networkNames = const [],
     this.lastAirDate,
     this.nextEpisodeAirDate,
+    this.lastAiredSeasonNumber,
+    this.lastAiredEpisodeNumber,
     this.cast = const [],
     this.certification,
     this.keywordNames = const [],
@@ -179,6 +185,10 @@ class MediaDetails {
               (json['next_episode_to_air'] as Map<String, dynamic>?)
                   ?['air_date'],
             ),
+      lastAiredSeasonNumber:
+          isFilm ? null : _lastEpisodeToAirInt(json, 'season_number'),
+      lastAiredEpisodeNumber:
+          isFilm ? null : _lastEpisodeToAirInt(json, 'episode_number'),
       seasonSummaries: isFilm
           ? const []
           : SeasonSummary.listFromTmdbJson(json['seasons']),
@@ -488,4 +498,10 @@ List<MediaEpisodeGroup> _parseEpisodeGroups(Map<String, dynamic> json) {
     );
   }
   return groups;
+}
+
+int? _lastEpisodeToAirInt(Map<String, dynamic> json, String key) {
+  final raw = json['last_episode_to_air'];
+  if (raw is! Map) return null;
+  return (raw[key] as num?)?.toInt();
 }

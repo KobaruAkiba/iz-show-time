@@ -138,6 +138,7 @@ void main() {
           'episode_run_time': [60, 55],
           'first_air_date': '2011-04-17',
           'last_air_date': '2019-05-19',
+          'last_episode_to_air': {'season_number': 8, 'episode_number': 6},
           'next_episode_to_air': null,
           'poster_path': '/got.jpg',
           'created_by': [
@@ -225,6 +226,8 @@ void main() {
       expect(details.director, 'David Benioff, D. B. Weiss');
       expect(details.networkNames, ['HBO']);
       expect(details.lastAirDate, '2019-05-19');
+      expect(details.lastAiredSeasonNumber, 8);
+      expect(details.lastAiredEpisodeNumber, 6);
       expect(details.cast.single.name, 'Emilia Clarke');
       expect(details.cast.single.character, 'Daenerys Targaryen');
       expect(details.certification, 'TV-MA');

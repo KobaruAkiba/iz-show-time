@@ -127,26 +127,40 @@ class AppServices {
     }
   }
 
-  /// Persists TMDB airing metadata used by the catalogue In Progress filter.
+  /// Persists TMDB airing metadata used by the catalogue In Progress and
+  /// Caught Up filters.
   Future<void> updateTvShowAiringState(
     int id, {
     String? status,
     String? nextEpisodeAirDate,
+    int? lastAiredSeasonNumber,
+    int? lastAiredEpisodeNumber,
   }) async {
     final item = _catalogue.tvShowById(id);
     if (item == null) return;
 
     final nextStatus = _nonEmptyTrimmed(status);
     final nextDate = _nonEmptyTrimmed(nextEpisodeAirDate);
-    if (item.status == nextStatus && item.nextEpisodeAirDate == nextDate) {
+    // Season and episode are stored only as a pair.
+    final hasLastAired =
+        lastAiredSeasonNumber != null && lastAiredEpisodeNumber != null;
+    final lastSeason = hasLastAired ? lastAiredSeasonNumber : null;
+    final lastEpisode = hasLastAired ? lastAiredEpisodeNumber : null;
+    if (item.status == nextStatus &&
+        item.nextEpisodeAirDate == nextDate &&
+        item.lastAiredSeasonNumber == lastSeason &&
+        item.lastAiredEpisodeNumber == lastEpisode) {
       return;
     }
 
     final updated = item.copyWith(
       status: nextStatus,
       nextEpisodeAirDate: nextDate,
+      lastAiredSeasonNumber: lastSeason,
+      lastAiredEpisodeNumber: lastEpisode,
       clearStatus: nextStatus == null,
       clearNextEpisodeAirDate: nextDate == null,
+      clearLastAiredEpisode: !hasLastAired,
     );
     _catalogue.add(updated);
     await _persistCatalogueItem(updated);
@@ -160,6 +174,8 @@ class AppServices {
       id,
       status: details.status,
       nextEpisodeAirDate: details.nextEpisodeAirDate,
+      lastAiredSeasonNumber: details.lastAiredSeasonNumber,
+      lastAiredEpisodeNumber: details.lastAiredEpisodeNumber,
     );
   }
 

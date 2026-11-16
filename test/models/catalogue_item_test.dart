@@ -345,6 +345,8 @@ void main() {
         voteAverage: 8.1,
         status: 'Returning Series',
         nextEpisodeAirDate: '2026-09-15',
+        lastAiredSeasonNumber: 3,
+        lastAiredEpisodeNumber: 7,
         tags: [kFollowedTag],
       );
 
@@ -353,6 +355,8 @@ void main() {
 
       expect(restored.status, 'Returning Series');
       expect(restored.nextEpisodeAirDate, '2026-09-15');
+      expect(restored.lastAiredSeasonNumber, 3);
+      expect(restored.lastAiredEpisodeNumber, 7);
       expect(restored.isFollowed, isTrue);
       expect(restored.overview, isNull);
     });

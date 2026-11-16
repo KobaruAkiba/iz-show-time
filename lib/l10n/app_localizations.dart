@@ -316,6 +316,18 @@ abstract class AppLocalizations {
   /// **'TV shows you aren\'t following for new-episode alerts.'**
   String get filtersNotFollowedHint;
 
+  /// No description provided for @filtersCaughtUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Caught Up'**
+  String get filtersCaughtUp;
+
+  /// No description provided for @filtersCaughtUpHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Shows with no aired episodes after the last one you registered.'**
+  String get filtersCaughtUpHint;
+
   /// No description provided for @filtersSortBy.
   ///
   /// In en, this message translates to:
@@ -927,6 +939,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All your shows are followed.\nUnfollow a show from its details to see it here.'**
   String get catalogueNoNotFollowed;
+
+  /// No description provided for @catalogueNoCaughtUp.
+  ///
+  /// In en, this message translates to:
+  /// **'No caught-up shows.\nShows where you registered the latest aired episode appear here.'**
+  String get catalogueNoCaughtUp;
 
   /// No description provided for @settingsAppearance.
   ///

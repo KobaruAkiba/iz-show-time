@@ -133,6 +133,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'TV shows you aren\'t following for new-episode alerts.';
 
   @override
+  String get filtersCaughtUp => 'Caught Up';
+
+  @override
+  String get filtersCaughtUpHint =>
+      'Shows with no aired episodes after the last one you registered.';
+
+  @override
   String get filtersSortBy => 'Sort by';
 
   @override
@@ -500,6 +507,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get catalogueNoNotFollowed =>
       'All your shows are followed.\nUnfollow a show from its details to see it here.';
+
+  @override
+  String get catalogueNoCaughtUp =>
+      'No caught-up shows.\nShows where you registered the latest aired episode appear here.';
 
   @override
   String get settingsAppearance => 'Appearance';

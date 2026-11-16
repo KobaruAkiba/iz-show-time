@@ -130,6 +130,12 @@ class TvShow extends CatalogueItem {
   /// ISO date of TMDB `next_episode_to_air`, when known.
   final String? nextEpisodeAirDate;
 
+  /// Season number of TMDB `last_episode_to_air`, when known.
+  final int? lastAiredSeasonNumber;
+
+  /// Episode number of TMDB `last_episode_to_air`, when known.
+  final int? lastAiredEpisodeNumber;
+
   const TvShow({
     required super.id,
     required super.title,
@@ -138,6 +144,8 @@ class TvShow extends CatalogueItem {
     this.voteAverage = 0.0,
     this.status,
     this.nextEpisodeAirDate,
+    this.lastAiredSeasonNumber,
+    this.lastAiredEpisodeNumber,
     super.tags = const [],
   });
 
@@ -153,6 +161,8 @@ class TvShow extends CatalogueItem {
       voteAverage: (json['vote_average'] as num?)?.toDouble() ?? 0.0,
       status: _nonEmptyString(json['status']),
       nextEpisodeAirDate: _nonEmptyString(json['next_episode_air_date']),
+      lastAiredSeasonNumber: (json['last_aired_season'] as num?)?.toInt(),
+      lastAiredEpisodeNumber: (json['last_aired_episode'] as num?)?.toInt(),
       tags: _parseTags(json['tags']),
     );
   }
@@ -166,6 +176,10 @@ class TvShow extends CatalogueItem {
         if (status != null) 'status': status,
         if (nextEpisodeAirDate != null)
           'next_episode_air_date': nextEpisodeAirDate,
+        if (lastAiredSeasonNumber != null)
+          'last_aired_season': lastAiredSeasonNumber,
+        if (lastAiredEpisodeNumber != null)
+          'last_aired_episode': lastAiredEpisodeNumber,
         'tags': tags,
       };
 
@@ -175,9 +189,12 @@ class TvShow extends CatalogueItem {
     double? voteAverage,
     String? status,
     String? nextEpisodeAirDate,
+    int? lastAiredSeasonNumber,
+    int? lastAiredEpisodeNumber,
     List<String>? tags,
     bool clearStatus = false,
     bool clearNextEpisodeAirDate = false,
+    bool clearLastAiredEpisode = false,
   }) =>
       TvShow(
         id: id,
@@ -189,6 +206,12 @@ class TvShow extends CatalogueItem {
         nextEpisodeAirDate: clearNextEpisodeAirDate
             ? null
             : (nextEpisodeAirDate ?? this.nextEpisodeAirDate),
+        lastAiredSeasonNumber: clearLastAiredEpisode
+            ? null
+            : (lastAiredSeasonNumber ?? this.lastAiredSeasonNumber),
+        lastAiredEpisodeNumber: clearLastAiredEpisode
+            ? null
+            : (lastAiredEpisodeNumber ?? this.lastAiredEpisodeNumber),
         tags: tags ?? this.tags,
       );
 
@@ -228,6 +251,8 @@ CatalogueItem catalogueItemForLocalStore(CatalogueItem item) {
         voteAverage: show.voteAverage,
         status: show.status,
         nextEpisodeAirDate: show.nextEpisodeAirDate,
+        lastAiredSeasonNumber: show.lastAiredSeasonNumber,
+        lastAiredEpisodeNumber: show.lastAiredEpisodeNumber,
         tags: show.tags,
       ),
     _ => throw ArgumentError(
@@ -255,6 +280,10 @@ Map<String, dynamic> catalogueItemToStorageJson(CatalogueItem item) {
         if (show.status != null) 'status': show.status,
         if (show.nextEpisodeAirDate != null)
           'next_episode_air_date': show.nextEpisodeAirDate,
+        if (show.lastAiredSeasonNumber != null)
+          'last_aired_season': show.lastAiredSeasonNumber,
+        if (show.lastAiredEpisodeNumber != null)
+          'last_aired_episode': show.lastAiredEpisodeNumber,
         'tags': show.tags,
       },
     _ => throw ArgumentError(

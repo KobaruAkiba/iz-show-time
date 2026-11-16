@@ -37,12 +37,14 @@ bool hasActiveMediaFilters({
   bool inProgressOnly = false,
   bool favoritesOnly = false,
   bool notFollowedOnly = false,
+  bool caughtUpOnly = false,
 }) {
   return mediaFilter != MediaFilter.all ||
       sortOption != MediaSortOption.none ||
       inProgressOnly ||
       favoritesOnly ||
-      notFollowedOnly;
+      notFollowedOnly ||
+      caughtUpOnly;
 }
 
 List<CatalogueItem> applyMediaFilters(
@@ -133,6 +135,7 @@ typedef MediaFiltersResult = ({
   bool inProgressOnly,
   bool favoritesOnly,
   bool notFollowedOnly,
+  bool caughtUpOnly,
 });
 
 Future<MediaFiltersResult?> showMediaFiltersSheet(
@@ -142,9 +145,11 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
   bool inProgressOnly = false,
   bool favoritesOnly = false,
   bool notFollowedOnly = false,
+  bool caughtUpOnly = false,
   bool showInProgressFilter = false,
   bool showFavoritesFilter = false,
   bool showNotFollowedFilter = false,
+  bool showCaughtUpFilter = false,
   bool showMediaTypeFilter = true,
 }) {
   var draftMediaFilter = mediaFilter;
@@ -152,14 +157,19 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
   var draftInProgressOnly = inProgressOnly;
   var draftFavoritesOnly = favoritesOnly;
   var draftNotFollowedOnly = notFollowedOnly;
-  final showStatusSection =
-      showInProgressFilter || showFavoritesFilter || showNotFollowedFilter;
+  var draftCaughtUpOnly = caughtUpOnly;
+  final showStatusSection = showInProgressFilter ||
+      showFavoritesFilter ||
+      showNotFollowedFilter ||
+      showCaughtUpFilter;
 
-  bool draftForcesTvOnly() => draftInProgressOnly || draftNotFollowedOnly;
+  bool draftForcesTvOnly() =>
+      draftInProgressOnly || draftNotFollowedOnly || draftCaughtUpOnly;
 
   void applyTvOnlyConstraints() {
     if (!showMediaTypeFilter || !draftForcesTvOnly()) return;
-    // In Progress / Not Followed are TV-only: films-only is incompatible.
+    // In Progress / Not Followed / Caught Up are TV-only: films-only is
+    // incompatible.
     if (draftMediaFilter == MediaFilter.filmsOnly) {
       draftMediaFilter = MediaFilter.tvOnly;
     }
@@ -294,6 +304,24 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                             });
                           },
                         ),
+                      if (showCaughtUpFilter)
+                        FilterChip(
+                          label: Text(l10n.filtersCaughtUp),
+                          selected: draftCaughtUpOnly,
+                          showCheckmark: false,
+                          avatar: Icon(
+                            draftCaughtUpOnly
+                                ? Icons.check_circle
+                                : Icons.check_circle_outline,
+                            size: 18,
+                          ),
+                          onSelected: (selected) {
+                            setSheetState(() {
+                              draftCaughtUpOnly = selected;
+                              applyTvOnlyConstraints();
+                            });
+                          },
+                        ),
                     ],
                   ),
                   if (draftInProgressOnly && showInProgressFilter)
@@ -314,6 +342,19 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
                         l10n.filtersNotFollowedHint,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.7),
+                            ),
+                      ),
+                    ),
+                  if (draftCaughtUpOnly && showCaughtUpFilter)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        l10n.filtersCaughtUpHint,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Theme.of(context)
                                   .colorScheme
@@ -360,6 +401,7 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                           draftInProgressOnly = false;
                           draftFavoritesOnly = false;
                           draftNotFollowedOnly = false;
+                          draftCaughtUpOnly = false;
                         });
                       },
                       child: Text(l10n.filtersReset),
@@ -383,6 +425,9 @@ Future<MediaFiltersResult?> showMediaFiltersSheet(
                                 : false,
                             notFollowedOnly: showNotFollowedFilter
                                 ? draftNotFollowedOnly
+                                : false,
+                            caughtUpOnly: showCaughtUpFilter
+                                ? draftCaughtUpOnly
                                 : false,
                           ),
                         );
