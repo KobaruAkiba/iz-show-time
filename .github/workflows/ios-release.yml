@@ -163,11 +163,19 @@ jobs:
           mkdir -p "$HOME/.appstoreconnect/private_keys"
           cp "$KEY_PATH" "$HOME/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
 
+          # altool can report a rejected upload (e.g. 403 for a missing
+          # agreement) while still exiting 0: scan its output as well.
+          ALTOOL_LOG="$RUNNER_TEMP/altool.log"
           xcrun altool --upload-app \
             --type ios \
             --file "$IPA_PATH" \
             --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
-            --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
+            --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID" 2>&1 | tee "$ALTOOL_LOG"
+
+          if grep -q "ERROR:" "$ALTOOL_LOG"; then
+            echo "::error::App Store Connect rejected the upload. See the altool output above."
+            exit 1
+          fi
 
       - name: Clean up keychain
         if: always()
