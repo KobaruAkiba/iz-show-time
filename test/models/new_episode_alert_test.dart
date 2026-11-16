@@ -74,6 +74,46 @@ void main() {
 
       expect(restored.runtimeMinutes, isNull);
       expect(restored.isCatalogueAddable, isFalse);
+      // JSON saved before `later_aired` existed.
+      expect(restored.laterAiredEpisodes, isEmpty);
+    });
+  });
+
+  group('NewEpisodeAlert later aired episodes', () {
+    test('round-trip in JSON', () {
+      final alert = NewEpisodeAlert(
+        showId: 1,
+        showTitle: 'Show',
+        episodeId: 10,
+        seasonNumber: 1,
+        episodeNumber: 2,
+        episodeName: 'Episode',
+        detectedAt: DateTime(2026, 3, 15, 12),
+        laterAiredEpisodes: [
+          LaterAiredEpisode(episodeId: 11, airDate: DateTime(2026, 3, 14)),
+          LaterAiredEpisode(episodeId: 12, airDate: DateTime(2026, 3, 15)),
+        ],
+      );
+
+      final restored = NewEpisodeAlert.fromJson(alert.toJson());
+
+      expect(
+        restored.laterAiredEpisodes.map((e) => (e.episodeId, e.airDate)),
+        [(11, DateTime(2026, 3, 14)), (12, DateTime(2026, 3, 15))],
+      );
+    });
+
+    test('skip malformed entries', () {
+      expect(
+        LaterAiredEpisode.listFromJson([
+          {'episode_id': 11, 'air_date': '2026-03-14T00:00:00.000'},
+          {'episode_id': 'x', 'air_date': '2026-03-14T00:00:00.000'},
+          {'episode_id': 13},
+          'junk',
+        ]).map((e) => e.episodeId),
+        [11],
+      );
+      expect(LaterAiredEpisode.listFromJson(null), isEmpty);
     });
   });
 }

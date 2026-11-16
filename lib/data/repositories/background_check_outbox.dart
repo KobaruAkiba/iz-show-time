@@ -25,6 +25,7 @@ class BackgroundCheckOutbox {
   static const String _checkedAtKey = 'checked_at';
   static const String _notifiedEpisodeIdsKey = 'notified_episode_ids';
   static const String _resumeAfterShowIdKey = 'resume_after_show_id';
+  static const String _notifiedAtKey = 'notified_at';
 
   final Box<dynamic> _box;
 
@@ -45,6 +46,21 @@ class BackgroundCheckOutbox {
     };
   }
 
+  /// When each episode still shown in the system notification was notified.
+  Map<int, DateTime> get notifiedAt {
+    final raw = _box.get(_notifiedAtKey);
+    if (raw is! String) return {};
+    final decoded = jsonDecode(raw);
+    if (decoded is! Map) return {};
+    return {
+      for (final entry in decoded.entries)
+        if (int.tryParse('${entry.key}') != null &&
+            entry.value is String &&
+            DateTime.tryParse(entry.value as String) != null)
+          int.parse('${entry.key}'): DateTime.parse(entry.value as String),
+    };
+  }
+
   /// Result of the previous run, if any.
   BackgroundCheckResult? get result => _parseResult(_box);
 
@@ -59,12 +75,17 @@ class BackgroundCheckOutbox {
     required List<NewEpisodeAlert> alerts,
     required DateTime checkedAt,
     required Set<int> notifiedEpisodeIds,
+    Map<int, DateTime> notifiedAt = const {},
     int? resumeAfterShowId,
   }) async {
     await _box.putAll({
       _alertsKey: jsonEncode(alerts.map((alert) => alert.toJson()).toList()),
       _checkedAtKey: checkedAt.toIso8601String(),
       _notifiedEpisodeIdsKey: jsonEncode(notifiedEpisodeIds.toList()..sort()),
+      _notifiedAtKey: jsonEncode({
+        for (final entry in notifiedAt.entries)
+          '${entry.key}': entry.value.toIso8601String(),
+      }),
       if (resumeAfterShowId != null) _resumeAfterShowIdKey: resumeAfterShowId,
     });
     await _box.flush();

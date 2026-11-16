@@ -27,7 +27,8 @@ class EpisodeCheckService {
 
   /// Native periodic task: refreshes alerts and raises a system notification
   /// when the app is not in foreground. Eligible episodes aired recently,
-  /// were not notified yet, and are not already in the catalogue.
+  /// were not notified yet, and are not already in the catalogue; the
+  /// notification shows how many were notified since the app was last open.
   ///
   /// The UI isolate owns the user-data boxes: this only reads a snapshot of
   /// them and writes its result to [BackgroundCheckOutbox].
@@ -96,13 +97,21 @@ class EpisodeCheckService {
     // Fallback: versions without the outbox kept these ids in the UI-owned
     // meta box.
     var notified = outbox.notifiedEpisodeIds ?? snapshot.notifiedEpisodeIds;
-    var notifiedCount = 0;
+    // Keep only episodes notified after the app last left the foreground:
+    // older ones were already seen.
+    final seenUntil = snapshot.appLeftForegroundAt;
+    var notifiedAt = {
+      for (final entry in outbox.notifiedAt.entries)
+        if (seenUntil == null || entry.value.isAfter(seenUntil))
+          entry.key: entry.value,
+    };
 
     if (shows.isEmpty) {
       await outbox.save(
         alerts: alerts,
         checkedAt: DateTime.now(),
         notifiedEpisodeIds: notified,
+        notifiedAt: notifiedAt,
       );
       return;
     }
@@ -129,21 +138,22 @@ class EpisodeCheckService {
       alerts = result.allAlerts;
 
       if (!snapshot.appInForeground) {
-        final eligible = alertsEligibleForSystemNotification(
+        final eligible = episodesEligibleForSystemNotification(
           alerts: alerts,
           alreadyNotifiedEpisodeIds: notified,
           catalogueEpisodeIds: catalogueEpisodeIds,
         );
         if (eligible.isNotEmpty) {
-          // One notification per run: later blocks update its count.
-          notifiedCount += eligible.length;
-          await notify(notifiedCount);
+          final now = DateTime.now();
+          notifiedAt = {...notifiedAt, for (final id in eligible) id: now};
+          // A single notification, replaced each time with the new total.
+          await notify(notifiedAt.length);
           // Drop IDs that are no longer in the current alert snapshot.
-          final activeIds = {for (final alert in alerts) alert.episodeId};
-          notified = {
-            ...notified,
-            for (final alert in eligible) alert.episodeId,
-          }..removeWhere((id) => !activeIds.contains(id));
+          final activeIds = {
+            for (final alert in alerts) ...alertEpisodeIds(alert),
+          };
+          notified = {...notified, ...eligible}
+            ..removeWhere((id) => !activeIds.contains(id));
         }
       }
 
@@ -151,6 +161,7 @@ class EpisodeCheckService {
         alerts: alerts,
         checkedAt: DateTime.now(),
         notifiedEpisodeIds: notified,
+        notifiedAt: notifiedAt,
         resumeAfterShowId: block.last.id,
       );
     }

@@ -15,6 +15,10 @@ class NewEpisodeAlert {
   final int? runtimeMinutes;
   final DateTime detectedAt;
 
+  /// Episodes of the same season already aired after this one: with this
+  /// episode, they are what the system notification counts.
+  final List<LaterAiredEpisode> laterAiredEpisodes;
+
   const NewEpisodeAlert({
     required this.showId,
     required this.showTitle,
@@ -26,6 +30,7 @@ class NewEpisodeAlert {
     this.airDate,
     this.runtimeMinutes,
     required this.detectedAt,
+    this.laterAiredEpisodes = const [],
   });
 
   factory NewEpisodeAlert.fromJson(Map<String, dynamic> json) {
@@ -40,6 +45,7 @@ class NewEpisodeAlert {
       airDate: EpisodeModel.parseAirDate(json['air_date'] as String?),
       runtimeMinutes: json['runtime_minutes'] as int?,
       detectedAt: DateTime.parse(json['detected_at'] as String),
+      laterAiredEpisodes: LaterAiredEpisode.listFromJson(json['later_aired']),
     );
   }
 
@@ -54,6 +60,10 @@ class NewEpisodeAlert {
         'air_date': airDate?.toIso8601String(),
         'runtime_minutes': runtimeMinutes,
         'detected_at': detectedAt.toIso8601String(),
+        if (laterAiredEpisodes.isNotEmpty)
+          'later_aired': [
+            for (final episode in laterAiredEpisodes) episode.toJson(),
+          ],
       };
 
   String get episodeCode {
@@ -81,4 +91,32 @@ class NewEpisodeAlert {
 
   @override
   int get hashCode => episodeId.hashCode;
+}
+
+/// An aired episode after the one of a [NewEpisodeAlert], in the same season.
+class LaterAiredEpisode {
+  final int episodeId;
+  final DateTime airDate;
+
+  const LaterAiredEpisode({required this.episodeId, required this.airDate});
+
+  Map<String, dynamic> toJson() => {
+        'episode_id': episodeId,
+        'air_date': airDate.toIso8601String(),
+      };
+
+  /// Skips malformed entries; alerts saved before this field read as empty.
+  static List<LaterAiredEpisode> listFromJson(Object? raw) {
+    if (raw is! List) return const [];
+    return [
+      for (final entry in raw)
+        if (entry is Map &&
+            entry['episode_id'] is int &&
+            EpisodeModel.parseAirDate(entry['air_date'] as String?) != null)
+          LaterAiredEpisode(
+            episodeId: entry['episode_id'] as int,
+            airDate: EpisodeModel.parseAirDate(entry['air_date'] as String?)!,
+          ),
+    ];
+  }
 }

@@ -190,6 +190,16 @@ class NewEpisodeChecker {
       airDate: nextEpisode.airDate,
       runtimeMinutes: resolvedRuntime,
       detectedAt: checkedAt,
+      laterAiredEpisodes: [
+        for (final episode in next!.seasonEpisodes)
+          if (episode.episodeNumber > nextEpisode.episodeNumber &&
+              episode.airDate != null &&
+              !EpisodeModel.isAirDateUpcoming(episode.airDate!, now: checkedAt))
+            LaterAiredEpisode(
+              episodeId: episode.id,
+              airDate: episode.airDate!,
+            ),
+      ],
     );
   }
 
@@ -226,8 +236,13 @@ class NewEpisodeChecker {
     return path;
   }
 
-  Future<({EpisodeModel episode, int? peerAverageRuntime})?>
-      _findImmediateNextEpisode({
+  /// The next episode, with the season it was found in.
+  Future<
+      ({
+        EpisodeModel episode,
+        int? peerAverageRuntime,
+        List<EpisodeModel> seasonEpisodes,
+      })?> _findImmediateNextEpisode({
     required int tvId,
     required EpisodeSignature lastRegistered,
     required int seasonCount,
@@ -252,6 +267,7 @@ class NewEpisodeChecker {
             seasonEpisodes,
             excludeEpisodeId: nextInSeason.id,
           ),
+          seasonEpisodes: seasonEpisodes,
         );
       }
     }
@@ -277,6 +293,7 @@ class NewEpisodeChecker {
         nextSeasonEpisodes,
         excludeEpisodeId: nextEpisode.id,
       ),
+      seasonEpisodes: nextSeasonEpisodes,
     );
   }
 

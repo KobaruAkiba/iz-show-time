@@ -16,13 +16,19 @@ final String _yesterday = DateTime.now()
     .toIso8601String()
     .substring(0, 10);
 
-/// Every show has two aired episodes; ids are `showId * 10 + episodeNumber`.
+/// Every show has two aired episodes unless [episodeCount] says otherwise;
+/// ids are `showId * 10 + episodeNumber`.
 /// Shows in [interruptedShowIds] throw a non-API error, like a killed run.
 class _TwoEpisodeStubTmdbService extends TmdbService {
-  _TwoEpisodeStubTmdbService({this.interruptedShowIds = const {}})
-      : super(cacheManager: null);
+  _TwoEpisodeStubTmdbService({
+    this.interruptedShowIds = const {},
+    this.episodeCount = const {},
+  }) : super(cacheManager: null);
 
   final Set<int> interruptedShowIds;
+
+  /// Episodes per show id, when not two.
+  final Map<int, int> episodeCount;
 
   @override
   Future<TvShowSummary?> getTvShowSummary(
@@ -42,7 +48,7 @@ class _TwoEpisodeStubTmdbService extends TmdbService {
       throw StateError('run interrupted');
     }
     return [
-      for (var number = 1; number <= 2; number++)
+      for (var number = 1; number <= (episodeCount[tvId] ?? 2); number++)
         EpisodeModel.fromJson({
           'id': tvId * 10 + number,
           'season_number': 1,
@@ -157,9 +163,65 @@ void main() {
 
       expect(storedEpisodeIds(), {12, 22, 32, 42, 52});
       expect(outbox.notifiedEpisodeIds, {12, 22, 32, 42, 52});
-      // Shows 1 and 2 were already notified: only 3, 4 and then 5 count.
-      expect(notifications, [2, 3]);
+      // The app was not opened in between: the notification keeps counting
+      // shows 1 and 2, then adds 3, 4 and 5.
+      expect(notifications, [4, 5]);
       expect(outbox.resumeAfterShowId, 2);
+    });
+
+    test('counts every aired episode of a show, not one per show', () async {
+      final notifications = <int>[];
+
+      // Show 1: episodes 2, 3 and 4 aired after the registered episode 1.
+      await EpisodeCheckService.checkAndStore(
+        snapshot: snapshot,
+        tmdbService: _TwoEpisodeStubTmdbService(episodeCount: {1: 4}),
+        outbox: outbox,
+        notify: (count) async => notifications.add(count),
+      );
+
+      // Show 1 counts 3 episodes, shows 2 to 5 one each.
+      expect(notifications, [7]);
+      expect(outbox.notifiedEpisodeIds, containsAll([12, 13, 14]));
+      final alert =
+          outbox.result!.alerts.firstWhere((alert) => alert.showId == 1);
+      expect(alert.episodeId, 12);
+      expect(
+        alert.laterAiredEpisodes.map((episode) => episode.episodeId),
+        [13, 14],
+      );
+    });
+
+    test('restarts the count after the app was opened', () async {
+      final notifications = <int>[];
+      Future<void> notify(int count) async => notifications.add(count);
+
+      await EpisodeCheckService.checkAndStore(
+        snapshot: snapshot,
+        tmdbService: _TwoEpisodeStubTmdbService(),
+        outbox: outbox,
+        notify: notify,
+      );
+      expect(notifications, [5]);
+
+      // The user opened and left the app; then show 1 gets a third episode.
+      notifications.clear();
+      await EpisodeCheckService.checkAndStore(
+        snapshot: UserDataSnapshot(
+          catalogue: snapshot.catalogue,
+          watchHistory: snapshot.watchHistory,
+          newEpisodeAlerts: const [],
+          appInForeground: false,
+          notifiedEpisodeIds: const {},
+          appLeftForegroundAt: DateTime.now(),
+        ),
+        tmdbService: _TwoEpisodeStubTmdbService(episodeCount: {1: 3}),
+        outbox: outbox,
+        notify: notify,
+      );
+
+      expect(notifications, [1]);
+      expect(outbox.notifiedAt.keys, [13]);
     });
 
     test('does not notify while the app is in foreground', () async {

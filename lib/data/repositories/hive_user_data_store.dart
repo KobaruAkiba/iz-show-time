@@ -18,6 +18,7 @@ class UserDataSnapshot {
   final bool appInForeground;
   final Set<int> notifiedEpisodeIds;
   final DateTime? lastEpisodeCheckAt;
+  final DateTime? appLeftForegroundAt;
 
   const UserDataSnapshot({
     required this.catalogue,
@@ -26,6 +27,7 @@ class UserDataSnapshot {
     required this.appInForeground,
     required this.notifiedEpisodeIds,
     this.lastEpisodeCheckAt,
+    this.appLeftForegroundAt,
   });
 }
 
@@ -95,6 +97,7 @@ class HiveUserDataStore implements UserDataStore {
         appInForeground: await store.loadAppInForeground(),
         notifiedEpisodeIds: await store.loadNotifiedEpisodeIds(),
         lastEpisodeCheckAt: await store.loadLastEpisodeCheckAt(),
+        appLeftForegroundAt: await store.loadAppLeftForegroundAt(),
       );
     } finally {
       await store.close();
@@ -451,7 +454,19 @@ class HiveUserDataStore implements UserDataStore {
   @override
   Future<void> saveAppInForeground(bool isInForeground) async {
     await open();
-    await metaBox.put(StorageConstants.appInForegroundKey, isInForeground);
+    await metaBox.putAll({
+      StorageConstants.appInForegroundKey: isInForeground,
+      if (!isInForeground)
+        StorageConstants.appLeftForegroundAtKey:
+            DateTime.now().toIso8601String(),
+    });
+  }
+
+  /// See [StorageConstants.appLeftForegroundAtKey].
+  Future<DateTime?> loadAppLeftForegroundAt() async {
+    await open();
+    final raw = metaBox.get(StorageConstants.appLeftForegroundAtKey);
+    return raw is String ? DateTime.tryParse(raw) : null;
   }
 
   @override
@@ -563,6 +578,7 @@ class HiveUserDataStore implements UserDataStore {
     await metaBox.delete(StorageConstants.newEpisodeAlertsKey);
     await metaBox.delete(StorageConstants.lastEpisodeCheckKey);
     await metaBox.delete(StorageConstants.appInForegroundKey);
+    await metaBox.delete(StorageConstants.appLeftForegroundAtKey);
     await metaBox.delete(StorageConstants.notifiedEpisodeIdsKey);
     await metaBox.delete(
       StorageConstants.notificationPermissionPrePromptShownKey,

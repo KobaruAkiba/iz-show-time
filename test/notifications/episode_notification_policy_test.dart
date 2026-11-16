@@ -19,11 +19,12 @@ void main() {
     });
   });
 
-  group('alertsEligibleForSystemNotification', () {
+  group('episodesEligibleForSystemNotification', () {
     NewEpisodeAlert alert({
       required int episodeId,
       required DateTime? airDate,
       int? runtimeMinutes,
+      List<LaterAiredEpisode> laterAiredEpisodes = const [],
     }) {
       return NewEpisodeAlert(
         showId: 1,
@@ -35,12 +36,56 @@ void main() {
         airDate: airDate,
         runtimeMinutes: runtimeMinutes,
         detectedAt: DateTime(2026, 3, 15),
+        laterAiredEpisodes: laterAiredEpisodes,
       );
     }
 
+    test('counts each recent later episode of an alert on its own', () {
+      final eligible = episodesEligibleForSystemNotification(
+        alerts: [
+          alert(
+            episodeId: 1,
+            // Old backlog: does not count, but the alert still qualifies.
+            airDate: DateTime(2026, 1, 10),
+            runtimeMinutes: 42,
+            laterAiredEpisodes: [
+              LaterAiredEpisode(episodeId: 2, airDate: DateTime(2026, 1, 17)),
+              LaterAiredEpisode(episodeId: 3, airDate: DateTime(2026, 3, 14)),
+              LaterAiredEpisode(episodeId: 4, airDate: DateTime(2026, 3, 15)),
+              LaterAiredEpisode(episodeId: 5, airDate: DateTime(2026, 3, 15)),
+            ],
+          ),
+        ],
+        alreadyNotifiedEpisodeIds: {5},
+        catalogueEpisodeIds: {4},
+        now: DateTime(2026, 3, 15, 21),
+      );
+
+      expect(eligible, [3]);
+    });
+
+    test('ignores later episodes when the next one is not addable', () {
+      final eligible = episodesEligibleForSystemNotification(
+        alerts: [
+          alert(
+            episodeId: 1,
+            airDate: DateTime(2026, 3, 15),
+            runtimeMinutes: null,
+            laterAiredEpisodes: [
+              LaterAiredEpisode(episodeId: 2, airDate: DateTime(2026, 3, 15)),
+            ],
+          ),
+        ],
+        alreadyNotifiedEpisodeIds: {},
+        now: DateTime(2026, 3, 15, 21),
+      );
+
+      expect(eligible, isEmpty);
+    });
+
     test('includes recently aired, addable alerts not notified yet', () {
       final now = DateTime(2026, 3, 15, 21);
-      final eligible = alertsEligibleForSystemNotification(
+      final eligible = episodesEligibleForSystemNotification(
         alerts: [
           alert(
             episodeId: 1,
@@ -68,11 +113,11 @@ void main() {
         now: now,
       );
 
-      expect(eligible.map((a) => a.episodeId), [1, 2]);
+      expect(eligible, [1, 2]);
     });
 
     test('excludes episodes aired more than a week ago', () {
-      final eligible = alertsEligibleForSystemNotification(
+      final eligible = episodesEligibleForSystemNotification(
         alerts: [
           alert(
             episodeId: 1,
@@ -89,11 +134,11 @@ void main() {
         now: DateTime(2026, 3, 15, 21),
       );
 
-      expect(eligible.map((a) => a.episodeId), [1]);
+      expect(eligible, [1]);
     });
 
     test('excludes upcoming and missing-runtime alerts', () {
-      final eligible = alertsEligibleForSystemNotification(
+      final eligible = episodesEligibleForSystemNotification(
         alerts: [
           alert(
             episodeId: 1,
@@ -115,7 +160,7 @@ void main() {
 
     test('excludes catalogue-addable alerts already in the catalogue', () {
       final now = DateTime(2026, 3, 15, 21);
-      final eligible = alertsEligibleForSystemNotification(
+      final eligible = episodesEligibleForSystemNotification(
         alerts: [
           alert(
             episodeId: 1,
@@ -133,7 +178,7 @@ void main() {
         now: now,
       );
 
-      expect(eligible.map((a) => a.episodeId), [1]);
+      expect(eligible, [1]);
     });
   });
 }

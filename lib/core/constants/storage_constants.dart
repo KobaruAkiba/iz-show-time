@@ -12,6 +12,10 @@ class StorageConstants {
   static const String newEpisodeAlertsKey = 'new_episode_alerts';
   static const String lastEpisodeCheckKey = 'last_episode_check_at';
   static const String appInForegroundKey = 'app_in_foreground';
+
+  /// Last time the app left the foreground: episodes notified before then
+  /// count as seen.
+  static const String appLeftForegroundAtKey = 'app_left_foreground_at';
   static const String notifiedEpisodeIdsKey = 'notified_episode_ids';
   static const String notificationPermissionPrePromptShownKey =
       'notification_permission_pre_prompt_shown';
