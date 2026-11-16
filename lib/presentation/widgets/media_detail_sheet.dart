@@ -455,13 +455,16 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     for (final seasonNumber in _expandedSeasons) {
       final anchors = _seasonAnchors[seasonNumber];
       if (anchors == null) continue;
+      final header = _rectIn(anchors.season, viewport);
       final first = _rectIn(anchors.firstEpisode, viewport);
       final latest = _rectIn(anchors.latestEpisode, viewport);
-      if (first == null || latest == null) continue;
+      if (header == null || first == null || latest == null) continue;
       spans.add(
         SeasonJumpSpan(
           seasonNumber: seasonNumber,
-          firstTop: first.top,
+          // Where the header would sit if it scrolled with the episodes:
+          // above 0, the pinned header starts covering the first episode.
+          firstTop: first.top - header.height,
           latestBottom: latest.bottom,
         ),
       );
@@ -477,7 +480,7 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
   }
 
   /// Scrolls to the latest aired episode (kept above the button) or back to
-  /// the season header, so its first episode shows right below it.
+  /// the first episode, right below the season header.
   void _jumpWithinSeason(SeasonJumpTarget target) {
     final viewport = _viewportBox();
     final controller = _sheetScrollController;
@@ -495,9 +498,12 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
       delta = latest.bottom -
           (viewport.size.height - SeasonJumpButton.coveredHeight(context));
     } else {
+      // The header may be pinned at the top: measure from the first episode
+      // and leave room for the header above it.
       final header = _rectIn(anchors.season, viewport);
-      if (header == null) return;
-      delta = header.top;
+      final first = _rectIn(anchors.firstEpisode, viewport);
+      if (header == null || first == null) return;
+      delta = first.top - header.height;
     }
     final position = controller.position;
     final offset = (position.pixels + delta)
@@ -609,233 +615,257 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     final bottomPadding = isFilm
         ? 32.0
         : math.max(32.0, SeasonJumpButton.coveredHeight(context));
-    return ListView(
-      controller: scrollController,
-      padding: EdgeInsets.fromLTRB(24, 12, 24, bottomPadding),
-      children: [
-        Center(
-          child: Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: colorScheme.onSurface.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(2),
-            ),
+    final showSeasons = !_isLoading && details != null && !isFilm;
+
+    // Seasons are slivers so their headers can pin while the episodes
+    // scroll; the content before and after them stays a plain list.
+    final leading = <Widget>[
+      Center(
+        child: Container(
+          width: 40,
+          height: 4,
+          decoration: BoxDecoration(
+            color: colorScheme.onSurface.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(2),
           ),
         ),
-        const SizedBox(height: 20),
-        if (_isLoading)
-          const DetailSkeleton()
-        else if (details != null) ...[
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: SizedBox(
-                  width: 100,
-                  height: 150,
-                  child: AppNetworkImage(
-                    url: posterUrl,
-                    logicalWidth: 100,
-                    fallback: _posterFallback(context),
-                  ),
+      ),
+      const SizedBox(height: 20),
+      if (_isLoading)
+        const DetailSkeleton()
+      else if (details != null) ...[
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: 100,
+                height: 150,
+                child: AppNetworkImage(
+                  url: posterUrl,
+                  logicalWidth: 100,
+                  fallback: _posterFallback(context),
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      details.title,
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleLarge
-                          ?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            // Content title — keep onSurface (section titles use primary).
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    details.title,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          // Content title — keep onSurface (section titles use primary).
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      if (ratingChipLabel != null)
+                        Semantics(
+                          label: l10n.ratingSemantics(ratingChipLabel),
+                          child: ExcludeSemantics(
+                            child: _MetaChip(
+                              icon: Icons.star_rounded,
+                              label: ratingChipLabel,
+                            ),
                           ),
-                    ),
+                        ),
+                      if (details.year != null)
+                        _MetaChip(
+                          icon: Icons.calendar_today,
+                          label: details.year.toString(),
+                        ),
+                      if (details.isFilm &&
+                          details.formattedRuntime != null)
+                        _MetaChip(
+                          icon: Icons.schedule,
+                          label: details.formattedRuntime!,
+                        ),
+                      if (!details.isFilm &&
+                          details.formattedSeasons != null)
+                        _MetaChip(
+                          icon: Icons.layers,
+                          label: details.formattedSeasons!,
+                        ),
+                      if (details.formattedStatus != null)
+                        _MetaChip(
+                          icon: Icons.flag_outlined,
+                          label: details.formattedStatus!,
+                        ),
+                      _MetaChip(
+                        icon: details.isFilm
+                            ? Icons.movie_filter
+                            : Icons.tv,
+                        label: details.isFilm
+                            ? l10n.mediaTypeFilm
+                            : l10n.mediaTypeShow,
+                      ),
+                    ],
+                  ),
+                  if (details.genres.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
                       runSpacing: 4,
                       children: [
-                        if (ratingChipLabel != null)
-                          Semantics(
-                            label: l10n.ratingSemantics(ratingChipLabel),
-                            child: ExcludeSemantics(
-                              child: _MetaChip(
-                                icon: Icons.star_rounded,
-                                label: ratingChipLabel,
-                              ),
-                            ),
-                          ),
-                        if (details.year != null)
-                          _MetaChip(
-                            icon: Icons.calendar_today,
-                            label: details.year.toString(),
-                          ),
-                        if (details.isFilm &&
-                            details.formattedRuntime != null)
-                          _MetaChip(
-                            icon: Icons.schedule,
-                            label: details.formattedRuntime!,
-                          ),
-                        if (!details.isFilm &&
-                            details.formattedSeasons != null)
-                          _MetaChip(
-                            icon: Icons.layers,
-                            label: details.formattedSeasons!,
-                          ),
-                        if (details.formattedStatus != null)
-                          _MetaChip(
-                            icon: Icons.flag_outlined,
-                            label: details.formattedStatus!,
-                          ),
-                        _MetaChip(
-                          icon: details.isFilm
-                              ? Icons.movie_filter
-                              : Icons.tv,
-                          label: details.isFilm
-                              ? l10n.mediaTypeFilm
-                              : l10n.mediaTypeShow,
-                        ),
+                        for (final genre
+                            in details.genres.take(3))
+                          _GenreChip(label: genre),
                       ],
                     ),
-                    if (details.genres.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 4,
-                        children: [
-                          for (final genre
-                              in details.genres.take(3))
-                            _GenreChip(label: genre),
-                        ],
-                      ),
-                    ],
-                    if (!isFilm &&
+                  ],
+                  if (!isFilm &&
+                      _appServices
+                              .watchedEpisodesCountFor(widget.item.id) >
+                          0) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.episodesInCatalogue(
                         _appServices
-                                .watchedEpisodesCountFor(widget.item.id) >
-                            0) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        l10n.episodesInCatalogue(
-                          _appServices
-                              .watchedEpisodesCountFor(widget.item.id),
-                        ),
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(color: colorScheme.primary),
+                            .watchedEpisodesCountFor(widget.item.id),
                       ),
-                    ],
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: colorScheme.primary),
+                    ),
                   ],
-                ),
+                ],
               ),
-            ],
+            ),
+          ],
+        ),
+        if (isFilm) ...[
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _guarded(_toggleFilmWatched),
+              icon: Icon(
+                filmWatched
+                    ? Icons.check_circle
+                    : Icons.play_circle_outline,
+              ),
+              label: Text(
+                filmWatched ? l10n.watched : l10n.markAsWatched,
+              ),
+            ),
           ),
-          if (isFilm) ...[
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: _guarded(_toggleFilmWatched),
-                icon: Icon(
-                  filmWatched
-                      ? Icons.check_circle
-                      : Icons.play_circle_outline,
-                ),
-                label: Text(
-                  filmWatched ? l10n.watched : l10n.markAsWatched,
-                ),
-              ),
-            ),
-            if (filmWatched) ...[
-              const SizedBox(height: 12),
-              _buildFavoriteButton(isFavorite: isFavorite),
-            ],
-          ],
-          if (!isFilm) ...[
-            if (inCatalogue) ...[
-              const SizedBox(height: 20),
-              _buildFollowedButton(isFollowed: isFollowed),
-              const SizedBox(height: 12),
-              _buildFavoriteButton(isFavorite: isFavorite),
-            ],
-            const SizedBox(height: 24),
-            _buildSeasonsSection(),
-          ],
-          if (details.director != null &&
-              details.director!.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            _buildSectionLabel(
-              details.isFilm ? l10n.director : l10n.createdBy,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              details.director!,
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-          ],
-          if (details.cast.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            _buildSectionLabel(l10n.cast),
+          if (filmWatched) ...[
             const SizedBox(height: 12),
-            _buildCastCarousel(details.cast),
-          ],
-          if (details.overview != null &&
-              details.overview!.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            _buildSectionLabel(l10n.overview),
-            const SizedBox(height: 4),
-            Text(
-              details.overview!,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    height: 1.5,
-                    color: colorScheme.onSurface.withValues(alpha: 0.85),
-                  ),
-            ),
-          ],
-          if (details.watchProviderNames.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            _buildSectionLabel(l10n.whereToWatch),
-            const SizedBox(height: 8),
-            Semantics(
-              label: l10n.whereToWatchSemantics(
-                details.watchProviderNames.join(', '),
-              ),
-              child: ExcludeSemantics(
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 4,
-                  children: [
-                    for (final provider in details.watchProviderNames)
-                      _GenreChip(label: provider),
-                  ],
-                ),
-              ),
-            ),
-          ],
-          if (details.networkNames.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            _buildSectionLabel(l10n.networks),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: [
-                for (final network in details.networkNames)
-                  _GenreChip(label: network),
-              ],
-            ),
+            _buildFavoriteButton(isFavorite: isFavorite),
           ],
         ],
+        if (!isFilm) ...[
+          if (inCatalogue) ...[
+            const SizedBox(height: 20),
+            _buildFollowedButton(isFollowed: isFollowed),
+            const SizedBox(height: 12),
+            _buildFavoriteButton(isFavorite: isFavorite),
+          ],
+          const SizedBox(height: 24),
+          ..._buildSeasonsHeading(),
+        ],
+      ],
+    ];
+    final trailing = <Widget>[
+      if (!_isLoading && details != null) ...[
+        if (details.director != null &&
+            details.director!.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          _buildSectionLabel(
+            details.isFilm ? l10n.director : l10n.createdBy,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            details.director!,
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+        ],
+        if (details.cast.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          _buildSectionLabel(l10n.cast),
+          const SizedBox(height: 12),
+          _buildCastCarousel(details.cast),
+        ],
+        if (details.overview != null &&
+            details.overview!.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          _buildSectionLabel(l10n.overview),
+          const SizedBox(height: 4),
+          Text(
+            details.overview!,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  height: 1.5,
+                  color: colorScheme.onSurface.withValues(alpha: 0.85),
+                ),
+          ),
+        ],
+        if (details.watchProviderNames.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          _buildSectionLabel(l10n.whereToWatch),
+          const SizedBox(height: 8),
+          Semantics(
+            label: l10n.whereToWatchSemantics(
+              details.watchProviderNames.join(', '),
+            ),
+            child: ExcludeSemantics(
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  for (final provider in details.watchProviderNames)
+                    _GenreChip(label: provider),
+                ],
+              ),
+            ),
+          ),
+        ],
+        if (details.networkNames.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          _buildSectionLabel(l10n.networks),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              for (final network in details.networkNames)
+                _GenreChip(label: network),
+            ],
+          ),
+        ],
+      ],
+    ];
+
+    return CustomScrollView(
+      controller: scrollController,
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+          sliver: SliverList.list(children: leading),
+        ),
+        if (showSeasons)
+          for (final summary in _seasonSummaries)
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              sliver: _buildSeasonSliver(summary),
+            ),
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(24, 0, 24, bottomPadding),
+          sliver: SliverList.list(children: trailing),
+        ),
       ],
     );
   }
@@ -960,32 +990,29 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     );
   }
 
-  Widget _buildSeasonsSection() {
+  /// "Episodes" label, or the empty state when TMDB lists no season.
+  List<Widget> _buildSeasonsHeading() {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = context.l10n;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionLabel(l10n.episodes),
-        const SizedBox(height: 8),
-        if (_seasonSummaries.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Text(
-              l10n.noEpisodesFound,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-            ),
-          )
-        else
-          ..._seasonSummaries.map(_buildSeasonSection),
-      ],
-    );
+    return [
+      _buildSectionLabel(l10n.episodes),
+      const SizedBox(height: 8),
+      if (_seasonSummaries.isEmpty)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Text(
+            l10n.noEpisodesFound,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+          ),
+        ),
+    ];
   }
 
-  Widget _buildSeasonSection(SeasonSummary summary) {
+  /// One season: a header that stays pinned while its episodes scroll.
+  Widget _buildSeasonSliver(SeasonSummary summary) {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = context.l10n;
     final seasonNumber = summary.seasonNumber;
@@ -1056,60 +1083,71 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     final latestIndex =
         season != null ? latestAiredEpisodeIndex(season.episodes) : null;
 
-    final card = Card(
+    final background =
+        colorScheme.surfaceContainerHighest.withValues(alpha: 0.4);
+
+    // Pinned over the episodes, so the header must be opaque: same tint,
+    // blended onto the sheet surface.
+    final header = Material(
       key: anchors.season,
-      margin: EdgeInsets.zero,
-      elevation: 0,
-      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-      child: Column(
-        children: [
-          ListTile(
-            onTap: () => _toggleSeason(seasonNumber),
-            title: Row(
-              children: [
-                Flexible(
-                  child: Text(
-                    summary.isSpecials
-                        ? l10n.seasonSpecials
-                        : l10n.seasonLabel(seasonNumber),
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-                if (isUpcoming) ...[
-                  const SizedBox(width: 8),
-                  const _StatusBadge.upcoming(),
-                ],
-              ],
+      color: Color.alphaBlend(background, colorScheme.surface),
+      borderRadius: isExpanded
+          ? const BorderRadius.vertical(top: _seasonRadius)
+          : const BorderRadius.all(_seasonRadius),
+      child: ListTile(
+        onTap: () => _toggleSeason(seasonNumber),
+        title: Row(
+          children: [
+            Flexible(
+              child: Text(
+                summary.isSpecials
+                    ? l10n.seasonSpecials
+                    : l10n.seasonLabel(seasonNumber),
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
             ),
-            subtitle: Text(subtitle),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  tooltip: allInCatalogue
-                      ? l10n.removeSeasonFromCatalogue
-                      : l10n.addSeasonToCatalogue,
-                  icon: Icon(
-                    allInCatalogue
-                        ? Icons.bookmark
-                        : partialInCatalogue
-                            ? Icons.bookmark_add
-                            : Icons.bookmark_add_outlined,
-                    color: allInCatalogue || partialInCatalogue
-                        ? colorScheme.primary
-                        : null,
-                  ),
-                  onPressed: canAddSeason
-                      ? _guarded(() => _toggleSeasonInCatalogue(seasonNumber))
-                      : null,
-                ),
-                Icon(
-                  isExpanded ? Icons.expand_less : Icons.expand_more,
-                ),
-              ],
+            if (isUpcoming) ...[
+              const SizedBox(width: 8),
+              const _StatusBadge.upcoming(),
+            ],
+          ],
+        ),
+        subtitle: Text(subtitle),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              tooltip: allInCatalogue
+                  ? l10n.removeSeasonFromCatalogue
+                  : l10n.addSeasonToCatalogue,
+              icon: Icon(
+                allInCatalogue
+                    ? Icons.bookmark
+                    : partialInCatalogue
+                        ? Icons.bookmark_add
+                        : Icons.bookmark_add_outlined,
+                color: allInCatalogue || partialInCatalogue
+                    ? colorScheme.primary
+                    : null,
+              ),
+              onPressed: canAddSeason
+                  ? _guarded(() => _toggleSeasonInCatalogue(seasonNumber))
+                  : null,
             ),
-          ),
-          if (isExpanded && season != null)
+            Icon(
+              isExpanded ? Icons.expand_less : Icons.expand_more,
+            ),
+          ],
+        ),
+      ),
+    );
+
+    final Widget? body;
+    if (isExpanded && season != null) {
+      body = Material(
+        type: MaterialType.transparency,
+        child: Column(
+          children: [
             for (final (index, episode) in season.episodes.indexed)
               _anchoredEpisode(
                 anchors: anchors,
@@ -1117,19 +1155,25 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
                 // No aired episode: no anchor, so the jump button stays hidden.
                 isLatest: index == latestIndex,
                 child: _buildEpisodeTile(episode, season: season),
-              )
-          else if (isExpanded && isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-        ],
-      ),
-    );
-    return _SeasonJumpHighlight(
+              ),
+          ],
+        ),
+      );
+    } else if (isExpanded && isLoading) {
+      body = const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    } else {
+      body = null;
+    }
+
+    return _SeasonSliver(
       seasonNumber: seasonNumber,
       jumpTarget: _jumpTarget,
-      child: card,
+      background: background,
+      header: header,
+      body: body,
     );
   }
 
@@ -1264,20 +1308,32 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
   }
 }
 
-/// Outlines a season card in primary while the jump button targets it.
+/// Corner radius of a season block, as on a Material 3 card.
+const _seasonRadius = Radius.circular(12);
+
+/// One season as a sliver group: [header] pins to the top of the sheet
+/// while [body] (the episodes) scrolls under it, and the next season's
+/// header pushes it away.
 ///
-/// A 2dp outline reads as "selected", unlike the primary tint used for
-/// "in catalogue". It rebuilds only the outline, not the card, and switches
-/// instantly with reduced motion.
-class _SeasonJumpHighlight extends StatelessWidget {
+/// While the jump button targets this season, a 2dp primary outline wraps
+/// the whole block. An outline reads as "selected", unlike the primary
+/// tint used for "in catalogue"; it fades in 150ms, instantly with reduced
+/// motion. Only the outline rebuilds when the target changes.
+class _SeasonSliver extends StatelessWidget {
   final int seasonNumber;
   final ValueListenable<SeasonJumpTarget?> jumpTarget;
-  final Widget child;
+  final Color background;
+  final Widget header;
 
-  const _SeasonJumpHighlight({
+  /// Episodes or a loading spinner; null while the season is collapsed.
+  final Widget? body;
+
+  const _SeasonSliver({
     required this.seasonNumber,
     required this.jumpTarget,
-    required this.child,
+    required this.background,
+    required this.header,
+    required this.body,
   });
 
   @override
@@ -1285,34 +1341,57 @@ class _SeasonJumpHighlight extends StatelessWidget {
     final primary = Theme.of(context).colorScheme.primary;
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    return ValueListenableBuilder<SeasonJumpTarget?>(
-      valueListenable: jumpTarget,
-      child: child,
-      builder: (context, target, card) {
-        final active = target?.seasonNumber == seasonNumber;
-        return AnimatedContainer(
-          duration:
-              reduceMotion ? Duration.zero : const Duration(milliseconds: 150),
-          curve: Curves.easeOut,
-          margin: const EdgeInsets.only(bottom: 8),
-          foregroundDecoration: BoxDecoration(
-            // Same radius as the Material 3 card underneath.
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: active ? primary : primary.withValues(alpha: 0),
-              width: 2,
-            ),
-          ),
-          child: card,
-        );
-      },
+    final content = body;
+    final group = SliverMainAxisGroup(
+      slivers: [
+        PinnedHeaderSliver(child: header),
+        if (content != null) SliverToBoxAdapter(child: content),
+      ],
+    );
+
+    return SliverPadding(
+      padding: const EdgeInsets.only(bottom: 8),
+      sliver: DecoratedSliver(
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: const BorderRadius.all(_seasonRadius),
+        ),
+        sliver: ValueListenableBuilder<SeasonJumpTarget?>(
+          valueListenable: jumpTarget,
+          child: group,
+          builder: (context, target, group) {
+            final active = target?.seasonNumber == seasonNumber;
+            return TweenAnimationBuilder<double>(
+              tween: Tween(end: active ? 1 : 0),
+              duration: reduceMotion
+                  ? Duration.zero
+                  : const Duration(milliseconds: 150),
+              curve: Curves.easeOut,
+              child: group,
+              // Foreground: the outline also runs over the pinned header.
+              builder: (context, opacity, group) => DecoratedSliver(
+                position: DecorationPosition.foreground,
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.all(_seasonRadius),
+                  border: Border.all(
+                    color: primary.withValues(alpha: opacity),
+                    width: 2,
+                  ),
+                ),
+                sliver: group!,
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 }
 
 /// Widgets of one season measured by the jump button.
 class _SeasonAnchors {
-  /// Season card: "back to first" aligns its header with the top edge.
+  /// Season header, pinned or in place: its height is the strip it covers
+  /// at the top of the sheet.
   final season = GlobalKey();
   final firstEpisode = GlobalKey();
 

@@ -68,24 +68,31 @@ class _SheetStubTmdbService extends TmdbService {
 
 /// One long season: [airedCount] aired episodes, then [upcomingCount] future.
 class _LongSeasonTmdbService extends TmdbService {
-  _LongSeasonTmdbService({this.airedCount = 30, this.upcomingCount = 0})
-      : super(cacheManager: null);
+  _LongSeasonTmdbService({
+    this.airedCount = 30,
+    this.upcomingCount = 0,
+    this.seasonCount = 1,
+  }) : super(cacheManager: null);
 
   final int airedCount;
   final int upcomingCount;
+
+  /// Identical seasons listed by the show, so the sheet can scroll.
+  final int seasonCount;
 
   @override
   Future<MediaDetails?> getMediaDetails(CatalogueItem item) async {
     return MediaDetails(
       title: item.title,
       isFilm: false,
-      numberOfSeasons: 1,
+      numberOfSeasons: seasonCount,
       seasonSummaries: [
-        SeasonSummary(
-          seasonNumber: 1,
-          episodeCount: airedCount + upcomingCount,
-          airDate: DateTime(2020),
-        ),
+        for (var number = 1; number <= seasonCount; number++)
+          SeasonSummary(
+            seasonNumber: number,
+            episodeCount: airedCount + upcomingCount,
+            airDate: DateTime(2020),
+          ),
       ],
     );
   }
@@ -102,7 +109,7 @@ class _LongSeasonTmdbService extends TmdbService {
       episodes: [
         for (var number = 1; number <= airedCount + upcomingCount; number++)
           EpisodeModel.fromJson({
-            'id': 1000 + number,
+            'id': seasonNumber * 1000 + number,
             'season_number': seasonNumber,
             'episode_number': number,
             'name': 'Episode $number',
@@ -180,7 +187,14 @@ void main() {
 
   group('season jump button', () {
     Rect sheetRect(WidgetTester tester) =>
-        tester.getRect(find.byType(ListView).first);
+        tester.getRect(find.byType(CustomScrollView));
+
+    /// The season header: the Material closest to its title.
+    Rect headerRect(WidgetTester tester) => tester.getRect(
+          find
+              .ancestor(of: find.text('Season 1'), matching: find.byType(Material))
+              .first,
+        );
 
     Rect buttonRect(WidgetTester tester) =>
         tester.getRect(find.byType(FloatingActionButton));
@@ -220,9 +234,11 @@ void main() {
       await tester.tap(find.text('S1 · Back to first'));
       await tester.pumpAndSettle();
       expect(find.text('S1 · Jump to latest'), findsOneWidget);
-      final header = tester.getRect(find.text('Season 1'));
+      final header = headerRect(tester);
       final first = tester.getRect(find.text('Episode 1'));
-      expect(header.top, greaterThanOrEqualTo(sheetRect(tester).top));
+      expect(header.top, greaterThanOrEqualTo(sheetRect(tester).top - 0.5));
+      // The first episode shows right below the header, not under it.
+      expect(first.top, greaterThanOrEqualTo(header.bottom));
       expect(first.bottom, lessThanOrEqualTo(sheetRect(tester).bottom));
     });
 
@@ -274,13 +290,17 @@ void main() {
       await pumpSheet(tester);
 
       Color outlineColor() {
-        final container = tester.widget<AnimatedContainer>(
+        final outline = tester.widget<DecoratedSliver>(
           find.ancestor(
             of: find.text('Season 1'),
-            matching: find.byType(AnimatedContainer),
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is DecoratedSliver &&
+                  widget.position == DecorationPosition.foreground,
+            ),
           ),
         );
-        final decoration = container.foregroundDecoration! as BoxDecoration;
+        final decoration = outline.decoration as BoxDecoration;
         return (decoration.border! as Border).top.color;
       }
 
@@ -299,5 +319,60 @@ void main() {
       expect(find.byType(FloatingActionButton), findsNothing);
       expect(outlineColor().a, 0);
     });
+  });
+
+  testWidgets('expanding a season after scrolling keeps its header in place',
+      (tester) async {
+    appServices.tmdbService = _LongSeasonTmdbService(seasonCount: 8);
+    await pumpSheet(tester);
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -300));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -150));
+    await tester.pumpAndSettle();
+
+    Rect header() => tester.getRect(
+          find
+              .ancestor(
+                of: find.text('Season 1'),
+                matching: find.byType(Material),
+              )
+              .first,
+        );
+    final before = header();
+    await tester.tap(find.text('Season 1'));
+    await tester.pumpAndSettle();
+
+    expect(header().top, closeTo(before.top, 0.5));
+    expect(find.text('Episode 1'), findsOneWidget);
+    expect(find.text('S1 · Jump to latest'), findsOneWidget);
+  });
+
+  testWidgets('the expanded season header stays pinned while scrolling',
+      (tester) async {
+    appServices.tmdbService = _LongSeasonTmdbService();
+    await pumpSheet(tester);
+    await tester.tap(find.text('Season 1'));
+    await tester.pumpAndSettle();
+
+    // First drag grows the sheet to full height, the second scrolls it.
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -300));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -600));
+    await tester.pumpAndSettle();
+
+    final sheet = tester.getRect(find.byType(CustomScrollView));
+    final header = tester.getRect(
+      find
+          .ancestor(of: find.text('Season 1'), matching: find.byType(Material))
+          .first,
+    );
+    expect(header.top, closeTo(sheet.top, 0.5));
+    // Episodes scroll under the header.
+    expect(tester.getRect(find.text('Episode 1')).top, lessThan(header.top));
+
+    // Still tappable while pinned: collapsing the season.
+    await tester.tap(find.text('Season 1'));
+    await tester.pumpAndSettle();
+    expect(find.text('Episode 1'), findsNothing);
   });
 }
