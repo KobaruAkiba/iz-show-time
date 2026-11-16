@@ -682,6 +682,36 @@ abstract class AppLocalizations {
   /// **'Could not load episodes. Tap to retry.'**
   String get seasonLoadFailed;
 
+  /// No description provided for @seasonShortLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'S{number}'**
+  String seasonShortLabel(int number);
+
+  /// No description provided for @jumpToLatestEpisode.
+  ///
+  /// In en, this message translates to:
+  /// **'{season} · Jump to latest'**
+  String jumpToLatestEpisode(String season);
+
+  /// No description provided for @backToFirstEpisode.
+  ///
+  /// In en, this message translates to:
+  /// **'{season} · Back to first'**
+  String backToFirstEpisode(String season);
+
+  /// No description provided for @jumpToLatestEpisodeSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'{season}, jump to latest episode'**
+  String jumpToLatestEpisodeSemantics(String season);
+
+  /// No description provided for @backToFirstEpisodeSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'{season}, back to first episode'**
+  String backToFirstEpisodeSemantics(String season);
+
   /// No description provided for @seasonLabel.
   ///
   /// In en, this message translates to:

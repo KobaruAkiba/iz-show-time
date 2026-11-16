@@ -335,6 +335,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get seasonLoadFailed => 'Could not load episodes. Tap to retry.';
 
   @override
+  String seasonShortLabel(int number) {
+    return 'S$number';
+  }
+
+  @override
+  String jumpToLatestEpisode(String season) {
+    return '$season · Jump to latest';
+  }
+
+  @override
+  String backToFirstEpisode(String season) {
+    return '$season · Back to first';
+  }
+
+  @override
+  String jumpToLatestEpisodeSemantics(String season) {
+    return '$season, jump to latest episode';
+  }
+
+  @override
+  String backToFirstEpisodeSemantics(String season) {
+    return '$season, back to first episode';
+  }
+
+  @override
   String seasonLabel(int number) {
     return 'Season $number';
   }
