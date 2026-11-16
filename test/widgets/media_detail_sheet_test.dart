@@ -304,20 +304,41 @@ void main() {
         return (decoration.border! as Border).top.color;
       }
 
+      BoxDecoration fill() {
+        final sliver = tester.widget<DecoratedSliver>(
+          find.ancestor(
+            of: find.text('Season 1'),
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is DecoratedSliver &&
+                  widget.position == DecorationPosition.background,
+            ),
+          ),
+        );
+        return sliver.decoration as BoxDecoration;
+      }
+
+      List<BoxShadow>? glow() => fill().boxShadow;
+
       final primary = Theme.of(tester.element(find.text('Season 1')))
           .colorScheme
           .primary;
       expect(outlineColor().a, 0);
+      expect(glow(), isNull);
 
       await tester.tap(find.text('Season 1'));
       await tester.pumpAndSettle();
       expect(find.text('S1 · Jump to latest'), findsOneWidget);
       expect(outlineColor(), primary);
+      expect(glow(), hasLength(2));
+      // An opaque fill keeps the glow outside the block, not under its tint.
+      expect(fill().color!.a, 1.0);
 
       await tester.tap(find.text('Season 1'));
       await tester.pumpAndSettle();
       expect(find.byType(FloatingActionButton), findsNothing);
       expect(outlineColor().a, 0);
+      expect(glow(), isNull);
     });
   });
 

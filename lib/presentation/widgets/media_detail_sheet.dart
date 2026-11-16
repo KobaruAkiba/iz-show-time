@@ -1083,14 +1083,17 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     final latestIndex =
         season != null ? latestAiredEpisodeIndex(season.episodes) : null;
 
-    final background =
-        colorScheme.surfaceContainerHighest.withValues(alpha: 0.4);
+    // The season tint blended onto the sheet surface: looks the same as the
+    // translucent tint, but opaque. The pinned header hides the episodes
+    // under it, and the glow around the block does not show through.
+    final background = Color.alphaBlend(
+      colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+      colorScheme.surface,
+    );
 
-    // Pinned over the episodes, so the header must be opaque: same tint,
-    // blended onto the sheet surface.
     final header = Material(
       key: anchors.season,
-      color: Color.alphaBlend(background, colorScheme.surface),
+      color: background,
       borderRadius: isExpanded
           ? const BorderRadius.vertical(top: _seasonRadius)
           : const BorderRadius.all(_seasonRadius),
@@ -1315,10 +1318,12 @@ const _seasonRadius = Radius.circular(12);
 /// while [body] (the episodes) scrolls under it, and the next season's
 /// header pushes it away.
 ///
-/// While the jump button targets this season, a 2dp primary outline wraps
-/// the whole block. An outline reads as "selected", unlike the primary
-/// tint used for "in catalogue"; it fades in 150ms, instantly with reduced
-/// motion. Only the outline rebuilds when the target changes.
+/// While the jump button targets this season, the whole block gets:
+/// - a 1dp primary outline: it reads as "selected", unlike the primary
+///   tint used for "in catalogue";
+/// - the same primary glow as the active Trending Now card.
+/// Both fade in 150ms, instantly with reduced motion. Only the decoration
+/// rebuilds when the target changes, not the episodes.
 class _SeasonSliver extends StatelessWidget {
   final int seasonNumber;
   final ValueListenable<SeasonJumpTarget?> jumpTarget;
@@ -1351,41 +1356,61 @@ class _SeasonSliver extends StatelessWidget {
 
     return SliverPadding(
       padding: const EdgeInsets.only(bottom: 8),
-      sliver: DecoratedSliver(
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: const BorderRadius.all(_seasonRadius),
-        ),
-        sliver: ValueListenableBuilder<SeasonJumpTarget?>(
-          valueListenable: jumpTarget,
-          child: group,
-          builder: (context, target, group) {
-            final active = target?.seasonNumber == seasonNumber;
-            return TweenAnimationBuilder<double>(
-              tween: Tween(end: active ? 1 : 0),
-              duration: reduceMotion
-                  ? Duration.zero
-                  : const Duration(milliseconds: 150),
-              curve: Curves.easeOut,
-              child: group,
-              // Foreground: the outline also runs over the pinned header.
-              builder: (context, opacity, group) => DecoratedSliver(
+      sliver: ValueListenableBuilder<SeasonJumpTarget?>(
+        valueListenable: jumpTarget,
+        child: group,
+        builder: (context, target, group) {
+          final active = target?.seasonNumber == seasonNumber;
+          return TweenAnimationBuilder<double>(
+            tween: Tween(end: active ? 1 : 0),
+            duration: reduceMotion
+                ? Duration.zero
+                : const Duration(milliseconds: 150),
+            curve: Curves.easeOut,
+            child: group,
+            builder: (context, emphasis, group) => DecoratedSliver(
+              // Glow and fill in one decoration: the shadow paints first and
+              // the opaque fill covers it, so it shows only around the block.
+              decoration: BoxDecoration(
+                color: background,
+                borderRadius: const BorderRadius.all(_seasonRadius),
+                boxShadow: emphasis == 0
+                    ? null
+                    : _activeGlow(primary, emphasis),
+              ),
+              sliver: DecoratedSliver(
+                // Foreground: the outline also runs over the pinned header.
                 position: DecorationPosition.foreground,
                 decoration: BoxDecoration(
                   borderRadius: const BorderRadius.all(_seasonRadius),
                   border: Border.all(
-                    color: primary.withValues(alpha: opacity),
-                    width: 2,
+                    color: primary.withValues(alpha: emphasis),
+                    width: 1,
                   ),
                 ),
                 sliver: group!,
               ),
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }
+
+  /// Same halo as the active card in Trending Now (MediaPosterCard), faded
+  /// by [emphasis] from 0 to 1: an even ambient glow plus a slight lift.
+  static List<BoxShadow> _activeGlow(Color primary, double emphasis) => [
+        BoxShadow(
+          color: primary.withValues(alpha: 0.14 * emphasis),
+          blurRadius: 22,
+          spreadRadius: 0.5,
+        ),
+        BoxShadow(
+          color: primary.withValues(alpha: 0.22 * emphasis),
+          blurRadius: 16,
+          offset: const Offset(0, 4),
+        ),
+      ];
 }
 
 /// Widgets of one season measured by the jump button.
