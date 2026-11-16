@@ -66,6 +66,54 @@ class _SheetStubTmdbService extends TmdbService {
   }
 }
 
+/// One long season: [airedCount] aired episodes, then [upcomingCount] future.
+class _LongSeasonTmdbService extends TmdbService {
+  _LongSeasonTmdbService({this.airedCount = 30, this.upcomingCount = 0})
+      : super(cacheManager: null);
+
+  final int airedCount;
+  final int upcomingCount;
+
+  @override
+  Future<MediaDetails?> getMediaDetails(CatalogueItem item) async {
+    return MediaDetails(
+      title: item.title,
+      isFilm: false,
+      numberOfSeasons: 1,
+      seasonSummaries: [
+        SeasonSummary(
+          seasonNumber: 1,
+          episodeCount: airedCount + upcomingCount,
+          airDate: DateTime(2020),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Future<SeasonModel?> getSeason({
+    required int tvId,
+    required int seasonNumber,
+    bool forceRefresh = false,
+  }) async {
+    return SeasonModel(
+      seasonNumber: seasonNumber,
+      airDate: DateTime(2020),
+      episodes: [
+        for (var number = 1; number <= airedCount + upcomingCount; number++)
+          EpisodeModel.fromJson({
+            'id': 1000 + number,
+            'season_number': seasonNumber,
+            'episode_number': number,
+            'name': 'Episode $number',
+            'air_date': number <= airedCount ? '2020-01-01' : '2099-01-01',
+            'runtime': 40,
+          }),
+      ],
+    );
+  }
+}
+
 void main() {
   const show = TvShow(id: 4242, title: 'Sheet Show');
   final appServices = AppServices();
@@ -128,5 +176,96 @@ void main() {
 
     expect(tmdb.fetchedSeasons, [2, 2]);
     expect(find.text('Episode of season 2'), findsOneWidget);
+  });
+
+  group('season jump button', () {
+    Rect sheetRect(WidgetTester tester) =>
+        tester.getRect(find.byType(ListView).first);
+
+    Rect buttonRect(WidgetTester tester) =>
+        tester.getRect(find.byType(FloatingActionButton));
+
+    testWidgets('hidden for a season that fits on screen', (tester) async {
+      appServices.tmdbService = _SheetStubTmdbService();
+      await pumpSheet(tester);
+
+      await tester.tap(find.text('Season 1'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FloatingActionButton), findsNothing);
+    });
+
+    testWidgets('jumps to the latest episode and back to the first',
+        (tester) async {
+      appServices.tmdbService = _LongSeasonTmdbService();
+      await pumpSheet(tester);
+      expect(find.byType(FloatingActionButton), findsNothing);
+
+      await tester.tap(find.text('Season 1'));
+      await tester.pumpAndSettle();
+      expect(find.text('Jump to latest'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Jump to latest episode of Season 1'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Jump to latest'));
+      await tester.pumpAndSettle();
+      expect(find.text('Back to first'), findsOneWidget);
+      // The latest episode sits above the button, not behind it.
+      final latest = tester.getRect(find.text('Episode 30'));
+      expect(latest.top, greaterThanOrEqualTo(sheetRect(tester).top));
+      expect(latest.bottom, lessThanOrEqualTo(buttonRect(tester).top));
+
+      await tester.tap(find.text('Back to first'));
+      await tester.pumpAndSettle();
+      expect(find.text('Jump to latest'), findsOneWidget);
+      final header = tester.getRect(find.text('Season 1'));
+      final first = tester.getRect(find.text('Episode 1'));
+      expect(header.top, greaterThanOrEqualTo(sheetRect(tester).top));
+      expect(first.bottom, lessThanOrEqualTo(sheetRect(tester).bottom));
+    });
+
+    testWidgets('stops at the latest aired episode, not upcoming ones',
+        (tester) async {
+      appServices.tmdbService =
+          _LongSeasonTmdbService(airedCount: 25, upcomingCount: 5);
+      await pumpSheet(tester);
+
+      await tester.tap(find.text('Season 1'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Jump to latest'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Back to first'), findsOneWidget);
+      final latestAired = tester.getRect(find.text('Episode 25'));
+      expect(latestAired.bottom, lessThanOrEqualTo(buttonRect(tester).top));
+      expect(latestAired.top, greaterThanOrEqualTo(sheetRect(tester).top));
+    });
+
+    testWidgets('jumps instantly with reduced motion', (tester) async {
+      appServices.tmdbService = _LongSeasonTmdbService();
+      await tester.pumpWidget(
+        const MediaQuery(
+          data: MediaQueryData(size: Size(800, 600), disableAnimations: true),
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: MediaDetailSheet(item: show)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Season 1'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Jump to latest'));
+      // One frame to scroll and re-measure, one to show the new label.
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text('Back to first'), findsOneWidget);
+      expect(tester.hasRunningAnimations, isFalse);
+    });
   });
 }
