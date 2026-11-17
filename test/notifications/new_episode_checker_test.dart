@@ -6,6 +6,7 @@ import 'package:iz_show_time_tracker/data/models/media_details.dart';
 import 'package:iz_show_time_tracker/data/models/new_episode_alert.dart';
 import 'package:iz_show_time_tracker/data/models/tv_show_summary.dart';
 import 'package:iz_show_time_tracker/data/models/watch_record.dart';
+import 'package:iz_show_time_tracker/data/models/watchlist_entry.dart';
 import 'package:iz_show_time_tracker/data/repositories/background_check_outbox.dart';
 import 'package:iz_show_time_tracker/data/repositories/user_data_store.dart';
 import 'package:iz_show_time_tracker/data/services/tmdb_service.dart';
@@ -41,6 +42,21 @@ class FakeEpisodeCheckStore implements UserDataStore {
 
   @override
   Future<void> removeWatchRecords(Iterable<String> watchKeys) async {}
+
+  @override
+  Future<List<WatchlistEntry>> loadWatchlist() async => [];
+
+  @override
+  Future<void> saveWatchlistEntry(WatchlistEntry e) async {}
+
+  @override
+  Future<void> removeWatchlistEntry(String mediaKey) async {}
+
+  @override
+  Future<bool> loadWatchlistMigrationDone() async => false;
+
+  @override
+  Future<void> saveWatchlistMigrationDone() async {}
 
   @override
   Future<void> flush() async {}

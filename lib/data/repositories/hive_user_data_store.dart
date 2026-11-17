@@ -7,6 +7,7 @@ import '../../core/constants/storage_constants.dart';
 import '../models/catalogue_item.dart';
 import '../models/new_episode_alert.dart';
 import '../models/watch_record.dart';
+import '../models/watchlist_entry.dart';
 import 'background_check_outbox.dart';
 import 'user_data_store.dart';
 
@@ -60,10 +61,12 @@ class HiveUserDataStore implements UserDataStore {
   Box<dynamic>? _catalogueBox;
   Box<dynamic>? _watchHistoryBox;
   Box<dynamic>? _metaBox;
+  Box<dynamic>? _watchlistBox;
 
   Box<dynamic> get catalogueBox => _catalogueBox!;
   Box<dynamic> get watchHistoryBox => _watchHistoryBox!;
   Box<dynamic> get metaBox => _metaBox!;
+  Box<dynamic> get watchlistBox => _watchlistBox!;
 
   @override
   Future<void> open() async {
@@ -71,6 +74,10 @@ class HiveUserDataStore implements UserDataStore {
     _catalogueBox ??= await _openBox(StorageConstants.catalogueBoxName);
     _watchHistoryBox ??= await _openBox(StorageConstants.watchHistoryBoxName);
     _metaBox ??= await _openBox(StorageConstants.metaBoxName);
+    // The background isolate never needs the watchlist: leave its box alone.
+    if (!_readOnly) {
+      _watchlistBox ??= await _openBox(StorageConstants.watchlistBoxName);
+    }
 
     if (!wasClosed || _readOnly) return;
     await _ensureSchema();
@@ -117,6 +124,7 @@ class HiveUserDataStore implements UserDataStore {
       'catalogue': _stringifyMapEntries(catalogueBox.toMap()),
       'watchHistory': _stringifyMapEntries(watchHistoryBox.toMap()),
       'meta': _stringifyMapEntries(_filteredBackupMetaMap()),
+      'watchlist': _stringifyMapEntries(watchlistBox.toMap()),
     };
   }
 
@@ -135,13 +143,18 @@ class HiveUserDataStore implements UserDataStore {
     final catalogue = _decodeBackupSection(data['catalogue']);
     final watchHistory = _decodeBackupSection(data['watchHistory']);
     final meta = _decodeBackupSection(data['meta']);
+    // Older backups have no watchlist section: restore an empty one.
+    final watchlist = data.containsKey('watchlist')
+        ? _decodeBackupSection(data['watchlist'])
+        : <dynamic, dynamic>{};
     // Reject the file before touching current data.
-    _validateBackupEntries(catalogue, watchHistory);
+    _validateBackupEntries(catalogue, watchHistory, watchlist);
 
     final previous = (
       catalogue: Map<dynamic, dynamic>.of(catalogueBox.toMap()),
       watchHistory: Map<dynamic, dynamic>.of(watchHistoryBox.toMap()),
       meta: Map<dynamic, dynamic>.of(metaBox.toMap()),
+      watchlist: Map<dynamic, dynamic>.of(watchlistBox.toMap()),
     );
 
     try {
@@ -149,6 +162,7 @@ class HiveUserDataStore implements UserDataStore {
         catalogue: catalogue,
         watchHistory: watchHistory,
         meta: _filteredBackupMetaEntries(meta),
+        watchlist: watchlist,
       );
       // Version 1 backups key the catalogue by bare TMDB id.
       await _migrateCatalogueKeysV3();
@@ -161,6 +175,7 @@ class HiveUserDataStore implements UserDataStore {
         catalogue: previous.catalogue,
         watchHistory: previous.watchHistory,
         meta: previous.meta,
+        watchlist: previous.watchlist,
       );
       await flush();
       rethrow;
@@ -174,19 +189,24 @@ class HiveUserDataStore implements UserDataStore {
     required Map<dynamic, dynamic> catalogue,
     required Map<dynamic, dynamic> watchHistory,
     required Map<dynamic, dynamic> meta,
+    required Map<dynamic, dynamic> watchlist,
   }) async {
     await catalogueBox.clear();
     await watchHistoryBox.clear();
     await metaBox.clear();
+    await watchlistBox.clear();
     if (catalogue.isNotEmpty) await catalogueBox.putAll(catalogue);
     if (watchHistory.isNotEmpty) await watchHistoryBox.putAll(watchHistory);
     if (meta.isNotEmpty) await metaBox.putAll(meta);
+    // Written last: it is the section most likely to be rejected by Hive.
+    if (watchlist.isNotEmpty) await watchlistBox.putAll(watchlist);
   }
 
   /// Throws [FormatException] when any entry would be dropped on load.
   void _validateBackupEntries(
     Map<dynamic, dynamic> catalogue,
     Map<dynamic, dynamic> watchHistory,
+    Map<dynamic, dynamic> watchlist,
   ) {
     try {
       for (final raw in catalogue.values) {
@@ -201,6 +221,12 @@ class HiveUserDataStore implements UserDataStore {
           throw const FormatException('Invalid watch history entry');
         }
         WatchRecord.fromJson(json);
+      }
+      for (final raw in watchlist.values) {
+        final json = _decodeStoredMap(raw);
+        if (json == null || WatchlistEntry.fromStorageJson(json) == null) {
+          throw const FormatException('Invalid watchlist entry');
+        }
       }
     } on FormatException {
       rethrow;
@@ -575,12 +601,58 @@ class HiveUserDataStore implements UserDataStore {
   }
 
   @override
+  Future<List<WatchlistEntry>> loadWatchlist() async {
+    await open();
+    final entries = <WatchlistEntry>[];
+
+    for (final key in watchlistBox.keys) {
+      try {
+        final json = _decodeStoredMap(watchlistBox.get(key));
+        if (json == null) continue;
+        final entry = WatchlistEntry.fromStorageJson(json);
+        if (entry != null) entries.add(entry);
+      } catch (error, stackTrace) {
+        debugPrint(
+          'Skipping corrupted watchlist entry $key: $error\n$stackTrace',
+        );
+      }
+    }
+
+    return entries;
+  }
+
+  @override
+  Future<void> saveWatchlistEntry(WatchlistEntry e) async {
+    await open();
+    await _putEncodedMap(watchlistBox, e.mediaKey, e.toStorageJson());
+  }
+
+  @override
+  Future<void> removeWatchlistEntry(String mediaKey) async {
+    await open();
+    await watchlistBox.delete(mediaKey);
+  }
+
+  @override
+  Future<bool> loadWatchlistMigrationDone() async {
+    await open();
+    return metaBox.get(StorageConstants.watchlistMigrationV1DoneKey) == true;
+  }
+
+  @override
+  Future<void> saveWatchlistMigrationDone() async {
+    await open();
+    await metaBox.put(StorageConstants.watchlistMigrationV1DoneKey, true);
+  }
+
+  @override
   Future<void> flush() async {
     await open();
     await Future.wait([
       catalogueBox.flush(),
       watchHistoryBox.flush(),
       metaBox.flush(),
+      if (_watchlistBox case final watchlist?) watchlist.flush(),
     ]);
   }
 
@@ -589,6 +661,7 @@ class HiveUserDataStore implements UserDataStore {
     await open();
     await catalogueBox.clear();
     await watchHistoryBox.clear();
+    await watchlistBox.clear();
     await metaBox.delete(StorageConstants.newEpisodeAlertsKey);
     await metaBox.delete(StorageConstants.lastEpisodeCheckKey);
     await metaBox.delete(StorageConstants.appInForegroundKey);
@@ -670,8 +743,10 @@ class HiveUserDataStore implements UserDataStore {
     await _catalogueBox?.close();
     await _watchHistoryBox?.close();
     await _metaBox?.close();
+    await _watchlistBox?.close();
     _catalogueBox = null;
     _watchHistoryBox = null;
     _metaBox = null;
+    _watchlistBox = null;
   }
 }
