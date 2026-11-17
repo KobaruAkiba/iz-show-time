@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_constants.dart';
+import 'sliver_scrollable_floor.dart';
 
 /// List that shows [pageSize] items first, then reveals more as the user scrolls.
 ///
 /// When all already-loaded items are visible and [hasMoreRemote] is true,
 /// [onLoadMore] is invoked so the parent can fetch the next API page.
+///
+/// Built on a [CustomScrollView], so [headerSlivers] can scroll (or float)
+/// together with the items and [emptyChild] can fill the space left under
+/// them, keeping the header reachable when there is nothing to list.
 class LazyPagedListView extends StatefulWidget {
   const LazyPagedListView({
     super.key,
@@ -13,6 +18,8 @@ class LazyPagedListView extends StatefulWidget {
     this.pageSize = AppConstants.listPageSize,
     this.padding = const EdgeInsets.all(16),
     this.leading,
+    this.headerSlivers = const [],
+    this.emptyChild,
     this.onRefresh,
     this.onLoadMore,
     this.hasMoreRemote = false,
@@ -27,6 +34,12 @@ class LazyPagedListView extends StatefulWidget {
   final int pageSize;
   final EdgeInsetsGeometry padding;
   final Widget? leading;
+
+  /// Slivers placed before the items, inside the same scroll view.
+  final List<Widget> headerSlivers;
+
+  /// Shown under [headerSlivers] when there are no items (and nothing loading).
+  final Widget? emptyChild;
   final Future<void> Function()? onRefresh;
   final Future<void> Function()? onLoadMore;
   final bool hasMoreRemote;
@@ -136,6 +149,29 @@ class _LazyPagedListViewState extends State<LazyPagedListView> {
     }
   }
 
+  Widget _buildRow(BuildContext context, int index) {
+    final leadingCount = widget.leading == null ? 0 : 1;
+    if (widget.leading != null && index == 0) {
+      return widget.leading!;
+    }
+
+    final itemIndex = index - leadingCount;
+    if (itemIndex < _visibleCount) {
+      return widget.itemBuilder(context, itemIndex);
+    }
+
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 16),
+      child: Center(
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(strokeWidth: 2.5),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) => _fillViewportIfNeeded());
@@ -144,35 +180,34 @@ class _LazyPagedListViewState extends State<LazyPagedListView> {
     final showFooter = widget.isLoadingMore;
     final footerCount = showFooter ? 1 : 0;
     final itemCount = leadingCount + _visibleCount + footerCount;
+    final showEmpty = widget.emptyChild != null && itemCount == 0;
+
+    final itemsSliver = SliverPadding(
+      padding: widget.padding,
+      sliver: SliverList.builder(
+        itemCount: itemCount,
+        itemBuilder: _buildRow,
+      ),
+    );
 
     Widget list = NotificationListener<ScrollNotification>(
       onNotification: _onScroll,
-      child: ListView.builder(
+      child: CustomScrollView(
         controller: _controller,
         physics: widget.physics,
-        padding: widget.padding,
-        itemCount: itemCount,
-        itemBuilder: (context, index) {
-          if (widget.leading != null && index == 0) {
-            return widget.leading!;
-          }
-
-          final itemIndex = index - leadingCount;
-          if (itemIndex < _visibleCount) {
-            return widget.itemBuilder(context, itemIndex);
-          }
-
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2.5),
-              ),
-            ),
-          );
-        },
+        slivers: [
+          ...widget.headerSlivers,
+          if (showEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: widget.emptyChild,
+            )
+          else if (widget.headerSlivers.isEmpty)
+            itemsSliver
+          else
+            // Lets floating headers hide completely, even over a short list.
+            SliverScrollableFloor(sliver: itemsSliver),
+        ],
       ),
     );
 

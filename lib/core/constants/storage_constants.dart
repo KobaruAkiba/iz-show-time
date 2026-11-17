@@ -3,6 +3,7 @@ class StorageConstants {
   static const String catalogueBoxName = 'catalogue';
   static const String watchHistoryBoxName = 'watch_history';
   static const String metaBoxName = 'meta';
+  static const String watchlistBoxName = 'watchlist';
 
   static const String schemaVersionKey = 'schema_version';
 
@@ -21,6 +22,10 @@ class StorageConstants {
   static const String notificationPermissionPrePromptShownKey =
       'notification_permission_pre_prompt_shown';
   static const String themeModeKey = 'theme_mode';
+
+  /// Set once bookmark-only shows have been moved to the watchlist.
+  static const String watchlistMigrationV1DoneKey =
+      'watchlist_migration_v1_done';
 
   /// Catalogue header shows a catalogue summary instead of total watch time.
   static const String hideWatchTimeKey = 'hide_watch_time';

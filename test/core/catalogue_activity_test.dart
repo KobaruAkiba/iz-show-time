@@ -142,7 +142,7 @@ void main() {
         [orphan, filmOld, showRecent, filmRecent],
         mediaFilter: MediaFilter.all,
         sortOption: MediaSortOption.none,
-        lastCatalogueActivityByMediaId: activity,
+        recencyByMediaKey: activity,
       );
 
       expect(sorted.map((item) => item.id).toList(), [1, 3, 2, 4]);
@@ -157,7 +157,7 @@ void main() {
         [a, b],
         mediaFilter: MediaFilter.all,
         sortOption: MediaSortOption.none,
-        lastCatalogueActivityByMediaId: {'m_10': sameDay, 'm_11': sameDay},
+        recencyByMediaKey: {'m_10': sameDay, 'm_11': sameDay},
       );
 
       expect(sorted.map((item) => item.id).toList(), [11, 10]);

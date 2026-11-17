@@ -2,234 +2,18 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:iz_show_time_tracker/core/services/app_services.dart';
+import 'package:iz_show_time_tracker/core/services/library_status.dart';
 import 'package:iz_show_time_tracker/data/models/catalogue_item.dart';
 import 'package:iz_show_time_tracker/data/models/episode_model.dart';
 import 'package:iz_show_time_tracker/data/models/media_details.dart';
 import 'package:iz_show_time_tracker/data/models/new_episode_alert.dart';
 import 'package:iz_show_time_tracker/data/models/tv_show_summary.dart';
 import 'package:iz_show_time_tracker/data/models/watch_record.dart';
+import 'package:iz_show_time_tracker/data/models/watchlist_entry.dart';
 import 'package:iz_show_time_tracker/data/repositories/background_check_outbox.dart';
-import 'package:iz_show_time_tracker/data/repositories/user_data_store.dart';
 import 'package:iz_show_time_tracker/data/services/tmdb_service.dart';
 
-class FakeUserDataStore implements UserDataStore {
-  final List<CatalogueItem> catalogue = [];
-  final List<WatchRecord> history = [];
-  final List<CatalogueItem> savedCatalogueItems = [];
-  final List<int> removedCatalogueIds = [];
-  final List<WatchRecord> savedWatchRecords = [];
-  final List<String> removedWatchKeys = [];
-  List<NewEpisodeAlert> alerts = [];
-  DateTime? lastEpisodeCheckAt;
-  bool appInForeground = false;
-  bool cleared = false;
-
-  @override
-  Future<void> open() async {}
-
-  @override
-  Future<Map<String, dynamic>> exportBackupData() async => {
-        'catalogue': catalogue
-            .map(
-              (item) => item is Film
-                  ? {'type': 'film', ...item.toJson()}
-                  : {'type': 'tv', ...(item as TvShow).toJson()},
-            )
-            .toList(),
-        'watchHistory': history.map((record) => record.toJson()).toList(),
-        'alerts': alerts.map((alert) => alert.toJson()).toList(),
-        'themeMode': themeMode,
-        'hideWatchTime': hideWatchTime,
-      };
-
-  @override
-  Future<void> importBackupData(Map<String, dynamic> data) async {
-    catalogue
-      ..clear()
-      ..addAll(
-        (data['catalogue'] as List<dynamic>? ?? const [])
-            .map((entry) => Map<String, dynamic>.from(entry as Map))
-            .map(
-              (json) => json['type'] == 'film'
-                  ? Film.fromJson(json)
-                  : TvShow.fromJson(json),
-            ),
-      );
-    history
-      ..clear()
-      ..addAll(
-        (data['watchHistory'] as List<dynamic>? ?? const []).map((entry) =>
-            WatchRecord.fromJson(Map<String, dynamic>.from(entry as Map))),
-      );
-    alerts = (data['alerts'] as List<dynamic>? ?? const [])
-        .map((entry) =>
-            NewEpisodeAlert.fromJson(Map<String, dynamic>.from(entry as Map)))
-        .toList();
-    themeMode = data['themeMode'] as String?;
-    hideWatchTime = data['hideWatchTime'] == true;
-  }
-
-  @override
-  Future<List<CatalogueItem>> loadCatalogue() async =>
-      List<CatalogueItem>.from(catalogue);
-
-  @override
-  Future<void> saveCatalogueItem(CatalogueItem item) async {
-    savedCatalogueItems.add(item);
-    final index =
-        catalogue.indexWhere((entry) => entry.mediaKey == item.mediaKey);
-    if (index >= 0) {
-      catalogue[index] = item;
-    } else {
-      catalogue.add(item);
-    }
-  }
-
-  @override
-  Future<void> removeCatalogueItem(CatalogueItem item) async {
-    removedCatalogueIds.add(item.id);
-    catalogue.removeWhere((entry) => entry.mediaKey == item.mediaKey);
-  }
-
-  @override
-  Future<List<WatchRecord>> loadWatchHistory() async =>
-      List<WatchRecord>.from(history);
-
-  int flushCount = 0;
-  int saveWatchRecordsCalls = 0;
-  int removeWatchRecordsCalls = 0;
-
-  @override
-  Future<void> saveWatchRecord(WatchRecord record) async {
-    await saveWatchRecords([record]);
-  }
-
-  @override
-  Future<void> saveWatchRecords(Iterable<WatchRecord> records) async {
-    saveWatchRecordsCalls++;
-    for (final record in records) {
-      history.removeWhere((entry) => entry.watchKey == record.watchKey);
-      history.add(record);
-      savedWatchRecords.add(record);
-    }
-  }
-
-  @override
-  Future<void> removeWatchRecord(String watchKey) async {
-    await removeWatchRecords([watchKey]);
-  }
-
-  @override
-  Future<void> removeWatchRecords(Iterable<String> watchKeys) async {
-    removeWatchRecordsCalls++;
-    final keys = watchKeys.toSet();
-    removedWatchKeys.addAll(keys);
-    history.removeWhere((record) => keys.contains(record.watchKey));
-  }
-
-  @override
-  Future<void> flush() async {
-    flushCount++;
-  }
-
-  @override
-  Future<List<NewEpisodeAlert>> loadNewEpisodeAlerts() async =>
-      List<NewEpisodeAlert>.from(alerts);
-
-  @override
-  Future<void> saveNewEpisodeAlerts(List<NewEpisodeAlert> alerts) async {
-    this.alerts = List<NewEpisodeAlert>.from(alerts);
-  }
-
-  @override
-  Future<DateTime?> loadLastEpisodeCheckAt() async => lastEpisodeCheckAt;
-
-  @override
-  Future<void> saveLastEpisodeCheckAt(DateTime checkedAt) async {
-    lastEpisodeCheckAt = checkedAt;
-  }
-
-  @override
-  Future<bool> loadAppInForeground() async => appInForeground;
-
-  @override
-  Future<void> saveAppInForeground(bool isInForeground) async {
-    appInForeground = isInForeground;
-  }
-
-  Set<int> notifiedEpisodeIds = {};
-
-  @override
-  Future<Set<int>> loadNotifiedEpisodeIds() async =>
-      Set<int>.from(notifiedEpisodeIds);
-
-  @override
-  Future<void> saveNotifiedEpisodeIds(Set<int> episodeIds) async {
-    notifiedEpisodeIds = Set<int>.from(episodeIds);
-  }
-
-  BackgroundCheckResult? backgroundCheckResult;
-
-  @override
-  Future<BackgroundCheckResult?> loadBackgroundCheckResult() async =>
-      backgroundCheckResult;
-
-  bool notificationPermissionPrePromptShown = false;
-
-  @override
-  Future<bool> loadNotificationPermissionPrePromptShown() async =>
-      notificationPermissionPrePromptShown;
-
-  @override
-  Future<void> saveNotificationPermissionPrePromptShown(bool shown) async {
-    notificationPermissionPrePromptShown = shown;
-  }
-
-  String? themeMode;
-
-  @override
-  Future<String?> loadThemeMode() async => themeMode;
-
-  @override
-  Future<void> saveThemeMode(String themeMode) async {
-    this.themeMode = themeMode;
-  }
-
-  bool hideWatchTime = false;
-
-  @override
-  Future<bool> loadHideWatchTime() async => hideWatchTime;
-
-  @override
-  Future<void> saveHideWatchTime(bool hidden) async {
-    hideWatchTime = hidden;
-  }
-
-  DateTime? lastTmdbCachePurgeAt;
-
-  @override
-  Future<DateTime?> loadLastTmdbCachePurgeAt() async => lastTmdbCachePurgeAt;
-
-  @override
-  Future<void> saveLastTmdbCachePurgeAt(DateTime purgedAt) async {
-    lastTmdbCachePurgeAt = purgedAt;
-  }
-
-  @override
-  Future<void> clearAll() async {
-    cleared = true;
-    catalogue.clear();
-    history.clear();
-    alerts = [];
-    lastEpisodeCheckAt = null;
-    notifiedEpisodeIds = {};
-    notificationPermissionPrePromptShown = false;
-    lastTmdbCachePurgeAt = null;
-  }
-
-  @override
-  Future<void> close() async {}
-}
+import '../support/fake_user_data_store.dart';
 
 class StubTmdbService extends TmdbService {
   StubTmdbService({
@@ -415,6 +199,8 @@ void main() {
 
       setUp(() async {
         store.catalogue.add(show.withFollowed(true));
+        // Keeps the zero-episode followed show in the catalogue.
+        store.watchlistMigrationDone = true;
         await appServices.initialize(userDataStore: store);
       });
 
@@ -1424,6 +1210,220 @@ void main() {
         isTrue,
       );
       expect(store.lastTmdbCachePurgeAt!.isAfter(before), isTrue);
+    });
+  });
+
+  group('AppServices watchlist', () {
+    late AppServices appServices;
+    late FakeUserDataStore store;
+    const film = Film(id: 70, title: 'Watchlist Film');
+    const show = TvShow(id: 71, title: 'Watchlist Show');
+    final episode = EpisodeModel.fromJson({
+      'id': 7101,
+      'season_number': 1,
+      'episode_number': 1,
+      'name': 'Pilot',
+      'air_date': '2020-01-01',
+      'runtime': 30,
+    });
+
+    setUp(() async {
+      appServices = AppServices();
+      store = FakeUserDataStore();
+      appServices.userDataStore = store;
+      appServices.tmdbService = StubTmdbService(
+        seasonCount: 1,
+        episodesBySeason: {
+          1: [episode],
+        },
+      );
+      await appServices.clearAllData();
+    });
+
+    Future<void> expectEntryPathLeavesWatchlist(
+      CatalogueItem item,
+      Future<void> Function() enter,
+    ) async {
+      await appServices.watchlist.add(item);
+      await enter();
+      expect(appServices.isInCatalogue(item), isTrue);
+      expect(appServices.watchlist.contains(item), isFalse);
+      expect(store.watchlist, isEmpty);
+    }
+
+    test(
+      'addToCatalogue takes the title off the watchlist',
+      () => expectEntryPathLeavesWatchlist(
+        film,
+        () => appServices.addToCatalogue(film),
+      ),
+    );
+    test(
+      'addToCatalogueWithWatchTime takes the film off the watchlist',
+      () => expectEntryPathLeavesWatchlist(
+        film,
+        () => appServices.addToCatalogueWithWatchTime(film),
+      ),
+    );
+    test(
+      'toggleCatalogueItem on a film takes it off the watchlist',
+      () => expectEntryPathLeavesWatchlist(
+        film,
+        () => appServices.toggleCatalogueItem(film),
+      ),
+    );
+    test(
+      'markFilmWatched takes the film off the watchlist',
+      () => expectEntryPathLeavesWatchlist(
+        film,
+        () => appServices.markFilmWatched(film: film, durationMinutes: 100),
+      ),
+    );
+    test(
+      'markEpisodeWatched takes the show off the watchlist',
+      () => expectEntryPathLeavesWatchlist(
+        show,
+        () => appServices.markEpisodeWatched(show: show, episode: episode),
+      ),
+    );
+    test(
+      'addSeasonToCatalogue takes the show off the watchlist',
+      () => expectEntryPathLeavesWatchlist(
+        show,
+        () => appServices.addSeasonToCatalogue(
+          show: show,
+          episodes: [episode],
+        ),
+      ),
+    );
+
+    // Review Focus 1
+    test('cataloguing a show keeps the film with the same id on the watchlist',
+        () async {
+      const sameIdFilm = Film(id: 71, title: 'Same Id Film');
+      await appServices.watchlist.add(sameIdFilm);
+      await appServices.markEpisodeWatched(show: show, episode: episode);
+      expect(appServices.watchlist.contains(sameIdFilm), isTrue);
+    });
+
+    test('the bookmark sends a show to the watchlist, never to the catalogue',
+        () async {
+      expect(
+        await appServices.toggleCatalogueItem(show),
+        LibraryToggleResult.addedToWatchlist,
+      );
+      expect(
+        await appServices.toggleCatalogueItem(show),
+        LibraryToggleResult.alreadyOnWatchlist,
+      );
+      expect(appServices.isInCatalogue(show), isFalse);
+      expect(
+        appServices.tvShows
+            .where((s) => appServices.watchedEpisodesCountFor(s.id) == 0),
+        isEmpty,
+      );
+    });
+
+    test('the bookmark adds a film and removes a catalogued title', () async {
+      expect(
+        await appServices.toggleCatalogueItem(film),
+        LibraryToggleResult.addedToCatalogue,
+      );
+      expect(
+        await appServices.toggleCatalogueItem(film),
+        LibraryToggleResult.removedFromCatalogue,
+      );
+      expect(appServices.watchlist.contains(film), isFalse);
+    });
+
+    test('libraryStatusOf reports none, watchlist and catalogue', () async {
+      expect(appServices.libraryStatusOf(film), LibraryStatus.none);
+      await appServices.watchlist.add(film);
+      expect(appServices.libraryStatusOf(film), LibraryStatus.watchlist);
+      await appServices.addToCatalogue(film);
+      expect(appServices.libraryStatusOf(film), LibraryStatus.catalogue);
+    });
+
+    test('the watchlist stays out of stats and followed shows', () async {
+      await appServices.watchlist.add(film);
+      await appServices.watchlist.add(show);
+      expect(appServices.catalogue, isEmpty);
+      expect(appServices.followedTvShows, isEmpty);
+      expect(appServices.totalWatchTimeMinutes, 0);
+      expect(appServices.filmsWatchedCount, 0);
+    });
+
+    test('initialize drops watchlist entries already in the catalogue',
+        () async {
+      store.catalogue.add(film);
+      store.watchlist.addAll([
+        WatchlistEntry(item: film, addedAt: DateTime(2026, 1, 1)),
+        WatchlistEntry(
+          item: const Film(id: 72, title: 'Other'),
+          addedAt: DateTime(2026, 1, 2),
+        ),
+      ]);
+      await appServices.initialize(userDataStore: store);
+      expect(appServices.watchlist.entries.map((e) => e.mediaKey), ['m_72']);
+      expect(store.watchlist.map((e) => e.mediaKey), ['m_72']);
+    });
+
+    test('clearAllData empties the watchlist', () async {
+      await appServices.watchlist.add(film);
+      await appServices.clearAllData();
+      expect(appServices.watchlist.entries, isEmpty);
+      expect(store.watchlist, isEmpty);
+    });
+
+    test('backup round-trip keeps watchlist entries and dates', () async {
+      await appServices.watchlist.restore(
+        WatchlistEntry(item: film, addedAt: DateTime(2026, 4, 1)),
+      );
+      final backup = await appServices.exportUserDataBackup();
+      await appServices.clearAllData();
+      await appServices.restoreUserDataBackup(backup);
+      expect(
+        appServices.watchlist.addedAtByMediaKey,
+        {'m_70': DateTime(2026, 4, 1)},
+      );
+    });
+
+    test('a backup without a watchlist restores an empty watchlist', () async {
+      await appServices.watchlist.add(film);
+      final decoded = jsonDecode(await appServices.exportUserDataBackup())
+          as Map<String, dynamic>;
+      decoded.remove('watchlist');
+      await appServices.restoreUserDataBackup(jsonEncode(decoded));
+      expect(appServices.watchlist.entries, isEmpty);
+    });
+
+    test(
+        'initialize migrates bookmark-only shows and reruns after a backup '
+        'import', () async {
+      store.catalogue.add(const TvShow(id: 80, title: 'Old Bookmark'));
+      await appServices.initialize(userDataStore: store);
+      expect(
+        appServices.isInCatalogue(const TvShow(id: 80, title: '')),
+        isFalse,
+      );
+      expect(
+        appServices.watchlist.contains(const TvShow(id: 80, title: '')),
+        isTrue,
+      );
+      expect(store.watchlistMigrationDone, isTrue);
+
+      store.catalogue.add(const TvShow(id: 81, title: 'Bookmark In Backup'));
+      final backup = await appServices.exportUserDataBackup();
+      await appServices.restoreUserDataBackup(backup);
+
+      expect(
+        appServices.isInCatalogue(const TvShow(id: 81, title: '')),
+        isFalse,
+      );
+      expect(
+        appServices.watchlist.contains(const TvShow(id: 81, title: '')),
+        isTrue,
+      );
     });
   });
 }

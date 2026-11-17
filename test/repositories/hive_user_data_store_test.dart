@@ -7,6 +7,7 @@ import 'package:iz_show_time_tracker/core/constants/storage_constants.dart';
 import 'package:iz_show_time_tracker/data/models/catalogue_item.dart';
 import 'package:iz_show_time_tracker/data/models/new_episode_alert.dart';
 import 'package:iz_show_time_tracker/data/models/watch_record.dart';
+import 'package:iz_show_time_tracker/data/models/watchlist_entry.dart';
 import 'package:iz_show_time_tracker/data/repositories/background_check_outbox.dart';
 import 'package:iz_show_time_tracker/data/repositories/hive_user_data_store.dart';
 
@@ -30,6 +31,47 @@ void main() {
   });
 
   group('HiveUserDataStore', () {
+    test('round-trips watchlist entries and clearAll removes them', () async {
+      final film = WatchlistEntry(
+        item: const Film(id: 7, title: 'Film'),
+        addedAt: DateTime(2026, 1, 1),
+      );
+      final show = WatchlistEntry(
+        item: const TvShow(id: 7, title: 'Show'),
+        addedAt: DateTime(2026, 2, 1),
+      );
+      await store.saveWatchlistEntry(film);
+      await store.saveWatchlistEntry(show);
+      expect(store.watchlistBox.keys.toSet(), {'m_7', 't_7'});
+      expect(store.watchlistBox.get('t_7'), isA<String>());
+
+      await store.removeWatchlistEntry('m_7');
+      expect(
+          (await store.loadWatchlist()).single.addedAt, DateTime(2026, 2, 1));
+
+      await store.clearAll();
+      expect(await store.loadWatchlist(), isEmpty);
+    });
+
+    test('persists the watchlist migration flag', () async {
+      expect(await store.loadWatchlistMigrationDone(), isFalse);
+      await store.saveWatchlistMigrationDone();
+      expect(await store.loadWatchlistMigrationDone(), isTrue);
+      expect(
+        store.metaBox.get(StorageConstants.watchlistMigrationV1DoneKey),
+        isTrue,
+      );
+    });
+
+    test('readSnapshot never opens the watchlist box', () async {
+      await store.close();
+      await Hive.deleteBoxFromDisk(StorageConstants.watchlistBoxName);
+
+      await HiveUserDataStore.readSnapshot();
+
+      expect(File('${tempDir.path}/watchlist.hive').existsSync(), isFalse);
+    });
+
     test('round-trips catalogue items and watch records', () async {
       const film = Film(
         id: 550,
@@ -505,6 +547,99 @@ void main() {
       final loaded = await store.loadCatalogue();
       expect(loaded.single.overview, isNull);
       expect(loaded.single.title, 'Legacy');
+    });
+  });
+
+  group('HiveUserDataStore watchlist backup', () {
+    WatchlistEntry entry(int id, String title) => WatchlistEntry(
+          item: TvShow(id: id, title: title),
+          addedAt: DateTime(2026, 3, 1, 8),
+        );
+    Map<String, dynamic> backupWith({
+      Map<String, dynamic> catalogue = const {},
+      Object? watchlist,
+    }) =>
+        {
+          'format': 'iz_show_time_backup',
+          'version': 2,
+          'catalogue': catalogue,
+          'watchHistory': <String, dynamic>{},
+          'meta': <String, dynamic>{},
+          if (watchlist != null) 'watchlist': watchlist,
+        };
+
+    test('backup round-trips the watchlist and keeps version 2', () async {
+      await store.saveWatchlistEntry(entry(7, 'Saved Show'));
+      final backup = await store.exportBackupData();
+      expect(backup['version'], 2);
+      expect((backup['watchlist'] as Map).keys, ['t_7']);
+
+      await store.clearAll();
+      await store.importBackupData(backup);
+
+      final loaded = await store.loadWatchlist();
+      expect(loaded.single.item.title, 'Saved Show');
+      expect(loaded.single.addedAt, DateTime(2026, 3, 1, 8));
+    });
+
+    test('a backup without a watchlist section imports an empty watchlist',
+        () async {
+      await store.saveWatchlistEntry(entry(7, 'Old'));
+      await store.importBackupData(backupWith());
+      expect(await store.loadWatchlist(), isEmpty);
+    });
+
+    test('import resets the watchlist migration flag', () async {
+      await store.saveWatchlistMigrationDone();
+      final backup = await store.exportBackupData();
+      expect(
+        (backup['meta'] as Map)
+            .containsKey(StorageConstants.watchlistMigrationV1DoneKey),
+        isFalse,
+      );
+      await store.importBackupData(backup);
+      expect(await store.loadWatchlistMigrationDone(), isFalse);
+    });
+
+    // Review Focus 3
+    test('rejects an invalid watchlist section and keeps current data',
+        () async {
+      await store.saveCatalogueItem(const Film(id: 5, title: 'Kept Film'));
+      await store.saveWatchlistEntry(entry(7, 'Kept Show'));
+      await expectLater(
+        store.importBackupData(backupWith(watchlist: ['not a map'])),
+        throwsFormatException,
+      );
+      await expectLater(
+        store.importBackupData(backupWith(watchlist: {
+          't_1': jsonEncode({'type': 'tv', 'id': 1, 'title': 'No date'}),
+        })),
+        throwsFormatException,
+      );
+
+      expect((await store.loadCatalogue()).single.title, 'Kept Film');
+      expect((await store.loadWatchlist()).single.item.title, 'Kept Show');
+    });
+
+    test('a failing watchlist write rolls the whole import back', () async {
+      await store.saveCatalogueItem(const Film(id: 5, title: 'Kept Film'));
+      await store.saveWatchlistEntry(entry(7, 'Kept Show'));
+
+      await expectLater(
+        store.importBackupData(backupWith(
+          catalogue: {
+            'm_9': jsonEncode({'type': 'film', 'id': 9, 'title': 'Imported'}),
+          },
+          // Hive rejects String keys longer than 255 characters.
+          watchlist: {
+            'k' * 256: jsonEncode(entry(8, 'Bad key').toStorageJson()),
+          },
+        )),
+        throwsA(isA<HiveError>()),
+      );
+
+      expect((await store.loadCatalogue()).single.title, 'Kept Film');
+      expect((await store.loadWatchlist()).single.item.title, 'Kept Show');
     });
   });
 

@@ -32,6 +32,7 @@ class _MainNavigatorState extends State<MainNavigator> {
       case MainTab.catalogue:
         return CatalogueScreen(
           isActive: _currentTab == MainTab.catalogue,
+          onFindSomethingToWatch: () => _selectTab(MainTab.search.index),
         );
       case MainTab.settings:
         return SettingsScreen(

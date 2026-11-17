@@ -51,7 +51,7 @@ List<CatalogueItem> applyMediaFilters(
   Iterable<CatalogueItem> items, {
   required MediaFilter mediaFilter,
   required MediaSortOption sortOption,
-  Map<String, DateTime> lastCatalogueActivityByMediaId = const {},
+  Map<String, DateTime> recencyByMediaKey = const {},
 }) {
   final results = <CatalogueItem>[];
   switch (mediaFilter) {
@@ -70,7 +70,7 @@ List<CatalogueItem> applyMediaFilters(
         (a, b) => compareCatalogueByLastActivity(
           a,
           b,
-          lastCatalogueActivityByMediaId,
+          recencyByMediaKey,
         ),
       );
     case MediaSortOption.titleAsc:

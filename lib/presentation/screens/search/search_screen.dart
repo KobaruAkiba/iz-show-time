@@ -16,8 +16,10 @@ import '../../../core/constants/app_constants.dart';
 import '../../../core/network/api_error.dart';
 import '../../../core/network/network_feedback.dart';
 import '../../../core/services/app_services.dart';
+import '../../../core/services/library_status.dart';
 import '../../../core/utils/catalogue_activity.dart';
 import '../../../l10n/l10n.dart';
+import 'library_toggle_message.dart';
 
 /// Search screen for finding films and shows via TMDB
 class SearchScreen extends StatefulWidget {
@@ -438,7 +440,7 @@ class _SearchScreenState extends State<SearchScreen> {
       _results,
       mediaFilter: _mediaFilter,
       sortOption: _sortOption,
-      lastCatalogueActivityByMediaId: lastCatalogueActivityByMediaId(
+      recencyByMediaKey: lastCatalogueActivityByMediaId(
         _appServices.watchHistory,
       ),
     );
@@ -456,21 +458,20 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Future<void> _toggleItem(CatalogueItem item) async {
     final l10n = context.l10n;
-    final wasInCatalogue = _appServices.isInCatalogue(item);
-    if (wasInCatalogue) {
+    // Read before the toggle: the message depends on where the title was.
+    final statusBefore = _appServices.libraryStatusOf(item);
+    if (statusBefore == LibraryStatus.catalogue) {
       final confirmed = await confirmRemoveFromCatalogue(context, item);
       if (!confirmed || !mounted) return;
     }
 
-    await _appServices.toggleCatalogueItem(item);
+    final result = await _appServices.toggleCatalogueItem(item);
     if (!mounted) return;
     setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          wasInCatalogue
-              ? l10n.removedFromCatalogue
-              : l10n.addedToCatalogue,
+          libraryToggleMessage(result, statusBefore: statusBefore, l10n: l10n),
         ),
       ),
     );

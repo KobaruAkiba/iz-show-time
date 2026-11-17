@@ -2,9 +2,10 @@ import '../models/catalogue_item.dart';
 import '../models/new_episode_alert.dart';
 import '../models/watch_record.dart';
 import 'background_check_outbox.dart';
+import 'watchlist_store.dart';
 
 /// Persists catalogue items and watch history on device.
-abstract class UserDataStore {
+abstract class UserDataStore implements WatchlistStore {
   Future<void> open();
 
   /// Exports user-managed data to a portable backup payload.
@@ -70,6 +71,12 @@ abstract class UserDataStore {
   Future<DateTime?> loadLastTmdbCachePurgeAt();
 
   Future<void> saveLastTmdbCachePurgeAt(DateTime purgedAt);
+
+  /// Whether bookmark-only shows were already moved to the watchlist.
+  /// Missing means false.
+  Future<bool> loadWatchlistMigrationDone();
+
+  Future<void> saveWatchlistMigrationDone();
 
   /// Forces durable write of pending box changes to disk.
   Future<void> flush();
