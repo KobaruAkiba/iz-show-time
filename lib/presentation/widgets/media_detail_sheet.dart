@@ -17,6 +17,7 @@ import '../../l10n/l10n.dart';
 import 'app_network_image.dart';
 import 'confirm_remove_from_catalogue.dart';
 import 'season_jump_button.dart';
+import 'sheet_snack_bar_host.dart';
 import 'skeleton.dart';
 import 'watchlist_button.dart';
 import 'watchlist_snack_bars.dart';
@@ -31,9 +32,11 @@ Future<void> showMediaDetailSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => MediaDetailSheet(
-      item: item,
-      onWatchTimeChanged: onWatchTimeChanged,
+    builder: (_) => SheetSnackBarHost(
+      child: MediaDetailSheet(
+        item: item,
+        onWatchTimeChanged: onWatchTimeChanged,
+      ),
     ),
   );
 }

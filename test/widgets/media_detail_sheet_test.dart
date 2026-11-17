@@ -522,4 +522,62 @@ void main() {
       expect(button(tester).state, WatchlistButtonState.inCatalogue);
     });
   });
+
+  group('opened as a modal sheet', () {
+    const rootScaffoldKey = Key('root-scaffold');
+    const film = Film(id: 950, title: 'Modal Film');
+
+    setUp(() async {
+      await appServices.initialize(
+        userDataStore: FakeUserDataStore()..watchlistMigrationDone = true,
+      );
+    });
+
+    Future<void> openSheet(WidgetTester tester) async {
+      appServices.tmdbService = _FilmStubTmdbService();
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            key: rootScaffoldKey,
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => showMediaDetailSheet(context, film),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('shows its snackbars above the sheet, not behind it',
+        (tester) async {
+      await openSheet(tester);
+      await tester.ensureVisible(find.text('Add to Watchlist'));
+      await tester.tap(find.text('Add to Watchlist'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Added to watchlist'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(rootScaffoldKey),
+          matching: find.byType(SnackBar),
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('tapping outside the sheet still closes it', (tester) async {
+      await openSheet(tester);
+      expect(find.byType(MediaDetailSheet), findsOneWidget);
+
+      await tester.tapAt(const Offset(20, 20));
+      await tester.pumpAndSettle();
+      expect(find.byType(MediaDetailSheet), findsNothing);
+    });
+  });
 }
