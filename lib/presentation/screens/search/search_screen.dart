@@ -438,7 +438,7 @@ class _SearchScreenState extends State<SearchScreen> {
       _results,
       mediaFilter: _mediaFilter,
       sortOption: _sortOption,
-      lastCatalogueActivityByMediaId: lastCatalogueActivityByMediaId(
+      recencyByMediaKey: lastCatalogueActivityByMediaId(
         _appServices.watchHistory,
       ),
     );
