@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import '../../widgets/active_media_filter_chips.dart';
+import '../../widgets/floating_search_header.dart';
 import '../../widgets/lazy_paged_list_view.dart';
 import '../../widgets/media_card.dart';
 import '../../widgets/media_detail_sheet.dart';
@@ -14,7 +15,8 @@ import '../../../data/models/catalogue_item.dart';
 import '../../../data/models/watchlist_entry.dart';
 import '../../../l10n/l10n.dart';
 
-/// Body of the "To watch" segment: counts, search, sort and the saved titles.
+/// Body of the "To watch" segment: type counts that scroll away, a floating
+/// search with the sort chip, and the saved titles.
 class WatchlistView extends StatefulWidget {
   final VoidCallback? onFindSomethingToWatch;
 
@@ -91,52 +93,54 @@ class _WatchlistViewState extends State<WatchlistView> {
     final filmCount = entries.where((entry) => entry.item.isFilm).length;
     final items = _filterItems(entries);
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: MediaTypeCountsRow(
-            filmCount: filmCount,
-            tvShowCount: entries.length - filmCount,
-            selectedFilter: _mediaFilter,
-            onFilterSelected: (filter) => setState(() => _mediaFilter = filter),
+    return _buildItemList(
+      context,
+      items,
+      headerSlivers: [
+        // Scrolls away with the list.
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: MediaTypeCountsRow(
+              filmCount: filmCount,
+              tvShowCount: entries.length - filmCount,
+              selectedFilter: _mediaFilter,
+              onFilterSelected: (filter) =>
+                  setState(() => _mediaFilter = filter),
+            ),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: MediaSearchField(
+        FloatingSearchHeader(
+          search: MediaSearchField(
             hintText: l10n.watchlistSearchHint,
             onChanged: (value) => setState(() => _searchQuery = value),
             filtersActive: _sortOption != MediaSortOption.none,
             onFiltersPressed: _showFiltersSheet,
           ),
+          // The type is already shown by the counts row; only sort is a chip.
+          chips: _sortOption == MediaSortOption.none
+              ? null
+              : ActiveMediaFilterChips(
+                  sortOption: _sortOption,
+                  onClearSort: () =>
+                      setState(() => _sortOption = MediaSortOption.none),
+                ),
         ),
-        if (hasActiveMediaFilters(
-          mediaFilter: _mediaFilter,
-          sortOption: _sortOption,
-        ))
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: ActiveMediaFilterChips(
-              mediaFilter: _mediaFilter,
-              sortOption: _sortOption,
-              onClearMediaFilter: () =>
-                  setState(() => _mediaFilter = MediaFilter.all),
-              onClearSort: () =>
-                  setState(() => _sortOption = MediaSortOption.none),
-            ),
-          ),
-        const SizedBox(height: 8),
-        Expanded(child: _buildItemList(context, items)),
       ],
     );
   }
 
-  Widget _buildItemList(BuildContext context, List<CatalogueItem> items) {
+  Widget _buildItemList(
+    BuildContext context,
+    List<CatalogueItem> items, {
+    required List<Widget> headerSlivers,
+  }) {
     final l10n = context.l10n;
 
-    if (items.isEmpty) {
-      return Center(
+    return LazyPagedListView(
+      headerSlivers: headerSlivers,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      emptyChild: Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Text(
@@ -145,10 +149,7 @@ class _WatchlistViewState extends State<WatchlistView> {
             style: Theme.of(context).textTheme.bodyLarge,
           ),
         ),
-      );
-    }
-
-    return LazyPagedListView(
+      ),
       // Local data only: the window resets when the query or order changes.
       resetKey: Object.hash(_searchQuery, _mediaFilter, _sortOption),
       totalItemCount: items.length,

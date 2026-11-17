@@ -2,19 +2,17 @@ import 'package:flutter/material.dart';
 import '../../l10n/l10n.dart';
 import 'media_filters.dart';
 
-/// Wrap of dismissible chips: type, [extraChips], then sort.
+/// Wrap of dismissible chips: [extraChips], then sort.
+///
+/// The media type is not listed: the type counts row already shows it.
 class ActiveMediaFilterChips extends StatelessWidget {
-  final MediaFilter mediaFilter;
   final MediaSortOption sortOption;
-  final VoidCallback onClearMediaFilter;
   final VoidCallback onClearSort;
   final List<Widget> extraChips;
 
   const ActiveMediaFilterChips({
     super.key,
-    required this.mediaFilter,
     required this.sortOption,
-    required this.onClearMediaFilter,
     required this.onClearSort,
     this.extraChips = const [],
   });
@@ -29,12 +27,6 @@ class ActiveMediaFilterChips extends StatelessWidget {
         spacing: 8,
         runSpacing: 4,
         children: [
-          if (mediaFilter != MediaFilter.all)
-            InputChip(
-              label: Text(mediaFilterLabel(mediaFilter, l10n)),
-              onDeleted: onClearMediaFilter,
-              visualDensity: VisualDensity.compact,
-            ),
           ...extraChips,
           if (sortOption != MediaSortOption.none)
             InputChip(

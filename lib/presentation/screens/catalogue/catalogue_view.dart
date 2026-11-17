@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../widgets/media_detail_sheet.dart';
 import '../../widgets/media_card.dart';
 import '../../widgets/active_media_filter_chips.dart';
+import '../../widgets/floating_search_header.dart';
 import '../../widgets/media_filters.dart';
 import '../../widgets/media_search_field.dart';
 import '../../widgets/catalogue_stats_row.dart';
@@ -15,7 +16,8 @@ import '../../../core/services/app_services.dart';
 import '../../../core/utils/catalogue_activity.dart';
 import '../../../l10n/l10n.dart';
 
-/// Body of the catalogue: stats, search, filters and the item list.
+/// Body of the catalogue: one scroll view with stats and type chips that
+/// scroll away, a floating search with filter chips, and the item list.
 class CatalogueView extends StatefulWidget {
   final bool isActive;
 
@@ -45,7 +47,7 @@ class _CatalogueViewState extends State<CatalogueView> {
   bool get _forcesTvOnly =>
       _inProgressOnly || _notFollowedOnly || _caughtUpOnly;
 
-  /// Chips row: type + sheet filters (status / sort).
+  /// Any filter, type included: decides which empty message to show.
   bool get _hasActiveFilters => hasActiveMediaFilters(
         mediaFilter: _mediaFilter,
         sortOption: _sortOption,
@@ -55,7 +57,8 @@ class _CatalogueViewState extends State<CatalogueView> {
         caughtUpOnly: _caughtUpOnly,
       );
 
-  /// Tune button badge: only filters controlled by the sheet (not media type).
+  /// Filters controlled by the sheet (not media type): tune button badge and
+  /// removable chips, since the type is already shown by the counts row.
   bool get _hasActiveSheetFilters =>
       _sortOption != MediaSortOption.none ||
       _inProgressOnly ||
@@ -182,10 +185,6 @@ class _CatalogueViewState extends State<CatalogueView> {
     });
   }
 
-  void _clearMediaFilter() {
-    setState(() => _mediaFilter = MediaFilter.all);
-  }
-
   void _clearInProgress() {
     setState(() => _inProgressOnly = false);
   }
@@ -231,50 +230,50 @@ class _CatalogueViewState extends State<CatalogueView> {
     final watchTime = _appServices.totalWatchTimeMinutes;
     final items = _filterItems(catalogue);
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: ValueListenableBuilder<bool>(
-            valueListenable: _appServices.hideWatchTimeListenable,
-            builder: (context, hideWatchTime, _) => CatalogueStatsRow(
-              totalCount: catalogue.length,
-              watchTimeMinutes: watchTime,
-              hideWatchTime: hideWatchTime,
+    return _buildItemList(
+      items,
+      headerSlivers: [
+        // Scrolls away with the list.
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ValueListenableBuilder<bool>(
+                  valueListenable: _appServices.hideWatchTimeListenable,
+                  builder: (context, hideWatchTime, _) => CatalogueStatsRow(
+                    totalCount: catalogue.length,
+                    watchTimeMinutes: watchTime,
+                    hideWatchTime: hideWatchTime,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                MediaTypeCountsRow(
+                  tvShowCount: tvShows.length,
+                  filmCount: films.length,
+                  selectedFilter: _mediaFilter,
+                  onFilterSelected: _onMediaFilterSelected,
+                ),
+              ],
             ),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: MediaTypeCountsRow(
-            tvShowCount: tvShows.length,
-            filmCount: films.length,
-            selectedFilter: _mediaFilter,
-            onFilterSelected: _onMediaFilterSelected,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: MediaSearchField(
+        FloatingSearchHeader(
+          search: MediaSearchField(
             hintText: l10n.catalogueSearchHint,
             onChanged: (value) => setState(() => _searchQuery = value),
             filtersActive: _hasActiveSheetFilters,
             onFiltersPressed: _showFiltersSheet,
           ),
+          chips: _hasActiveSheetFilters
+              ? ActiveMediaFilterChips(
+                  sortOption: _sortOption,
+                  onClearSort: _clearSort,
+                  extraChips: _statusChips(l10n),
+                )
+              : null,
         ),
-        if (_hasActiveFilters)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: ActiveMediaFilterChips(
-              mediaFilter: _mediaFilter,
-              sortOption: _sortOption,
-              onClearMediaFilter: _clearMediaFilter,
-              onClearSort: _clearSort,
-              extraChips: _statusChips(l10n),
-            ),
-          ),
-        const SizedBox(height: 8),
-        Expanded(child: _buildItemList(items)),
       ],
     );
   }
@@ -309,11 +308,16 @@ class _CatalogueViewState extends State<CatalogueView> {
     ];
   }
 
-  Widget _buildItemList(List<CatalogueItem> items) {
+  Widget _buildItemList(
+    List<CatalogueItem> items, {
+    required List<Widget> headerSlivers,
+  }) {
     final l10n = context.l10n;
 
-    if (items.isEmpty) {
-      return Center(
+    return LazyPagedListView(
+      headerSlivers: headerSlivers,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      emptyChild: Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Text(
@@ -322,10 +326,7 @@ class _CatalogueViewState extends State<CatalogueView> {
             style: Theme.of(context).textTheme.bodyLarge,
           ),
         ),
-      );
-    }
-
-    return LazyPagedListView(
+      ),
       // Local catalogue only — no remote API. Window resets on filter change.
       resetKey: Object.hash(
         _searchQuery,

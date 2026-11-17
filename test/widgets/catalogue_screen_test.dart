@@ -44,21 +44,27 @@ void main() {
     expect(find.text('Beta'), findsNothing);
   });
 
-  testWidgets('the type filter shows a chip that clears it', (tester) async {
+  testWidgets(
+      'the type filter is shown by its selected chip, with no extra '
+      'removable chip, and All clears it', (tester) async {
     await pumpCatalogue(tester);
     await tester.tap(find.text('Films 2'));
     await tester.pumpAndSettle();
-    expect(find.byType(InputChip), findsOneWidget);
-    await tester.tap(
-      find
-          .descendant(
-            of: find.byType(InputChip),
-            matching: find.byType(Icon),
-          )
-          .last,
-    );
-    await tester.pumpAndSettle();
     expect(find.byType(InputChip), findsNothing);
+    expect(
+      tester
+          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Films 2'))
+          .selected,
+      isTrue,
+    );
+    await tester.tap(find.text('All 2'));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'All 2'))
+          .selected,
+      isTrue,
+    );
   });
 
   testWidgets('type chips are always visible and filter the list',
