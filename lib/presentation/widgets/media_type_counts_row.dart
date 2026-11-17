@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
-import '../../../l10n/l10n.dart';
-import '../../widgets/media_filters.dart';
+import '../../l10n/l10n.dart';
+import 'media_filters.dart';
 
-/// "All N / Films N / Shows N" chips that also act as the media-type filter.
-class WatchlistCountsRow extends StatelessWidget {
-  final int filmCount;
+/// "All N / Shows N / Films N" chips that also act as the media-type filter.
+///
+/// Shared by the catalogue and the watchlist, so both filter by type the same
+/// way. The total is the sum of the two counts.
+class MediaTypeCountsRow extends StatelessWidget {
   final int tvShowCount;
+  final int filmCount;
   final MediaFilter selectedFilter;
   final ValueChanged<MediaFilter> onFilterSelected;
 
-  const WatchlistCountsRow({
+  const MediaTypeCountsRow({
     super.key,
-    required this.filmCount,
     required this.tvShowCount,
+    required this.filmCount,
     required this.selectedFilter,
     required this.onFilterSelected,
   });
@@ -29,8 +32,8 @@ class WatchlistCountsRow extends StatelessWidget {
         runSpacing: 4,
         children: [
           _chip(MediaFilter.all, '${l10n.filterAll} $total'),
-          _chip(MediaFilter.filmsOnly, '${l10n.statsFilms} $filmCount'),
           _chip(MediaFilter.tvOnly, '${l10n.statsShows} $tvShowCount'),
+          _chip(MediaFilter.filmsOnly, '${l10n.statsFilms} $filmCount'),
         ],
       ),
     );

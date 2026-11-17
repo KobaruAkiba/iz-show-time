@@ -5,6 +5,7 @@ import '../../widgets/active_media_filter_chips.dart';
 import '../../widgets/media_filters.dart';
 import '../../widgets/media_search_field.dart';
 import '../../widgets/catalogue_stats_row.dart';
+import '../../widgets/media_type_counts_row.dart';
 import '../../widgets/confirm_remove_from_catalogue.dart';
 import '../../widgets/lazy_paged_list_view.dart';
 import '../../../data/models/catalogue_item.dart';
@@ -39,7 +40,6 @@ class _CatalogueViewState extends State<CatalogueView> {
   bool _favoritesOnly = false;
   bool _notFollowedOnly = false;
   bool _caughtUpOnly = false;
-  bool _statsExpanded = false;
   final _appServices = AppServices();
 
   bool get _forcesTvOnly =>
@@ -233,23 +233,28 @@ class _CatalogueViewState extends State<CatalogueView> {
 
     return Column(
       children: [
-        ValueListenableBuilder<bool>(
-          valueListenable: _appServices.hideWatchTimeListenable,
-          builder: (context, hideWatchTime, _) => CatalogueStatsRow(
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: ValueListenableBuilder<bool>(
+            valueListenable: _appServices.hideWatchTimeListenable,
+            builder: (context, hideWatchTime, _) => CatalogueStatsRow(
+              totalCount: catalogue.length,
+              watchTimeMinutes: watchTime,
+              hideWatchTime: hideWatchTime,
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: MediaTypeCountsRow(
             tvShowCount: tvShows.length,
             filmCount: films.length,
-            totalCount: catalogue.length,
-            watchTimeMinutes: watchTime,
-            hideWatchTime: hideWatchTime,
-            expanded: _statsExpanded,
-            onToggleExpanded: () =>
-                setState(() => _statsExpanded = !_statsExpanded),
             selectedFilter: _mediaFilter,
             onFilterSelected: _onMediaFilterSelected,
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           child: MediaSearchField(
             hintText: l10n.catalogueSearchHint,
             onChanged: (value) => setState(() => _searchQuery = value),
@@ -268,7 +273,7 @@ class _CatalogueViewState extends State<CatalogueView> {
               extraChips: _statusChips(l10n),
             ),
           ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         Expanded(child: _buildItemList(items)),
       ],
     );

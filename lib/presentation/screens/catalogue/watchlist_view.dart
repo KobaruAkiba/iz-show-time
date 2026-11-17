@@ -7,12 +7,12 @@ import '../../widgets/media_card.dart';
 import '../../widgets/media_detail_sheet.dart';
 import '../../widgets/media_filters.dart';
 import '../../widgets/media_search_field.dart';
+import '../../widgets/media_type_counts_row.dart';
 import '../../widgets/watchlist_snack_bars.dart';
 import '../../../core/services/app_services.dart';
 import '../../../data/models/catalogue_item.dart';
 import '../../../data/models/watchlist_entry.dart';
 import '../../../l10n/l10n.dart';
-import 'watchlist_counts_row.dart';
 
 /// Body of the "To watch" segment: counts, search, sort and the saved titles.
 class WatchlistView extends StatefulWidget {
@@ -94,8 +94,8 @@ class _WatchlistViewState extends State<WatchlistView> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: WatchlistCountsRow(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: MediaTypeCountsRow(
             filmCount: filmCount,
             tvShowCount: entries.length - filmCount,
             selectedFilter: _mediaFilter,
@@ -103,7 +103,7 @@ class _WatchlistViewState extends State<WatchlistView> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           child: MediaSearchField(
             hintText: l10n.watchlistSearchHint,
             onChanged: (value) => setState(() => _searchQuery = value),
@@ -126,7 +126,7 @@ class _WatchlistViewState extends State<WatchlistView> {
                   setState(() => _sortOption = MediaSortOption.none),
             ),
           ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         Expanded(child: _buildItemList(context, items)),
       ],
     );

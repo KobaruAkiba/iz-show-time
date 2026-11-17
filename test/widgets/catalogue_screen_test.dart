@@ -5,6 +5,8 @@ import 'package:iz_show_time_tracker/data/models/catalogue_item.dart';
 import 'package:iz_show_time_tracker/data/models/watchlist_entry.dart';
 import 'package:iz_show_time_tracker/l10n/l10n.dart';
 import 'package:iz_show_time_tracker/presentation/screens/catalogue/catalogue_screen.dart';
+import 'package:iz_show_time_tracker/presentation/screens/catalogue/library_segment_switch.dart';
+import 'package:iz_show_time_tracker/presentation/widgets/catalogue_stats_row.dart';
 
 import '../support/fake_user_data_store.dart';
 
@@ -44,9 +46,7 @@ void main() {
 
   testWidgets('the type filter shows a chip that clears it', (tester) async {
     await pumpCatalogue(tester);
-    await tester.tap(find.text('Total Watch Time'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Films').first);
+    await tester.tap(find.text('Films 2'));
     await tester.pumpAndSettle();
     expect(find.byType(InputChip), findsOneWidget);
     await tester.tap(
@@ -59,6 +59,37 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byType(InputChip), findsNothing);
+  });
+
+  testWidgets('type chips are always visible and filter the list',
+      (tester) async {
+    store.catalogue.add(const TvShow(id: 3, title: 'Gamma'));
+    await pumpCatalogue(tester);
+    expect(find.text('All 3'), findsOneWidget);
+    expect(find.text('Shows 1'), findsOneWidget);
+    expect(find.text('Films 2'), findsOneWidget);
+    expect(find.text('Gamma'), findsOneWidget);
+
+    await tester.tap(find.text('Shows 1'));
+    await tester.pumpAndSettle();
+    expect(find.text('Gamma'), findsOneWidget);
+    expect(find.text('Alpha'), findsNothing);
+
+    await tester.tap(find.text('All 3'));
+    await tester.pumpAndSettle();
+    expect(find.text('Alpha'), findsOneWidget);
+    expect(find.text('Gamma'), findsOneWidget);
+  });
+
+  testWidgets('the summary line is thin and keeps the segment target tall',
+      (tester) async {
+    await pumpCatalogue(tester);
+    expect(find.text('0m · 2 titles'), findsOneWidget);
+    expect(tester.getSize(find.byType(CatalogueStatsRow)).height, 40);
+    expect(
+      tester.getSize(find.byType(SegmentedButton<LibrarySegment>)).height,
+      greaterThanOrEqualTo(48),
+    );
   });
 
   testWidgets('an empty catalogue shows the empty message', (tester) async {
