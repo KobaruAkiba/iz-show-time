@@ -10,9 +10,12 @@ import '../constants/storage_constants.dart';
 import '../network/api_error.dart';
 import '../network/network_feedback.dart';
 import '../theme/app_theme.dart';
+import 'bookmark_only_shows_migration.dart';
 import 'catalogue_index.dart';
 import 'episode_alerts_service.dart';
+import 'library_status.dart';
 import 'watch_history_index.dart';
+import 'watchlist_service.dart';
 import '../../data/repositories/hive_user_data_store.dart';
 import '../../data/repositories/user_data_store.dart';
 import '../../data/services/tmdb_service.dart';
@@ -66,6 +69,14 @@ class AppServices {
     flushIfIdle: _maybeFlush,
   );
 
+  /// Titles saved to watch later; only [addToCatalogue] moves them into the
+  /// catalogue.
+  late final WatchlistService watchlist = WatchlistService(
+    store: () => userDataStore,
+    flushIfIdle: _maybeFlush,
+    isInCatalogue: isInCatalogue,
+  );
+
   ValueNotifier<List<NewEpisodeAlert>> get newEpisodeAlertsListenable =>
       _alerts.listenable;
   final ValueNotifier<ThemeMode> themeModeListenable =
@@ -107,6 +118,12 @@ class AppServices {
 
   bool isInCatalogue(CatalogueItem item) => _catalogue.contains(item);
 
+  LibraryStatus libraryStatusOf(CatalogueItem item) {
+    if (isInCatalogue(item)) return LibraryStatus.catalogue;
+    if (watchlist.contains(item)) return LibraryStatus.watchlist;
+    return LibraryStatus.none;
+  }
+
   bool isFavorite(CatalogueItem item) =>
       _catalogue.find(item)?.isFavorite ?? false;
 
@@ -121,6 +138,8 @@ class AppServices {
       localItem = localItem.withFollowed(true);
     }
     _catalogue.add(localItem);
+    // Single watchlist -> catalogue transition; every add path goes through here.
+    await watchlist.remove(localItem);
     await _persistCatalogueItem(localItem);
     if (localItem is TvShow) {
       unawaited(syncTvShowAiringState(localItem.id));
@@ -277,18 +296,27 @@ class AppServices {
     });
   }
 
-  /// Adds or removes a catalogue item. Films record watch time on add.
-  Future<void> toggleCatalogueItem(CatalogueItem item) async {
+  /// Search bookmark: removes a catalogued title, adds a film to the catalogue
+  /// (recording watch time) and sends a TV show to the watchlist.
+  Future<LibraryToggleResult> toggleCatalogueItem(CatalogueItem item) async {
     if (isInCatalogue(item)) {
       await removeFromCatalogue(item);
-      return;
+      return LibraryToggleResult.removedFromCatalogue;
     }
 
     if (item is Film) {
       await addToCatalogueWithWatchTime(item);
-    } else {
-      await addToCatalogue(item);
+      return LibraryToggleResult.addedToCatalogue;
     }
+
+    return switch (await watchlist.add(item)) {
+      WatchlistAddResult.added => LibraryToggleResult.addedToWatchlist,
+      WatchlistAddResult.alreadyPresent =>
+        LibraryToggleResult.alreadyOnWatchlist,
+      // Catalogued meanwhile by another action.
+      WatchlistAddResult.alreadyInCatalogue =>
+        LibraryToggleResult.addedToCatalogue,
+    };
   }
 
   int watchedEpisodesCountFor(int mediaId) => _history.episodeCountFor(mediaId);
@@ -553,6 +581,17 @@ class AppServices {
     await store.open();
     _catalogue.replaceAll(await store.loadCatalogue());
     _history.replaceAll(await store.loadWatchHistory());
+    try {
+      await BookmarkOnlyShowsMigration(
+        store: store,
+        catalogue: _catalogue,
+        history: _history,
+      ).run();
+    } catch (error, stackTrace) {
+      // Startup goes on; without the flag the migration retries next launch.
+      debugPrint('Failed bookmark-only shows migration: $error\n$stackTrace');
+    }
+    await watchlist.loadFrom(store);
     await _alerts.loadFrom(store);
 
     try {
@@ -754,6 +793,7 @@ class AppServices {
     _catalogue.clear();
     _history.clear();
     _alerts.clear();
+    watchlist.clear();
     _lastAiringStatesSyncAt = null;
     await userDataStore.clearAll();
     // clearAll removes the purge stamp; re-record so the next launch is not forced.
