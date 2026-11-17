@@ -97,20 +97,14 @@ class _WatchlistViewState extends State<WatchlistView> {
       context,
       items,
       headerSlivers: [
-        // Scrolls away with the list.
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: MediaTypeCountsRow(
-              filmCount: filmCount,
-              tvShowCount: entries.length - filmCount,
-              selectedFilter: _mediaFilter,
-              onFilterSelected: (filter) =>
-                  setState(() => _mediaFilter = filter),
-            ),
-          ),
-        ),
         FloatingSearchHeader(
+          leading: MediaTypeCountsRow(
+            filmCount: filmCount,
+            tvShowCount: entries.length - filmCount,
+            selectedFilter: _mediaFilter,
+            onFilterSelected: (filter) =>
+                setState(() => _mediaFilter = filter),
+          ),
           search: MediaSearchField(
             hintText: l10n.watchlistSearchHint,
             onChanged: (value) => setState(() => _searchQuery = value),

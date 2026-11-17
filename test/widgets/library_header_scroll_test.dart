@@ -73,7 +73,8 @@ void main() {
     expect(segmentSwitch.hitTestable(), findsOneWidget);
   });
 
-  testWidgets('scrolling up mid-list brings the search back, not the summary',
+  testWidgets(
+      'scrolling up mid-list brings the search and type chips back, not the summary',
       (tester) async {
     await pumpLibrary(tester);
     await scrollDown(tester, 1500);
@@ -82,7 +83,7 @@ void main() {
     await scrollUp(tester, 150);
     expect(searchField, findsOneWidget);
     expect(statsRow, findsNothing);
-    expect(typeChips, findsNothing);
+    expect(typeChips, findsOneWidget);
     expect(segmentSwitch.hitTestable(), findsOneWidget);
   });
 
@@ -197,7 +198,12 @@ void main() {
     final shown = headerPaintExtent();
     expect(shown, greaterThan(0));
     expect(searchField, findsOneWidget);
-    expect(shown, tester.getSize(find.byType(MediaSearchField)).height + 16);
+    expect(
+        shown,
+        tester.getSize(find.byType(MediaSearchField)).height +
+            tester.getSize(find.byType(MediaTypeCountsRow)).height +
+            8 +
+            16);
 
     // A drag down hides it again, and it does not stay half hidden.
     await tester.timedDrag(catalogueScroll, const Offset(0, -50),
@@ -227,7 +233,7 @@ void main() {
 
     await scrollUp(tester, 150);
     expect(searchField, findsOneWidget);
-    expect(typeChips, findsNothing);
+    expect(typeChips, findsOneWidget);
   });
 
   testWidgets('each segment keeps its own scroll position', (tester) async {

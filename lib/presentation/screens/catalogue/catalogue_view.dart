@@ -248,18 +248,17 @@ class _CatalogueViewState extends State<CatalogueView> {
                     hideWatchTime: hideWatchTime,
                   ),
                 ),
-                const SizedBox(height: 8),
-                MediaTypeCountsRow(
-                  tvShowCount: tvShows.length,
-                  filmCount: films.length,
-                  selectedFilter: _mediaFilter,
-                  onFilterSelected: _onMediaFilterSelected,
-                ),
               ],
             ),
           ),
         ),
         FloatingSearchHeader(
+          leading: MediaTypeCountsRow(
+            tvShowCount: tvShows.length,
+            filmCount: films.length,
+            selectedFilter: _mediaFilter,
+            onFilterSelected: _onMediaFilterSelected,
+          ),
           search: MediaSearchField(
             hintText: l10n.catalogueSearchHint,
             onChanged: (value) => setState(() => _searchQuery = value),
