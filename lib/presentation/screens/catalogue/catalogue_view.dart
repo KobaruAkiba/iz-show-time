@@ -18,7 +18,14 @@ import '../../../l10n/l10n.dart';
 class CatalogueView extends StatefulWidget {
   final bool isActive;
 
-  const CatalogueView({super.key, this.isActive = true});
+  /// Called after the user changes the catalogue size (remove, details sheet).
+  final VoidCallback? onCatalogueChanged;
+
+  const CatalogueView({
+    super.key,
+    this.isActive = true,
+    this.onCatalogueChanged,
+  });
 
   @override
   State<CatalogueView> createState() => _CatalogueViewState();
@@ -199,12 +206,14 @@ class _CatalogueViewState extends State<CatalogueView> {
     setState(() => _sortOption = MediaSortOption.none);
   }
 
-  void _openDetails(CatalogueItem item) {
-    showMediaDetailSheet(
+  Future<void> _openDetails(CatalogueItem item) async {
+    await showMediaDetailSheet(
       context,
       item,
       onWatchTimeChanged: _refresh,
     );
+    if (!mounted) return;
+    widget.onCatalogueChanged?.call();
   }
 
   Future<void> _toggleFavorite(CatalogueItem item) async {
@@ -356,6 +365,7 @@ class _CatalogueViewState extends State<CatalogueView> {
                 ),
               );
               _refresh();
+              widget.onCatalogueChanged?.call();
             },
           ),
         );

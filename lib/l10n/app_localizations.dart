@@ -1419,6 +1419,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Still connecting… this is taking longer than usual.'**
   String get connectionSlow;
+
+  /// No description provided for @catalogueSegmentWatched.
+  ///
+  /// In en, this message translates to:
+  /// **'Watched'**
+  String get catalogueSegmentWatched;
+
+  /// No description provided for @catalogueSegmentToWatch.
+  ///
+  /// In en, this message translates to:
+  /// **'To watch'**
+  String get catalogueSegmentToWatch;
+
+  /// No description provided for @removeFromWatchlist.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from watchlist'**
+  String get removeFromWatchlist;
+
+  /// No description provided for @removedFromWatchlist.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed from watchlist'**
+  String get removedFromWatchlist;
+
+  /// No description provided for @undo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get undo;
+
+  /// No description provided for @watchlistSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search watchlist...'**
+  String get watchlistSearchHint;
+
+  /// No description provided for @watchlistEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your watchlist is empty'**
+  String get watchlistEmptyTitle;
+
+  /// No description provided for @watchlistEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Save films and shows you want to watch from their details.'**
+  String get watchlistEmptyBody;
+
+  /// No description provided for @watchlistEmptyCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Find something to watch'**
+  String get watchlistEmptyCta;
+
+  /// No description provided for @watchlistNoFilterMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'No titles match your filters'**
+  String get watchlistNoFilterMatches;
 }
 
 class _AppLocalizationsDelegate

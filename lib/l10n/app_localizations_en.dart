@@ -788,4 +788,35 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get connectionSlow =>
       'Still connecting… this is taking longer than usual.';
+
+  @override
+  String get catalogueSegmentWatched => 'Watched';
+
+  @override
+  String get catalogueSegmentToWatch => 'To watch';
+
+  @override
+  String get removeFromWatchlist => 'Remove from watchlist';
+
+  @override
+  String get removedFromWatchlist => 'Removed from watchlist';
+
+  @override
+  String get undo => 'Undo';
+
+  @override
+  String get watchlistSearchHint => 'Search watchlist...';
+
+  @override
+  String get watchlistEmptyTitle => 'Your watchlist is empty';
+
+  @override
+  String get watchlistEmptyBody =>
+      'Save films and shows you want to watch from their details.';
+
+  @override
+  String get watchlistEmptyCta => 'Find something to watch';
+
+  @override
+  String get watchlistNoFilterMatches => 'No titles match your filters';
 }

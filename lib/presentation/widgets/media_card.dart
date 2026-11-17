@@ -14,6 +14,9 @@ class MediaCard extends StatelessWidget {
   final bool isBookmarked;
   final bool isFavorite;
 
+  /// Replaces the bookmark button when set (e.g. watchlist removal).
+  final Widget? trailingAction;
+
   const MediaCard({
     super.key,
     required this.item,
@@ -22,6 +25,7 @@ class MediaCard extends StatelessWidget {
     this.onToggleFavorite,
     this.isBookmarked = false,
     this.isFavorite = false,
+    this.trailingAction,
   });
 
   bool get _isFilm => item is Film;
@@ -179,17 +183,18 @@ class MediaCard extends StatelessWidget {
                       : l10n.addToFavorites,
                   onPressed: onToggleFavorite,
                 ),
-              IconButton(
-                icon: Icon(
-                  isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                  size: 24,
-                ),
-                color: colorScheme.onSurface.withValues(alpha: 0.6),
-                tooltip: isBookmarked
-                    ? l10n.removeFromCatalogue
-                    : l10n.addToCatalogue,
-                onPressed: onAddRemove,
-              ),
+              trailingAction ??
+                  IconButton(
+                    icon: Icon(
+                      isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                      size: 24,
+                    ),
+                    color: colorScheme.onSurface.withValues(alpha: 0.6),
+                    tooltip: isBookmarked
+                        ? l10n.removeFromCatalogue
+                        : l10n.addToCatalogue,
+                    onPressed: onAddRemove,
+                  ),
             ],
           ),
         ),
