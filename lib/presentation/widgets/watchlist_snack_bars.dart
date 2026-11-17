@@ -20,3 +20,10 @@ void showRemovedFromWatchlistSnackBar(
       ),
     );
 }
+
+/// Plain confirmation for watchlist changes; replaces any visible snackbar.
+void showWatchlistSnackBar(ScaffoldMessengerState messenger, String message) {
+  messenger
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(message)));
+}

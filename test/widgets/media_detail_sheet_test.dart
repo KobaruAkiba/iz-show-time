@@ -6,9 +6,14 @@ import 'package:iz_show_time_tracker/data/models/catalogue_item.dart';
 import 'package:iz_show_time_tracker/data/models/episode_model.dart';
 import 'package:iz_show_time_tracker/data/models/media_details.dart';
 import 'package:iz_show_time_tracker/data/models/season_model.dart';
+import 'package:iz_show_time_tracker/data/models/tv_show_summary.dart';
+import 'package:iz_show_time_tracker/data/models/watchlist_entry.dart';
 import 'package:iz_show_time_tracker/data/services/tmdb_service.dart';
 import 'package:iz_show_time_tracker/l10n/l10n.dart';
 import 'package:iz_show_time_tracker/presentation/widgets/media_detail_sheet.dart';
+import 'package:iz_show_time_tracker/presentation/widgets/watchlist_button.dart';
+
+import '../support/fake_user_data_store.dart';
 
 /// Two seasons listed by the show payload; records which ones are fetched.
 class _SheetStubTmdbService extends TmdbService {
@@ -121,6 +126,34 @@ class _LongSeasonTmdbService extends TmdbService {
   }
 }
 
+
+/// Film payload with a runtime, so "Mark as Watched" can succeed.
+class _FilmStubTmdbService extends TmdbService {
+  _FilmStubTmdbService() : super(cacheManager: null);
+
+  @override
+  Future<MediaDetails?> getMediaDetails(CatalogueItem item) async =>
+      MediaDetails(title: item.title, isFilm: true, runtimeMinutes: 120);
+}
+
+/// Show stub whose background refreshes never reach the network.
+class _WatchlistShowStubTmdbService extends _SheetStubTmdbService {
+  @override
+  Future<TvShowSummary?> getTvShowSummary(
+    int tvId, {
+    bool forceRefresh = false,
+  }) async =>
+      const TvShowSummary(numberOfSeasons: 2);
+
+  @override
+  Future<List<EpisodeModel>> getSeasonEpisodes({
+    required int tvId,
+    required int seasonNumber,
+    bool forceRefresh = false,
+  }) async =>
+      const [];
+}
+
 void main() {
   const show = TvShow(id: 4242, title: 'Sheet Show');
   final appServices = AppServices();
@@ -167,6 +200,10 @@ void main() {
 
   testWidgets('a failed season shows a retry hint and reloads on tap',
       (tester) async {
+    // Taller viewport: the watchlist button pushes season 2's episodes below
+    // the fold, where the sliver would not build them.
+    tester.view.physicalSize = const Size(2400, 3000);
+    addTearDown(tester.view.resetPhysicalSize);
     final tmdb = _SheetStubTmdbService(failingSeasons: {2});
     appServices.tmdbService = tmdb;
     await pumpSheet(tester);
@@ -395,5 +432,94 @@ void main() {
     await tester.tap(find.text('Season 1'));
     await tester.pumpAndSettle();
     expect(find.text('Episode 1'), findsNothing);
+  });
+
+  group('watchlist button', () {
+    late FakeUserDataStore store;
+
+    setUp(() => store = FakeUserDataStore()..watchlistMigrationDone = true);
+
+    /// Initializes the services from [store] and shows the sheet for [item].
+    Future<void> pumpDetail(
+      WidgetTester tester,
+      CatalogueItem item,
+      TmdbService tmdb,
+    ) async {
+      await appServices.initialize(userDataStore: store);
+      appServices.tmdbService = tmdb;
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: MediaDetailSheet(item: item)),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    WatchlistButton button(WidgetTester t) =>
+        t.widget<WatchlistButton>(find.byType(WatchlistButton));
+
+    // A catalogued film can lack a WatchRecord when TMDB gave no runtime.
+    testWidgets('a catalogued film without a watch record cannot be watchlisted',
+        (tester) async {
+      const film = Film(id: 900, title: 'No Runtime Film');
+      store.catalogue.add(film);
+      await pumpDetail(tester, film, _FilmStubTmdbService());
+      expect(button(tester).state, WatchlistButtonState.inCatalogue);
+    });
+
+    testWidgets('adds a film and removes it with Undo', (tester) async {
+      await pumpDetail(
+        tester,
+        const Film(id: 901, title: 'Fresh Film'),
+        _FilmStubTmdbService(),
+      );
+      await tester.ensureVisible(find.text('Add to Watchlist'));
+      await tester.tap(find.text('Add to Watchlist'));
+      await tester.pumpAndSettle();
+      expect(find.text('Added to watchlist'), findsOneWidget);
+      expect(button(tester).state, WatchlistButtonState.onWatchlist);
+      final addedAt = appServices.watchlist.addedAtByMediaKey['m_901'];
+
+      await tester.tap(find.text('On Watchlist'));
+      await tester.pumpAndSettle();
+      expect(find.text('Removed from watchlist'), findsOneWidget);
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+      expect(appServices.watchlist.addedAtByMediaKey['m_901'], addedAt);
+      expect(button(tester).state, WatchlistButtonState.onWatchlist);
+    });
+
+    testWidgets('Mark as Watched on a watchlisted film says it moved',
+        (tester) async {
+      const film = Film(id: 902, title: 'Queued Film');
+      store.watchlist
+          .add(WatchlistEntry(item: film, addedAt: DateTime(2026, 1, 1)));
+      await pumpDetail(tester, film, _FilmStubTmdbService());
+      await tester.ensureVisible(find.text('Mark as Watched'));
+      await tester.tap(find.text('Mark as Watched'));
+      await tester.pumpAndSettle();
+      expect(find.text('Moved from watchlist to your catalogue'), findsOneWidget);
+      expect(find.text('Added to catalogue'), findsNothing);
+      expect(button(tester).state, WatchlistButtonState.inCatalogue);
+      expect(
+        appServices.watchlist.contains(const Film(id: 902, title: '')),
+        isFalse,
+      );
+    });
+
+    testWidgets('adding an episode of a watchlisted show says it moved',
+        (tester) async {
+      store.watchlist
+          .add(WatchlistEntry(item: show, addedAt: DateTime(2026, 1, 1)));
+      await pumpDetail(tester, show, _WatchlistShowStubTmdbService());
+      await tester.tap(find.text('Season 1'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Add episode to catalogue').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Moved from watchlist to your catalogue'), findsOneWidget);
+      expect(button(tester).state, WatchlistButtonState.inCatalogue);
+    });
   });
 }

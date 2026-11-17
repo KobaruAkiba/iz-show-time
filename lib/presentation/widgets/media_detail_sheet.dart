@@ -7,6 +7,8 @@ import '../../core/constants/api_constants.dart';
 import '../../core/network/api_error.dart';
 import '../../core/network/network_feedback.dart';
 import '../../core/services/app_services.dart';
+import '../../core/services/library_status.dart';
+import '../../core/services/watchlist_service.dart';
 import '../../data/models/catalogue_item.dart';
 import '../../data/models/episode_model.dart';
 import '../../data/models/media_details.dart';
@@ -16,6 +18,8 @@ import 'app_network_image.dart';
 import 'confirm_remove_from_catalogue.dart';
 import 'season_jump_button.dart';
 import 'skeleton.dart';
+import 'watchlist_button.dart';
+import 'watchlist_snack_bars.dart';
 
 /// Opens a bottom sheet with TMDB details for the tapped carousel item.
 Future<void> showMediaDetailSheet(
@@ -223,6 +227,8 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
       return;
     }
 
+    // Read before the action: it takes the film off the watchlist.
+    final wasOnWatchlist = _isOnWatchlist;
     final record = await _appServices.markFilmWatched(
       film: film,
       durationMinutes: runtime,
@@ -238,8 +244,42 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.addedToCatalogue)),
+      SnackBar(
+        content: Text(
+          wasOnWatchlist ? l10n.movedToCatalogue : l10n.addedToCatalogue,
+        ),
+      ),
     );
+    _notifyWatchTimeChanged();
+  }
+
+  bool get _isOnWatchlist =>
+      _appServices.libraryStatusOf(widget.item) == LibraryStatus.watchlist;
+
+  /// Adds to the watchlist, or removes with an Undo that restores the entry.
+  Future<void> _toggleWatchlist() async {
+    final item = widget.item;
+    final l10n = context.l10n;
+    final messenger = ScaffoldMessenger.of(context);
+    final watchlist = _appServices.watchlist;
+
+    final entry = watchlist.entryFor(item);
+    if (entry != null) {
+      await watchlist.remove(item);
+      showRemovedFromWatchlistSnackBar(
+        messenger,
+        l10n,
+        onUndo: () async {
+          await watchlist.restore(entry);
+          if (mounted) setState(() {});
+        },
+      );
+    } else {
+      final result = await watchlist.add(item);
+      if (result == WatchlistAddResult.added) {
+        showWatchlistSnackBar(messenger, l10n.addedToWatchlist);
+      }
+    }
     _notifyWatchTimeChanged();
   }
 
@@ -300,6 +340,8 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
       return;
     }
 
+    // Read before the action: it takes the show off the watchlist.
+    final wasOnWatchlist = _isOnWatchlist;
     final record = await _appServices.addEpisodeToCatalogue(
       show: show,
       episode: episode,
@@ -315,6 +357,12 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
       return;
     }
 
+    if (wasOnWatchlist) {
+      showWatchlistSnackBar(
+        ScaffoldMessenger.of(context),
+        l10n.movedToCatalogue,
+      );
+    }
     _notifyWatchTimeChanged();
   }
 
@@ -369,6 +417,8 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
       return;
     }
 
+    // Read before the action: it takes the show off the watchlist.
+    final wasOnWatchlist = _isOnWatchlist;
     final addedCount = await _appServices.addSeasonToCatalogue(
       show: show,
       episodes: season.episodes,
@@ -384,6 +434,12 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
       return;
     }
 
+    if (wasOnWatchlist) {
+      showWatchlistSnackBar(
+        ScaffoldMessenger.of(context),
+        l10n.movedToCatalogue,
+      );
+    }
     _notifyWatchTimeChanged();
   }
 
@@ -763,14 +819,18 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          _buildWatchlistButton(),
           if (filmWatched) ...[
             const SizedBox(height: 12),
             _buildFavoriteButton(isFavorite: isFavorite),
           ],
         ],
         if (!isFilm) ...[
+          const SizedBox(height: 20),
+          _buildWatchlistButton(),
           if (inCatalogue) ...[
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
             _buildFollowedButton(isFollowed: isFollowed),
             const SizedBox(height: 12),
             _buildFavoriteButton(isFavorite: isFavorite),
@@ -867,6 +927,13 @@ class _MediaDetailSheetState extends State<MediaDetailSheet> {
           sliver: SliverList.list(children: trailing),
         ),
       ],
+    );
+  }
+
+  Widget _buildWatchlistButton() {
+    return WatchlistButton(
+      state: watchlistButtonStateFor(_appServices.libraryStatusOf(widget.item)),
+      onPressed: _guarded(_toggleWatchlist),
     );
   }
 

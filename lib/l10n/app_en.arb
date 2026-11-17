@@ -426,5 +426,12 @@
   "watchlistEmptyTitle": "Your watchlist is empty",
   "watchlistEmptyBody": "Save films and shows you want to watch from their details.",
   "watchlistEmptyCta": "Find something to watch",
-  "watchlistNoFilterMatches": "No titles match your filters"
+  "watchlistNoFilterMatches": "No titles match your filters",
+  "addToWatchlist": "Add to Watchlist",
+  "onWatchlist": "On Watchlist",
+  "addedToWatchlist": "Added to watchlist",
+  "movedToCatalogue": "Moved from watchlist to your catalogue",
+  "alreadyInCatalogueHint": "Already in your catalogue",
+  "showAddedToWatchlist": "Added to your watchlist. Mark an episode as watched to add it to your catalogue.",
+  "alreadyOnWatchlist": "Already on your watchlist"
 }

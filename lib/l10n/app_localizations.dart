@@ -1479,6 +1479,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No titles match your filters'**
   String get watchlistNoFilterMatches;
+
+  /// No description provided for @addToWatchlist.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to Watchlist'**
+  String get addToWatchlist;
+
+  /// No description provided for @onWatchlist.
+  ///
+  /// In en, this message translates to:
+  /// **'On Watchlist'**
+  String get onWatchlist;
+
+  /// No description provided for @addedToWatchlist.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to watchlist'**
+  String get addedToWatchlist;
+
+  /// No description provided for @movedToCatalogue.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved from watchlist to your catalogue'**
+  String get movedToCatalogue;
+
+  /// No description provided for @alreadyInCatalogueHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Already in your catalogue'**
+  String get alreadyInCatalogueHint;
+
+  /// No description provided for @showAddedToWatchlist.
+  ///
+  /// In en, this message translates to:
+  /// **'Added to your watchlist. Mark an episode as watched to add it to your catalogue.'**
+  String get showAddedToWatchlist;
+
+  /// No description provided for @alreadyOnWatchlist.
+  ///
+  /// In en, this message translates to:
+  /// **'Already on your watchlist'**
+  String get alreadyOnWatchlist;
 }
 
 class _AppLocalizationsDelegate

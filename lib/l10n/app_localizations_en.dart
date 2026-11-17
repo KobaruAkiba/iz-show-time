@@ -819,4 +819,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get watchlistNoFilterMatches => 'No titles match your filters';
+
+  @override
+  String get addToWatchlist => 'Add to Watchlist';
+
+  @override
+  String get onWatchlist => 'On Watchlist';
+
+  @override
+  String get addedToWatchlist => 'Added to watchlist';
+
+  @override
+  String get movedToCatalogue => 'Moved from watchlist to your catalogue';
+
+  @override
+  String get alreadyInCatalogueHint => 'Already in your catalogue';
+
+  @override
+  String get showAddedToWatchlist =>
+      'Added to your watchlist. Mark an episode as watched to add it to your catalogue.';
+
+  @override
+  String get alreadyOnWatchlist => 'Already on your watchlist';
 }
