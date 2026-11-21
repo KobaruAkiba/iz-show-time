@@ -74,6 +74,9 @@ class _MyAppState extends State<MyApp> {
         userDataStore: widget.appServices.userDataStore,
         navigatorKey: appNavigatorKey,
       );
+      // On cold start the first resume arrives before initialize, so the
+      // coordinator's clear is skipped: clear the stale notification here.
+      await NotificationService().cancelNewEpisodesNotification();
       await NativeBackgroundScheduler.instance.initialize();
       await NativeBackgroundScheduler.instance.registerEpisodeChecks();
       await widget.appServices.startBackgroundTasks();

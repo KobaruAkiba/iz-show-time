@@ -3,13 +3,20 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 
 import '../services/app_services.dart';
+import 'notification_service.dart';
 
-/// Tracks whether the app is open in the foreground and reloads alerts on resume.
+/// Tracks whether the app is open in the foreground, reloads alerts and
+/// clears the stale new episodes notification on resume.
 class AppLifecycleCoordinator with WidgetsBindingObserver {
-  AppLifecycleCoordinator({required AppServices appServices})
-      : _appServices = appServices;
+  AppLifecycleCoordinator({
+    required AppServices appServices,
+    Future<void> Function()? clearNewEpisodesNotification,
+  })  : _appServices = appServices,
+        _clearNewEpisodesNotification = clearNewEpisodesNotification ??
+            NotificationService().cancelNewEpisodesNotification;
 
   final AppServices _appServices;
+  final Future<void> Function() _clearNewEpisodesNotification;
 
   void attach() {
     WidgetsBinding.instance.addObserver(this);
@@ -26,6 +33,7 @@ class AppLifecycleCoordinator with WidgetsBindingObserver {
 
     if (state == AppLifecycleState.resumed) {
       unawaited(_onResumed());
+      unawaited(_clearNewEpisodesNotification());
     }
   }
 

@@ -187,4 +187,17 @@ class NotificationService {
       );
     }
   }
+
+  /// Removes the new episodes notification from the tray, if shown.
+  Future<void> cancelNewEpisodesNotification() async {
+    if (!_initialized) return;
+
+    try {
+      await _plugin.cancel(id: _newEpisodesNotificationId);
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Failed to cancel new episodes notification: $error\n$stackTrace',
+      );
+    }
+  }
 }
