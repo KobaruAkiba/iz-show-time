@@ -266,6 +266,7 @@ void main() {
           newEpisodeAlerts: const [],
           appInForeground: true,
           notifiedEpisodeIds: const {},
+          appForegroundHeartbeatAt: DateTime.now(),
         ),
         tmdbService: _TwoEpisodeStubTmdbService(),
         outbox: outbox,
@@ -278,6 +279,31 @@ void main() {
       expect(storedEpisodeIds(), hasLength(5));
       expect(notifications, isEmpty);
       expect(outbox.notifiedEpisodeIds, isEmpty);
+    });
+
+    test('notifies when the foreground flag is stale', () async {
+      final notifications = <({int count, bool silent})>[];
+
+      // Left true by a crash: the heartbeat stopped an hour ago.
+      await EpisodeCheckService.checkAndStore(
+        snapshot: UserDataSnapshot(
+          catalogue: snapshot.catalogue,
+          watchHistory: snapshot.watchHistory,
+          newEpisodeAlerts: const [],
+          appInForeground: true,
+          notifiedEpisodeIds: const {},
+          appForegroundHeartbeatAt:
+              DateTime.now().subtract(const Duration(hours: 1)),
+        ),
+        tmdbService: _TwoEpisodeStubTmdbService(),
+        outbox: outbox,
+        notify: (count, {required silent}) async {
+          notifications.add((count: count, silent: silent));
+          return true;
+        },
+      );
+
+      expect(notifications, [(count: 5, silent: false)]);
     });
 
     test('a transient TMDB failure does not notify the same episode again',

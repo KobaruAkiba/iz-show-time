@@ -342,6 +342,29 @@ void main() {
       expect(Hive.isBoxOpen(StorageConstants.catalogueBoxName), isFalse);
     });
 
+    test('saving the foreground flag writes a heartbeat', () async {
+      await store.saveAppInForeground(true);
+
+      final heartbeatAt = await store.loadAppForegroundHeartbeatAt();
+      expect(heartbeatAt, isNotNull);
+      expect(
+        DateTime.now().difference(heartbeatAt!).abs(),
+        lessThan(const Duration(seconds: 5)),
+      );
+
+      await store.flush();
+      await store.close();
+      final snapshot = await HiveUserDataStore.readSnapshot();
+      expect(snapshot!.appForegroundHeartbeatAt, heartbeatAt);
+    });
+
+    test('clearAll removes the foreground heartbeat', () async {
+      await store.saveAppInForeground(true);
+      await store.clearAll();
+
+      expect(await store.loadAppForegroundHeartbeatAt(), isNull);
+    });
+
     test('readSnapshot leaves an outdated schema to the owner', () async {
       await store.catalogueBox.put(
         3,
@@ -488,6 +511,10 @@ void main() {
 
       expect(
         backupMeta.containsKey(StorageConstants.appInForegroundKey),
+        isFalse,
+      );
+      expect(
+        backupMeta.containsKey(StorageConstants.appForegroundHeartbeatAtKey),
         isFalse,
       );
       expect(

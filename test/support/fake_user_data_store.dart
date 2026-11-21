@@ -185,8 +185,12 @@ class FakeUserDataStore implements UserDataStore {
   @override
   Future<bool> loadAppInForeground() async => appInForeground;
 
+  /// Every value passed to [saveAppInForeground], in order.
+  final List<bool> foregroundWrites = [];
+
   @override
   Future<void> saveAppInForeground(bool isInForeground) async {
+    foregroundWrites.add(isInForeground);
     appInForeground = isInForeground;
   }
 

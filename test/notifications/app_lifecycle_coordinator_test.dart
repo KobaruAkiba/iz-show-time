@@ -10,17 +10,22 @@ void main() {
 
   group('AppLifecycleCoordinator', () {
     late AppLifecycleCoordinator coordinator;
+    late FakeUserDataStore store;
     late int clearCount;
 
     setUp(() {
       final appServices = AppServices();
-      appServices.userDataStore = FakeUserDataStore();
+      store = FakeUserDataStore();
+      appServices.userDataStore = store;
       clearCount = 0;
       coordinator = AppLifecycleCoordinator(
         appServices: appServices,
         clearNewEpisodesNotification: () async => clearCount++,
+        heartbeatInterval: const Duration(minutes: 5),
       );
     });
+
+    tearDown(() => coordinator.detach());
 
     test('clears the new episodes notification on resume', () {
       coordinator.didChangeAppLifecycleState(AppLifecycleState.resumed);
@@ -38,6 +43,34 @@ void main() {
       }
 
       expect(clearCount, 0);
+    });
+
+    testWidgets('refreshes the foreground heartbeat while resumed',
+        (tester) async {
+      coordinator.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await tester.pump(const Duration(minutes: 5));
+
+      expect(store.foregroundWrites, [true, true]);
+      coordinator.detach();
+    });
+
+    testWidgets('does not start a second heartbeat on a repeated resume',
+        (tester) async {
+      coordinator.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      coordinator.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await tester.pump(const Duration(minutes: 5));
+
+      expect(store.foregroundWrites, [true, true, true]);
+      coordinator.detach();
+    });
+
+    testWidgets('stops the heartbeat when paused', (tester) async {
+      coordinator.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      coordinator.didChangeAppLifecycleState(AppLifecycleState.paused);
+      await tester.pump(const Duration(minutes: 15));
+
+      expect(store.foregroundWrites, [true, false]);
+      coordinator.detach();
     });
   });
 }

@@ -158,7 +158,7 @@ class EpisodeCheckService {
       );
       alerts = result.allAlerts;
 
-      if (!snapshot.appInForeground) {
+      if (!snapshot.isAppOpenAt(DateTime.now())) {
         final eligible = episodesEligibleForSystemNotification(
           alerts: alerts,
           alreadyNotifiedEpisodeIds: notified,

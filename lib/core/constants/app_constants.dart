@@ -4,6 +4,7 @@ class AppConstants {
   /// Covers DNS + TCP + TLS. Short enough that a stuck handshake is retried
   /// quickly, long enough for slow mobile networks (EDGE, roaming).
   static const Duration connectionTimeout = Duration(seconds: 10);
+
   /// Max silence between response chunks, not a total duration: TMDB payloads
   /// are a few KB, so 15s without data means the connection is dead.
   static const Duration receiveTimeout = Duration(seconds: 15);
@@ -54,6 +55,14 @@ class AppConstants {
   /// On resume, the in-app refresh runs only when the last one is older than
   /// this: the periodic timer does not fire while the app is suspended.
   static const Duration resumeRefreshMinInterval = Duration(minutes: 15);
+
+  /// How often the open app refreshes its foreground heartbeat.
+  static const Duration appForegroundHeartbeatInterval = Duration(minutes: 5);
+
+  /// A foreground flag whose heartbeat is older than this is left over from a
+  /// crash or a kill: the background check treats the app as closed.
+  static const Duration appForegroundHeartbeatStaleAfter =
+      Duration(minutes: 15);
 
   /// Initial / incremental page size for lazy-loaded lists.
   static const int listPageSize = 15;

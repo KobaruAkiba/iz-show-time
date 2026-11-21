@@ -34,7 +34,6 @@ Future<void> main() async {
 Future<void> _startApp() async {
   try {
     final appServices = await AppBootstrap.initializeServices();
-    await appServices.userDataStore.saveAppInForeground(true);
 
     // Native plugins can hang before an Activity exists — bootstrap after first frame.
     runApp(MyApp(appServices: appServices));

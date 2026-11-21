@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:hive_ce_flutter/hive_flutter.dart';
 
+import '../../core/constants/app_constants.dart';
 import '../../core/constants/storage_constants.dart';
 import '../models/catalogue_item.dart';
 import '../models/new_episode_alert.dart';
@@ -20,6 +21,7 @@ class UserDataSnapshot {
   final Set<int> notifiedEpisodeIds;
   final DateTime? lastEpisodeCheckAt;
   final DateTime? appLeftForegroundAt;
+  final DateTime? appForegroundHeartbeatAt;
 
   const UserDataSnapshot({
     required this.catalogue,
@@ -29,7 +31,17 @@ class UserDataSnapshot {
     required this.notifiedEpisodeIds,
     this.lastEpisodeCheckAt,
     this.appLeftForegroundAt,
+    this.appForegroundHeartbeatAt,
   });
+
+  /// Whether the app was open at [now]: a foreground flag without a recent
+  /// heartbeat was left behind by a crash or by an older app version.
+  bool isAppOpenAt(DateTime now) {
+    final heartbeatAt = appForegroundHeartbeatAt;
+    if (!appInForeground || heartbeatAt == null) return false;
+    return now.difference(heartbeatAt) <=
+        AppConstants.appForegroundHeartbeatStaleAfter;
+  }
 }
 
 /// Hive-backed persistence for catalogue and watch history.
@@ -107,6 +119,7 @@ class HiveUserDataStore implements UserDataStore {
         notifiedEpisodeIds: await store.loadNotifiedEpisodeIds(),
         lastEpisodeCheckAt: await store.loadLastEpisodeCheckAt(),
         appLeftForegroundAt: await store.loadAppLeftForegroundAt(),
+        appForegroundHeartbeatAt: await store.loadAppForegroundHeartbeatAt(),
       );
     } finally {
       await store.close();
@@ -482,11 +495,13 @@ class HiveUserDataStore implements UserDataStore {
   @override
   Future<void> saveAppInForeground(bool isInForeground) async {
     await open();
+    final now = DateTime.now().toIso8601String();
     await metaBox.putAll({
       StorageConstants.appInForegroundKey: isInForeground,
-      if (!isInForeground)
-        StorageConstants.appLeftForegroundAtKey:
-            DateTime.now().toIso8601String(),
+      if (isInForeground)
+        StorageConstants.appForegroundHeartbeatAtKey: now
+      else
+        StorageConstants.appLeftForegroundAtKey: now,
     });
   }
 
@@ -494,6 +509,13 @@ class HiveUserDataStore implements UserDataStore {
   Future<DateTime?> loadAppLeftForegroundAt() async {
     await open();
     final raw = metaBox.get(StorageConstants.appLeftForegroundAtKey);
+    return raw is String ? DateTime.tryParse(raw) : null;
+  }
+
+  /// See [StorageConstants.appForegroundHeartbeatAtKey].
+  Future<DateTime?> loadAppForegroundHeartbeatAt() async {
+    await open();
+    final raw = metaBox.get(StorageConstants.appForegroundHeartbeatAtKey);
     return raw is String ? DateTime.tryParse(raw) : null;
   }
 
@@ -666,6 +688,7 @@ class HiveUserDataStore implements UserDataStore {
     await metaBox.delete(StorageConstants.lastEpisodeCheckKey);
     await metaBox.delete(StorageConstants.appInForegroundKey);
     await metaBox.delete(StorageConstants.appLeftForegroundAtKey);
+    await metaBox.delete(StorageConstants.appForegroundHeartbeatAtKey);
     await metaBox.delete(StorageConstants.notifiedEpisodeIdsKey);
     await metaBox.delete(
       StorageConstants.notificationPermissionPrePromptShownKey,
