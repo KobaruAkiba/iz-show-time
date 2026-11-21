@@ -5,6 +5,7 @@ import 'package:hive_ce/hive.dart';
 import 'package:iz_show_time_tracker/core/background/background_task_kind.dart';
 import 'package:iz_show_time_tracker/core/network/api_error.dart';
 import 'package:iz_show_time_tracker/core/notifications/episode_check_service.dart';
+import 'package:iz_show_time_tracker/core/notifications/new_episodes_summary.dart';
 import 'package:iz_show_time_tracker/data/models/catalogue_item.dart';
 import 'package:iz_show_time_tracker/data/models/episode_model.dart';
 import 'package:iz_show_time_tracker/data/models/tv_show_summary.dart';
@@ -140,8 +141,11 @@ void main() {
     test('an interrupted run keeps its completed blocks and is resumed',
         () async {
       final notifications = <({int count, bool silent})>[];
-      Future<bool> notify(int count, {required bool silent}) async {
-        notifications.add((count: count, silent: silent));
+      Future<bool> notify(
+        NewEpisodesSummary summary, {
+        required bool silent,
+      }) async {
+        notifications.add((count: summary.episodeCount, silent: silent));
         return true;
       }
 
@@ -203,8 +207,8 @@ void main() {
         snapshot: snapshot,
         tmdbService: _TwoEpisodeStubTmdbService(episodeCount: {1: 4}),
         outbox: outbox,
-        notify: (count, {required silent}) async {
-          notifications.add((count: count, silent: silent));
+        notify: (summary, {required silent}) async {
+          notifications.add((count: summary.episodeCount, silent: silent));
           return true;
         },
       );
@@ -221,10 +225,34 @@ void main() {
       );
     });
 
+    test('names the shows in the notification', () async {
+      final summaries = <NewEpisodesSummary>[];
+
+      await EpisodeCheckService.checkAndStore(
+        snapshot: snapshot,
+        tmdbService: _TwoEpisodeStubTmdbService(),
+        outbox: outbox,
+        notify: (summary, {required silent}) async {
+          summaries.add(summary);
+          return true;
+        },
+      );
+
+      expect(summaries, hasLength(1));
+      expect(summaries.single.episodeCount, 5);
+      expect(
+        summaries.single.showTitles,
+        ['Show 1', 'Show 2', 'Show 3', 'Show 4', 'Show 5'],
+      );
+    });
+
     test('restarts the count after the app was opened', () async {
       final notifications = <({int count, bool silent})>[];
-      Future<bool> notify(int count, {required bool silent}) async {
-        notifications.add((count: count, silent: silent));
+      Future<bool> notify(
+        NewEpisodesSummary summary, {
+        required bool silent,
+      }) async {
+        notifications.add((count: summary.episodeCount, silent: silent));
         return true;
       }
 
@@ -270,8 +298,8 @@ void main() {
         ),
         tmdbService: _TwoEpisodeStubTmdbService(),
         outbox: outbox,
-        notify: (count, {required silent}) async {
-          notifications.add((count: count, silent: silent));
+        notify: (summary, {required silent}) async {
+          notifications.add((count: summary.episodeCount, silent: silent));
           return true;
         },
       );
@@ -297,8 +325,8 @@ void main() {
         ),
         tmdbService: _TwoEpisodeStubTmdbService(),
         outbox: outbox,
-        notify: (count, {required silent}) async {
-          notifications.add((count: count, silent: silent));
+        notify: (summary, {required silent}) async {
+          notifications.add((count: summary.episodeCount, silent: silent));
           return true;
         },
       );
@@ -309,8 +337,11 @@ void main() {
     test('a transient TMDB failure does not notify the same episode again',
         () async {
       final notifications = <({int count, bool silent})>[];
-      Future<bool> notify(int count, {required bool silent}) async {
-        notifications.add((count: count, silent: silent));
+      Future<bool> notify(
+        NewEpisodesSummary summary, {
+        required bool silent,
+      }) async {
+        notifications.add((count: summary.episodeCount, silent: silent));
         return true;
       }
 
@@ -358,8 +389,8 @@ void main() {
         snapshot: snapshot,
         tmdbService: _TwoEpisodeStubTmdbService(),
         outbox: outbox,
-        notify: (count, {required silent}) async {
-          notifications.add((count: count, silent: silent));
+        notify: (summary, {required silent}) async {
+          notifications.add((count: summary.episodeCount, silent: silent));
           return true;
         },
         blockSize: 2,
@@ -380,8 +411,8 @@ void main() {
         snapshot: snapshot,
         tmdbService: _TwoEpisodeStubTmdbService(),
         outbox: outbox,
-        notify: (count, {required silent}) async {
-          notifications.add((count: count, silent: silent));
+        notify: (summary, {required silent}) async {
+          notifications.add((count: summary.episodeCount, silent: silent));
           return false;
         },
       );
@@ -396,8 +427,8 @@ void main() {
         snapshot: snapshot,
         tmdbService: _TwoEpisodeStubTmdbService(),
         outbox: outbox,
-        notify: (count, {required silent}) async {
-          notifications.add((count: count, silent: silent));
+        notify: (summary, {required silent}) async {
+          notifications.add((count: summary.episodeCount, silent: silent));
           return true;
         },
       );
@@ -414,8 +445,8 @@ void main() {
         snapshot: snapshot,
         tmdbService: _TwoEpisodeStubTmdbService(),
         outbox: outbox,
-        notify: (count, {required silent}) async {
-          notifications.add((count: count, silent: silent));
+        notify: (summary, {required silent}) async {
+          notifications.add((count: summary.episodeCount, silent: silent));
           return notifications.length > 1;
         },
         blockSize: 2,

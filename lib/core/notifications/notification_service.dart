@@ -5,6 +5,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../data/repositories/user_data_store.dart';
 import '../../l10n/l10n.dart';
+import 'new_episodes_notification_text.dart';
+import 'new_episodes_summary.dart';
 import 'notification_permission_preprompt.dart';
 
 /// Sends local system notifications for newly detected TV episodes.
@@ -156,20 +158,18 @@ class NotificationService {
     return false;
   }
 
-  /// Shows the new episodes notification for [count] episodes. Returns
-  /// `false` when it was not shown: service not initialized, nothing to
-  /// count, notifications disabled by the OS, or a plugin error.
+  /// Shows the new episodes notification for [summary]. Returns `false` when
+  /// it was not shown: service not initialized, nothing to count,
+  /// notifications disabled by the OS, or a plugin error.
   Future<bool> showNewEpisodesNotification({
-    required int count,
+    required NewEpisodesSummary summary,
     bool silent = false,
   }) async {
-    if (!_initialized || count <= 0) return false;
+    if (!_initialized || summary.episodeCount <= 0) return false;
 
     final l10n = AppL10n.current;
     final title = l10n.notificationTitle;
-    final body = count == 1
-        ? l10n.notificationBodyOne
-        : l10n.notificationBodyOther(count);
+    final body = newEpisodesNotificationBody(l10n, summary);
 
     final details = NotificationDetails(
       android: AndroidNotificationDetails(
@@ -180,6 +180,8 @@ class NotificationService {
         priority: Priority.high,
         playSound: true,
         silent: silent,
+        // Expanded, the notification shows every show named in the body.
+        styleInformation: BigTextStyleInformation(body),
       ),
       iOS: DarwinNotificationDetails(presentSound: !silent),
       macOS: DarwinNotificationDetails(presentSound: !silent),

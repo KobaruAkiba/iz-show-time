@@ -1270,6 +1270,25 @@ abstract class AppLocalizations {
   /// **'{count} new episodes available. Check Continue Watching on Home.'**
   String notificationBodyOther(int count);
 
+  /// No description provided for @notificationBodyOneShow.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{A new episode of {show}} other{{count} new episodes of {show}}}'**
+  String notificationBodyOneShow(int count, String show);
+
+  /// No description provided for @notificationBodyTwoShows.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} new episodes of {first} and {second}'**
+  String notificationBodyTwoShows(int count, String first, String second);
+
+  /// No description provided for @notificationBodyManyShows.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} new episodes of {first}, {second} and {others, plural, =1{1 more show} other{{others} more shows}}'**
+  String notificationBodyManyShows(
+      int count, String first, String second, int others);
+
   /// No description provided for @settingsNotifications.
   ///
   /// In en, this message translates to:

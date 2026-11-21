@@ -391,6 +391,30 @@
       "count": {"type": "int"}
     }
   },
+  "notificationBodyOneShow": "{count, plural, =1{A new episode of {show}} other{{count} new episodes of {show}}}",
+  "@notificationBodyOneShow": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "show": {"type": "String"}
+    }
+  },
+  "notificationBodyTwoShows": "{count} new episodes of {first} and {second}",
+  "@notificationBodyTwoShows": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "first": {"type": "String"},
+      "second": {"type": "String"}
+    }
+  },
+  "notificationBodyManyShows": "{count} new episodes of {first}, {second} and {others, plural, =1{1 more show} other{{others} more shows}}",
+  "@notificationBodyManyShows": {
+    "placeholders": {
+      "count": {"type": "int"},
+      "first": {"type": "String"},
+      "second": {"type": "String"},
+      "others": {"type": "int"}
+    }
+  },
   "settingsNotifications": "Notifications",
   "settingsNotificationsTitle": "Episode alerts",
   "settingsNotificationsOn": "On. You are alerted when a followed show airs a new episode.",

@@ -10,13 +10,14 @@ import '../constants/app_constants.dart';
 import '../network/network_feedback.dart';
 import 'episode_notification_policy.dart';
 import 'new_episode_checker.dart';
+import 'new_episodes_summary.dart';
 import 'notification_service.dart';
 
-/// Raises the new episodes notification for [count] episodes; when [silent]
-/// it updates the notification without sound or vibration. Completes with
+/// Raises the new episodes notification for [summary]; when [silent] it
+/// updates the notification without sound or vibration. Completes with
 /// `true` only if the notification was shown.
 typedef NewEpisodesNotifier = Future<bool> Function(
-  int count, {
+  NewEpisodesSummary summary, {
   required bool silent,
 });
 
@@ -54,9 +55,9 @@ class EpisodeCheckService {
         snapshot: snapshot,
         tmdbService: tmdbService,
         outbox: outbox,
-        notify: (count, {required silent}) =>
+        notify: (summary, {required silent}) =>
             NotificationService().showNewEpisodesNotification(
-          count: count,
+          summary: summary,
           silent: silent,
         ),
         taskKind: taskKind,
@@ -172,7 +173,10 @@ class EpisodeCheckService {
           };
           // A single notification, replaced each time with the new total.
           final shown = await notify(
-            candidateNotifiedAt.length,
+            summarizeNotifiedEpisodes(
+              episodeIds: candidateNotifiedAt.keys,
+              alerts: alerts,
+            ),
             silent: alertedThisRun,
           );
           // Episodes of a notification not shown (e.g. notifications off)
