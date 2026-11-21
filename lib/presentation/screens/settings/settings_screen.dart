@@ -13,6 +13,7 @@ import '../../widgets/app_page_header.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/services/app_services.dart';
 import '../../../l10n/l10n.dart';
+import 'background_check_status_tile.dart';
 import 'notifications_tile.dart';
 
 /// Settings screen with app preferences
@@ -48,6 +49,7 @@ class SettingsScreen extends StatelessWidget {
                   const Divider(),
                   _buildSectionTitle(context, l10n.settingsNotifications),
                   NotificationsTile(isActive: isActive),
+                  BackgroundCheckStatusTile(isActive: isActive),
                   const Divider(),
                   _buildSectionTitle(context, l10n.settingsCredits),
                   _buildTmdbAttribution(context),

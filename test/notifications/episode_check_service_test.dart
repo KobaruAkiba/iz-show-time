@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
+import 'package:iz_show_time_tracker/core/background/background_task_kind.dart';
 import 'package:iz_show_time_tracker/core/notifications/episode_check_service.dart';
 import 'package:iz_show_time_tracker/data/models/catalogue_item.dart';
 import 'package:iz_show_time_tracker/data/models/episode_model.dart';
@@ -167,6 +168,18 @@ void main() {
       // shows 1 and 2, then adds 3, 4 and 5.
       expect(notifications, [4, 5]);
       expect(outbox.resumeAfterShowId, 2);
+    });
+
+    test('stores the kind of task that ran the check', () async {
+      await EpisodeCheckService.checkAndStore(
+        snapshot: snapshot,
+        tmdbService: _TwoEpisodeStubTmdbService(),
+        outbox: outbox,
+        notify: (_) async {},
+        taskKind: BackgroundTaskKind.nightly,
+      );
+
+      expect(outbox.result!.taskKind, BackgroundTaskKind.nightly);
     });
 
     test('counts every aired episode of a show, not one per show', () async {

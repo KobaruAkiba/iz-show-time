@@ -726,6 +726,27 @@ class AppLocalizationsEn extends AppLocalizations {
       'Turn on notifications for IzShowTime in your device settings.';
 
   @override
+  String get settingsLastBackgroundCheckTitle => 'Last background check';
+
+  @override
+  String get settingsLastBackgroundCheckNever => 'Never run';
+
+  @override
+  String get settingsLastBackgroundCheckUnavailable =>
+      'Not available right now. Reopen Settings to retry.';
+
+  @override
+  String settingsLastBackgroundCheckWithKind(String date, String kind) {
+    return '$date ($kind)';
+  }
+
+  @override
+  String get settingsBackgroundTaskPeriodic => 'periodic';
+
+  @override
+  String get settingsBackgroundTaskNightly => 'nightly';
+
+  @override
   String get notificationPermissionTitle => 'Episode alerts';
 
   @override

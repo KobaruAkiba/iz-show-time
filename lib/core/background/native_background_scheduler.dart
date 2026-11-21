@@ -6,8 +6,10 @@ import 'package:workmanager/workmanager.dart';
 import '../constants/app_constants.dart';
 import 'background_entrypoint.dart';
 import 'background_task_constants.dart';
+import 'nightly_check_scheduler.dart';
 
-/// Registers native periodic episode checks on Android and iOS.
+/// Registers native episode checks: periodic on Android and iOS, plus the
+/// nightly processing task on iOS.
 class NativeBackgroundScheduler {
   NativeBackgroundScheduler._();
 
@@ -44,5 +46,6 @@ class NativeBackgroundScheduler {
       ),
       existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
     );
+    await NightlyCheckScheduler.schedule();
   }
 }

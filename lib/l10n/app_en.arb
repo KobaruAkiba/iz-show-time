@@ -397,6 +397,18 @@
   "settingsNotificationsOff": "Off. Tap to turn on.",
   "settingsNotificationsBlockedTitle": "Notifications are blocked",
   "settingsNotificationsBlockedBody": "Turn on notifications for IzShowTime in your device settings.",
+  "settingsLastBackgroundCheckTitle": "Last background check",
+  "settingsLastBackgroundCheckNever": "Never run",
+  "settingsLastBackgroundCheckUnavailable": "Not available right now. Reopen Settings to retry.",
+  "settingsLastBackgroundCheckWithKind": "{date} ({kind})",
+  "@settingsLastBackgroundCheckWithKind": {
+    "placeholders": {
+      "date": {"type": "String"},
+      "kind": {"type": "String"}
+    }
+  },
+  "settingsBackgroundTaskPeriodic": "periodic",
+  "settingsBackgroundTaskNightly": "nightly",
   "notificationPermissionTitle": "Episode alerts",
   "notificationPermissionBody": "Optional — the app works without them. When on, IzShowTime alerts you when a new episode airs for a show you follow.",
   "notificationPermissionNotNow": "Not now",

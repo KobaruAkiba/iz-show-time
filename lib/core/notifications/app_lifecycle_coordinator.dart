@@ -25,8 +25,15 @@ class AppLifecycleCoordinator with WidgetsBindingObserver {
     unawaited(_persistForegroundState(_isOpenState(state)));
 
     if (state == AppLifecycleState.resumed) {
-      unawaited(_appServices.importBackgroundCheckResult());
+      unawaited(_onResumed());
     }
+  }
+
+  /// Network refresh after the import: a slow import must not overwrite the
+  /// fresher network result.
+  Future<void> _onResumed() async {
+    await _appServices.importBackgroundCheckResult();
+    await _appServices.refreshOnResume();
   }
 
   /// Only [AppLifecycleState.resumed] counts as open.

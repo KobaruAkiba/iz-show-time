@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:hive_ce_flutter/hive_flutter.dart';
 
+import '../../core/background/background_task_kind.dart';
 import '../models/new_episode_alert.dart';
 
 /// Alerts computed by the background episode check.
@@ -9,7 +10,14 @@ class BackgroundCheckResult {
   final List<NewEpisodeAlert> alerts;
   final DateTime checkedAt;
 
-  const BackgroundCheckResult({required this.alerts, required this.checkedAt});
+  /// Task that saved this result; null when unknown (older versions).
+  final BackgroundTaskKind? taskKind;
+
+  const BackgroundCheckResult({
+    required this.alerts,
+    required this.checkedAt,
+    this.taskKind,
+  });
 }
 
 /// Hive box written only by the background isolate.
@@ -26,6 +34,7 @@ class BackgroundCheckOutbox {
   static const String _notifiedEpisodeIdsKey = 'notified_episode_ids';
   static const String _resumeAfterShowIdKey = 'resume_after_show_id';
   static const String _notifiedAtKey = 'notified_at';
+  static const String _taskKindKey = 'task_kind';
 
   final Box<dynamic> _box;
 
@@ -77,6 +86,7 @@ class BackgroundCheckOutbox {
     required Set<int> notifiedEpisodeIds,
     Map<int, DateTime> notifiedAt = const {},
     int? resumeAfterShowId,
+    BackgroundTaskKind? taskKind,
   }) async {
     await _box.putAll({
       _alertsKey: jsonEncode(alerts.map((alert) => alert.toJson()).toList()),
@@ -87,7 +97,10 @@ class BackgroundCheckOutbox {
           '${entry.key}': entry.value.toIso8601String(),
       }),
       if (resumeAfterShowId != null) _resumeAfterShowIdKey: resumeAfterShowId,
+      if (taskKind != null) _taskKindKey: taskKind.storageKey,
     });
+    // Never pair a new checkedAt with the kind of a previous run.
+    if (taskKind == null) await _box.delete(_taskKindKey);
     await _box.flush();
   }
 
@@ -117,6 +130,7 @@ class BackgroundCheckOutbox {
     if (checkedAt == null || decoded is! List) return null;
     return BackgroundCheckResult(
       checkedAt: checkedAt,
+      taskKind: BackgroundTaskKind.fromStorageKey(box.get(_taskKindKey)),
       alerts: [
         for (final entry in decoded)
           if (entry is Map)
