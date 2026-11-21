@@ -29,6 +29,7 @@ class NotificationService {
     UserDataStore? userDataStore,
     GlobalKey<NavigatorState>? navigatorKey,
     bool requestPermissions = true,
+    VoidCallback? onNewEpisodesTap,
   }) async {
     if (_initialized) return;
 
@@ -51,7 +52,12 @@ class NotificationService {
       ),
     );
 
-    await _plugin.initialize(settings: initSettings);
+    await _plugin.initialize(
+      settings: initSettings,
+      onDidReceiveNotificationResponse: (response) {
+        if (isNewEpisodesResponse(response)) onNewEpisodesTap?.call();
+      },
+    );
     _initialized = true;
     if (!requestPermissions) return;
     // Do not await permission prompts before/during early startup.
@@ -62,6 +68,10 @@ class NotificationService {
       ),
     );
   }
+
+  @visibleForTesting
+  static bool isNewEpisodesResponse(NotificationResponse response) =>
+      response.id == _newEpisodesNotificationId;
 
   /// Whether the OS currently lets the app post notifications.
   Future<bool> areNotificationsEnabled() {

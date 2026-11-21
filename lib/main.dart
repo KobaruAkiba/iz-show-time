@@ -14,6 +14,7 @@ import 'core/routing/app_router.dart';
 import 'core/network/network_feedback.dart';
 import 'l10n/l10n.dart';
 import 'presentation/navigation/main_navigator.dart';
+import 'presentation/navigation/main_tab.dart';
 import 'presentation/widgets/startup_error_app.dart';
 
 Future<void> main() async {
@@ -72,6 +73,7 @@ class _MyAppState extends State<MyApp> {
       await NotificationService().initialize(
         userDataStore: widget.appServices.userDataStore,
         navigatorKey: appNavigatorKey,
+        onNewEpisodesTap: () => mainTabRequests.show(MainTab.home),
       );
       // On cold start the first resume arrives before initialize, so the
       // coordinator's clear is skipped: clear the stale notification here.
