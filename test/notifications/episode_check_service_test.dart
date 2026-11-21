@@ -140,8 +140,10 @@ void main() {
     test('an interrupted run keeps its completed blocks and is resumed',
         () async {
       final notifications = <({int count, bool silent})>[];
-      Future<void> notify(int count, {required bool silent}) async =>
-          notifications.add((count: count, silent: silent));
+      Future<bool> notify(int count, {required bool silent}) async {
+        notifications.add((count: count, silent: silent));
+        return true;
+      }
 
       // Blocks of two: [1, 2] completes, [3, 4] is interrupted.
       await expectLater(
@@ -186,7 +188,7 @@ void main() {
         snapshot: snapshot,
         tmdbService: _TwoEpisodeStubTmdbService(),
         outbox: outbox,
-        notify: (_, {required silent}) async {},
+        notify: (_, {required silent}) async => true,
         taskKind: BackgroundTaskKind.nightly,
       );
 
@@ -201,8 +203,10 @@ void main() {
         snapshot: snapshot,
         tmdbService: _TwoEpisodeStubTmdbService(episodeCount: {1: 4}),
         outbox: outbox,
-        notify: (count, {required silent}) async =>
-            notifications.add((count: count, silent: silent)),
+        notify: (count, {required silent}) async {
+          notifications.add((count: count, silent: silent));
+          return true;
+        },
       );
 
       // Show 1 counts 3 episodes, shows 2 to 5 one each.
@@ -219,8 +223,10 @@ void main() {
 
     test('restarts the count after the app was opened', () async {
       final notifications = <({int count, bool silent})>[];
-      Future<void> notify(int count, {required bool silent}) async =>
-          notifications.add((count: count, silent: silent));
+      Future<bool> notify(int count, {required bool silent}) async {
+        notifications.add((count: count, silent: silent));
+        return true;
+      }
 
       await EpisodeCheckService.checkAndStore(
         snapshot: snapshot,
@@ -263,8 +269,10 @@ void main() {
         ),
         tmdbService: _TwoEpisodeStubTmdbService(),
         outbox: outbox,
-        notify: (count, {required silent}) async =>
-            notifications.add((count: count, silent: silent)),
+        notify: (count, {required silent}) async {
+          notifications.add((count: count, silent: silent));
+          return true;
+        },
       );
 
       expect(storedEpisodeIds(), hasLength(5));
@@ -275,8 +283,10 @@ void main() {
     test('a transient TMDB failure does not notify the same episode again',
         () async {
       final notifications = <({int count, bool silent})>[];
-      Future<void> notify(int count, {required bool silent}) async =>
-          notifications.add((count: count, silent: silent));
+      Future<bool> notify(int count, {required bool silent}) async {
+        notifications.add((count: count, silent: silent));
+        return true;
+      }
 
       await EpisodeCheckService.checkAndStore(
         snapshot: snapshot,
@@ -322,14 +332,72 @@ void main() {
         snapshot: snapshot,
         tmdbService: _TwoEpisodeStubTmdbService(),
         outbox: outbox,
-        notify: (count, {required silent}) async =>
-            notifications.add((count: count, silent: silent)),
+        notify: (count, {required silent}) async {
+          notifications.add((count: count, silent: silent));
+          return true;
+        },
         blockSize: 2,
       );
 
       expect(notifications, [
         (count: 2, silent: false),
         (count: 4, silent: true),
+        (count: 5, silent: true),
+      ]);
+    });
+
+    test('does not mark episodes while notifications are off', () async {
+      final notifications = <({int count, bool silent})>[];
+
+      // The notification is not shown (e.g. notifications disabled).
+      await EpisodeCheckService.checkAndStore(
+        snapshot: snapshot,
+        tmdbService: _TwoEpisodeStubTmdbService(),
+        outbox: outbox,
+        notify: (count, {required silent}) async {
+          notifications.add((count: count, silent: silent));
+          return false;
+        },
+      );
+
+      expect(notifications, [(count: 5, silent: false)]);
+      expect(outbox.notifiedEpisodeIds, isEmpty);
+      expect(outbox.notifiedAt, isEmpty);
+
+      // Notifications are enabled again: the same episodes are notified.
+      notifications.clear();
+      await EpisodeCheckService.checkAndStore(
+        snapshot: snapshot,
+        tmdbService: _TwoEpisodeStubTmdbService(),
+        outbox: outbox,
+        notify: (count, {required silent}) async {
+          notifications.add((count: count, silent: silent));
+          return true;
+        },
+      );
+
+      expect(notifications, [(count: 5, silent: false)]);
+      expect(outbox.notifiedEpisodeIds, {12, 22, 32, 42, 52});
+    });
+
+    test('alerts with sound after a notification that was not shown', () async {
+      final notifications = <({int count, bool silent})>[];
+
+      // Blocks of two: the first notification fails, the next ones succeed.
+      await EpisodeCheckService.checkAndStore(
+        snapshot: snapshot,
+        tmdbService: _TwoEpisodeStubTmdbService(),
+        outbox: outbox,
+        notify: (count, {required silent}) async {
+          notifications.add((count: count, silent: silent));
+          return notifications.length > 1;
+        },
+        blockSize: 2,
+      );
+
+      expect(notifications, [
+        (count: 2, silent: false),
+        (count: 4, silent: false),
         (count: 5, silent: true),
       ]);
     });

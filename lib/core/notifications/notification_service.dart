@@ -146,11 +146,14 @@ class NotificationService {
     return false;
   }
 
-  Future<void> showNewEpisodesNotification({
+  /// Shows the new episodes notification for [count] episodes. Returns
+  /// `false` when it was not shown: service not initialized, nothing to
+  /// count, notifications disabled by the OS, or a plugin error.
+  Future<bool> showNewEpisodesNotification({
     required int count,
     bool silent = false,
   }) async {
-    if (!_initialized || count <= 0) return;
+    if (!_initialized || count <= 0) return false;
 
     final l10n = AppL10n.current;
     final title = l10n.notificationTitle;
@@ -175,16 +178,19 @@ class NotificationService {
     );
 
     try {
+      if (!await areNotificationsEnabled()) return false;
       await _plugin.show(
         id: _newEpisodesNotificationId,
         title: title,
         body: body,
         notificationDetails: details,
       );
+      return true;
     } catch (error, stackTrace) {
       debugPrint(
         'Failed to show new episodes notification: $error\n$stackTrace',
       );
+      return false;
     }
   }
 

@@ -13,8 +13,9 @@ import 'new_episode_checker.dart';
 import 'notification_service.dart';
 
 /// Raises the new episodes notification for [count] episodes; when [silent]
-/// it updates the notification without sound or vibration.
-typedef NewEpisodesNotifier = Future<void> Function(
+/// it updates the notification without sound or vibration. Completes with
+/// `true` only if the notification was shown.
+typedef NewEpisodesNotifier = Future<bool> Function(
   int count, {
   required bool silent,
 });
@@ -165,16 +166,27 @@ class EpisodeCheckService {
         );
         if (eligible.isNotEmpty) {
           final now = DateTime.now();
-          notifiedAt = {...notifiedAt, for (final id in eligible) id: now};
-          // A single notification, replaced each time with the new total.
-          await notify(notifiedAt.length, silent: alertedThisRun);
-          alertedThisRun = true;
-          // Drop IDs that are no longer in the current alert snapshot.
-          final activeIds = {
-            for (final alert in alerts) ...alertEpisodeIds(alert),
+          final candidateNotifiedAt = {
+            ...notifiedAt,
+            for (final id in eligible) id: now,
           };
-          notified = {...notified, ...eligible}
-            ..removeWhere((id) => !activeIds.contains(id));
+          // A single notification, replaced each time with the new total.
+          final shown = await notify(
+            candidateNotifiedAt.length,
+            silent: alertedThisRun,
+          );
+          // Episodes of a notification not shown (e.g. notifications off)
+          // stay eligible, so a later block or run can still alert for them.
+          if (shown) {
+            notifiedAt = candidateNotifiedAt;
+            alertedThisRun = true;
+            // Drop IDs that are no longer in the current alert snapshot.
+            final activeIds = {
+              for (final alert in alerts) ...alertEpisodeIds(alert),
+            };
+            notified = {...notified, ...eligible}
+              ..removeWhere((id) => !activeIds.contains(id));
+          }
         }
       }
 
