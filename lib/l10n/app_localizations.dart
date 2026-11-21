@@ -1306,6 +1306,42 @@ abstract class AppLocalizations {
   /// **'Turn on notifications for IzShowTime in your device settings.'**
   String get settingsNotificationsBlockedBody;
 
+  /// No description provided for @settingsLastBackgroundCheckTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Last background check'**
+  String get settingsLastBackgroundCheckTitle;
+
+  /// No description provided for @settingsLastBackgroundCheckNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Never run'**
+  String get settingsLastBackgroundCheckNever;
+
+  /// No description provided for @settingsLastBackgroundCheckUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available right now. Reopen Settings to retry.'**
+  String get settingsLastBackgroundCheckUnavailable;
+
+  /// No description provided for @settingsLastBackgroundCheckWithKind.
+  ///
+  /// In en, this message translates to:
+  /// **'{date} ({kind})'**
+  String settingsLastBackgroundCheckWithKind(String date, String kind);
+
+  /// No description provided for @settingsBackgroundTaskPeriodic.
+  ///
+  /// In en, this message translates to:
+  /// **'periodic'**
+  String get settingsBackgroundTaskPeriodic;
+
+  /// No description provided for @settingsBackgroundTaskNightly.
+  ///
+  /// In en, this message translates to:
+  /// **'nightly'**
+  String get settingsBackgroundTaskNightly;
+
   /// No description provided for @notificationPermissionTitle.
   ///
   /// In en, this message translates to:

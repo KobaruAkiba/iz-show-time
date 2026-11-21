@@ -76,6 +76,7 @@
 		<key>BGTaskSchedulerPermittedIdentifiers</key>
 		<array>
 			<string>com.izshowtime.tracker.episode_check</string>
+			<string>com.izshowtime.tracker.episode_check_nightly</string>
 		</array>
 		<key>CFBundleDocumentTypes</key>
 		<array>

@@ -687,6 +687,9 @@ class AppServices {
     );
   }
 
+  /// Throttled in-app refresh for when the app returns to the foreground.
+  Future<void> refreshOnResume() => backgroundTaskRunner.onAppResumed();
+
   void dispose() {
     backgroundTaskRunner.dispose();
     cacheManager.dispose();

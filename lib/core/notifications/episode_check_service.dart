@@ -5,6 +5,7 @@ import '../../data/models/new_episode_alert.dart';
 import '../../data/repositories/background_check_outbox.dart';
 import '../../data/repositories/hive_user_data_store.dart';
 import '../../data/services/tmdb_service.dart';
+import '../background/background_task_kind.dart';
 import '../constants/app_constants.dart';
 import '../network/network_feedback.dart';
 import 'episode_notification_policy.dart';
@@ -34,6 +35,7 @@ class EpisodeCheckService {
   /// them and writes its result to [BackgroundCheckOutbox].
   static Future<void> runNativeBackgroundCheck({
     required TmdbService tmdbService,
+    required BackgroundTaskKind taskKind,
   }) async {
     final snapshot = await HiveUserDataStore.readSnapshot();
     if (snapshot == null) return;
@@ -46,6 +48,7 @@ class EpisodeCheckService {
         outbox: outbox,
         notify: (count) =>
             NotificationService().showNewEpisodesNotification(count: count),
+        taskKind: taskKind,
       );
     } finally {
       await outbox.close();
@@ -58,6 +61,8 @@ class EpisodeCheckService {
   /// The OS may end a background run at any time (about 30 s on iOS): what
   /// the completed blocks found is kept, shows not reached keep their previous
   /// alert, and the next run resumes after the last show checked.
+  ///
+  /// [taskKind] is stored with each save for the diagnostics in Settings.
   @visibleForTesting
   static Future<void> checkAndStore({
     required UserDataSnapshot snapshot,
@@ -65,6 +70,7 @@ class EpisodeCheckService {
     required BackgroundCheckOutbox outbox,
     required Future<void> Function(int count) notify,
     int blockSize = AppConstants.episodeCheckBlockSize,
+    BackgroundTaskKind? taskKind,
   }) async {
     final shows = rotateShowsAfter(
       [
@@ -112,6 +118,7 @@ class EpisodeCheckService {
         checkedAt: DateTime.now(),
         notifiedEpisodeIds: notified,
         notifiedAt: notifiedAt,
+        taskKind: taskKind,
       );
       return;
     }
@@ -163,6 +170,7 @@ class EpisodeCheckService {
         notifiedEpisodeIds: notified,
         notifiedAt: notifiedAt,
         resumeAfterShowId: block.last.id,
+        taskKind: taskKind,
       );
     }
   }

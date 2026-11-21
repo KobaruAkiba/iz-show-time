@@ -18,6 +18,13 @@ import workmanager_apple
       earliestBeginInSeconds: NSNumber(value: 2 * 60 * 60)
     )
 
+    // Nightly processing task (must match Dart
+    // BackgroundTaskConstants.nightlyCheckUniqueName + Info.plist). One-shot:
+    // Dart resubmits it at every launch and from each run.
+    WorkmanagerPlugin.registerBGProcessingTask(
+      withIdentifier: "com.izshowtime.tracker.episode_check_nightly"
+    )
+
     WorkmanagerPlugin.setPluginRegistrantCallback { registry in
       GeneratedPluginRegistrant.register(with: registry)
     }

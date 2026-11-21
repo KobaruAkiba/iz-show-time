@@ -51,6 +51,10 @@ class AppConstants {
   /// First WorkManager run after registration (Android minimum ~15 minutes).
   static const int notificationCheckInitialDelayMinutes = 15;
 
+  /// On resume, the in-app refresh runs only when the last one is older than
+  /// this: the periodic timer does not fire while the app is suspended.
+  static const Duration resumeRefreshMinInterval = Duration(minutes: 15);
+
   /// Initial / incremental page size for lazy-loaded lists.
   static const int listPageSize = 15;
 
