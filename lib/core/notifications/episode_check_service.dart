@@ -12,6 +12,13 @@ import 'episode_notification_policy.dart';
 import 'new_episode_checker.dart';
 import 'notification_service.dart';
 
+/// Raises the new episodes notification for [count] episodes; when [silent]
+/// it updates the notification without sound or vibration.
+typedef NewEpisodesNotifier = Future<void> Function(
+  int count, {
+  required bool silent,
+});
+
 /// [shows] ordered by id, starting after [resumeAfterShowId] and wrapping.
 @visibleForTesting
 List<TvShow> rotateShowsAfter(List<TvShow> shows, int? resumeAfterShowId) {
@@ -46,8 +53,11 @@ class EpisodeCheckService {
         snapshot: snapshot,
         tmdbService: tmdbService,
         outbox: outbox,
-        notify: (count) =>
-            NotificationService().showNewEpisodesNotification(count: count),
+        notify: (count, {required silent}) =>
+            NotificationService().showNewEpisodesNotification(
+          count: count,
+          silent: silent,
+        ),
         taskKind: taskKind,
       );
     } finally {
@@ -68,7 +78,7 @@ class EpisodeCheckService {
     required UserDataSnapshot snapshot,
     required TmdbService tmdbService,
     required BackgroundCheckOutbox outbox,
-    required Future<void> Function(int count) notify,
+    required NewEpisodesNotifier notify,
     int blockSize = AppConstants.episodeCheckBlockSize,
     BackgroundTaskKind? taskKind,
   }) async {
@@ -124,6 +134,9 @@ class EpisodeCheckService {
     }
 
     final checker = NewEpisodeChecker(tmdbService: tmdbService);
+    // Only the run's first notification sounds; later blocks of the same run
+    // replace its text silently.
+    var alertedThisRun = false;
     for (var start = 0; start < shows.length; start += blockSize) {
       final block = shows.sublist(
         start,
@@ -154,7 +167,8 @@ class EpisodeCheckService {
           final now = DateTime.now();
           notifiedAt = {...notifiedAt, for (final id in eligible) id: now};
           // A single notification, replaced each time with the new total.
-          await notify(notifiedAt.length);
+          await notify(notifiedAt.length, silent: alertedThisRun);
+          alertedThisRun = true;
           // Drop IDs that are no longer in the current alert snapshot.
           final activeIds = {
             for (final alert in alerts) ...alertEpisodeIds(alert),

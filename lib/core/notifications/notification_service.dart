@@ -146,7 +146,10 @@ class NotificationService {
     return false;
   }
 
-  Future<void> showNewEpisodesNotification({required int count}) async {
+  Future<void> showNewEpisodesNotification({
+    required int count,
+    bool silent = false,
+  }) async {
     if (!_initialized || count <= 0) return;
 
     final l10n = AppL10n.current;
@@ -163,9 +166,10 @@ class NotificationService {
         importance: Importance.high,
         priority: Priority.high,
         playSound: true,
+        silent: silent,
       ),
-      iOS: const DarwinNotificationDetails(),
-      macOS: const DarwinNotificationDetails(),
+      iOS: DarwinNotificationDetails(presentSound: !silent),
+      macOS: DarwinNotificationDetails(presentSound: !silent),
       linux: const LinuxNotificationDetails(),
       windows: const WindowsNotificationDetails(),
     );
