@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:iz_show_time_tracker/core/background/background_task_kind.dart';
+import 'package:iz_show_time_tracker/core/network/api_error.dart';
 import 'package:iz_show_time_tracker/core/notifications/episode_check_service.dart';
 import 'package:iz_show_time_tracker/data/models/catalogue_item.dart';
 import 'package:iz_show_time_tracker/data/models/episode_model.dart';
@@ -20,13 +21,16 @@ final String _yesterday = DateTime.now()
 /// Every show has two aired episodes unless [episodeCount] says otherwise;
 /// ids are `showId * 10 + episodeNumber`.
 /// Shows in [interruptedShowIds] throw a non-API error, like a killed run.
+/// Shows in [apiFailingShowIds] throw a transient TMDB error.
 class _TwoEpisodeStubTmdbService extends TmdbService {
   _TwoEpisodeStubTmdbService({
     this.interruptedShowIds = const {},
+    this.apiFailingShowIds = const {},
     this.episodeCount = const {},
   }) : super(cacheManager: null);
 
   final Set<int> interruptedShowIds;
+  final Set<int> apiFailingShowIds;
 
   /// Episodes per show id, when not two.
   final Map<int, int> episodeCount;
@@ -47,6 +51,9 @@ class _TwoEpisodeStubTmdbService extends TmdbService {
   }) async {
     if (interruptedShowIds.contains(tvId)) {
       throw StateError('run interrupted');
+    }
+    if (apiFailingShowIds.contains(tvId)) {
+      throw const ApiException(ApiErrorType.timeout, 'timeout');
     }
     return [
       for (var number = 1; number <= (episodeCount[tvId] ?? 2); number++)
@@ -256,6 +263,47 @@ void main() {
       expect(storedEpisodeIds(), hasLength(5));
       expect(notifications, isEmpty);
       expect(outbox.notifiedEpisodeIds, isEmpty);
+    });
+
+    test('a transient TMDB failure does not notify the same episode again',
+        () async {
+      final notifications = <int>[];
+      Future<void> notify(int count) async => notifications.add(count);
+
+      await EpisodeCheckService.checkAndStore(
+        snapshot: snapshot,
+        tmdbService: _TwoEpisodeStubTmdbService(),
+        outbox: outbox,
+        notify: notify,
+      );
+      expect(outbox.notifiedEpisodeIds, {12, 22, 32, 42, 52});
+
+      // TMDB fails for show 1 while show 2 gets a new episode in the same run.
+      notifications.clear();
+      await EpisodeCheckService.checkAndStore(
+        snapshot: snapshot,
+        tmdbService: _TwoEpisodeStubTmdbService(
+          apiFailingShowIds: {1},
+          episodeCount: {2: 3},
+        ),
+        outbox: outbox,
+        notify: notify,
+      );
+
+      expect(notifications, [6]);
+      expect(outbox.notifiedEpisodeIds, contains(12));
+      expect(storedEpisodeIds(), contains(12));
+
+      // TMDB answers again: episode 12 was already notified.
+      notifications.clear();
+      await EpisodeCheckService.checkAndStore(
+        snapshot: snapshot,
+        tmdbService: _TwoEpisodeStubTmdbService(episodeCount: {2: 3}),
+        outbox: outbox,
+        notify: notify,
+      );
+
+      expect(notifications, isEmpty);
     });
   });
 }
