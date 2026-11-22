@@ -23,12 +23,14 @@ class StubTmdbService extends TmdbService {
 
   final int seasonCount;
   final Map<int, List<EpisodeModel>> episodesBySeason;
+  int summaryCallCount = 0;
 
   @override
   Future<TvShowSummary?> getTvShowSummary(
     int tvId, {
     bool forceRefresh = false,
   }) async {
+    summaryCallCount++;
     return TvShowSummary(numberOfSeasons: seasonCount);
   }
 
@@ -685,6 +687,28 @@ void main() {
         );
       },
     );
+
+    test('concurrent full refreshes share one run', () async {
+      const show = TvShow(id: 44, title: 'Shared Refresh Show');
+      final episode2 = EpisodeModel.fromJson({
+        'id': 100,
+        'season_number': 1,
+        'episode_number': 2,
+        'name': 'Registered',
+        'air_date': '2026-01-01',
+        'runtime': 45,
+      });
+      await appServices.addEpisodeToCatalogue(show: show, episode: episode2);
+      final tmdb = appServices.tmdbService as StubTmdbService;
+      tmdb.summaryCallCount = 0;
+
+      await Future.wait([
+        appServices.refreshNewEpisodeAlertsFromNetwork(),
+        appServices.refreshNewEpisodeAlertsFromNetwork(),
+      ]);
+
+      expect(tmdb.summaryCallCount, 1);
+    });
 
     test(
       'does not surface new episodes for catalogue shows that are not followed',
