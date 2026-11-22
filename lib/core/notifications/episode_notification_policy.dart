@@ -10,10 +10,13 @@ import '../../data/models/new_episode_alert.dart';
 /// not qualify until rewritten by the episode checker.
 ///
 /// In a qualifying alert, the next episode and each of
-/// [NewEpisodeAlert.laterAiredEpisodes] count on their own when aired within
-/// [AppConstants.notificationRecentAirDays] and neither notified nor
-/// catalogued: catching up on an old show stays quiet, and undated episodes
-/// cannot be called recent.
+/// [NewEpisodeAlert.laterAiredEpisodes] count on their own when aired one to
+/// [AppConstants.notificationRecentAirDays] calendar days ago and neither
+/// notified nor catalogued: catching up on an old show stays quiet, and
+/// undated episodes cannot be called recent.
+///
+/// An episode aired today waits until the next day: TMDB air dates carry no
+/// time of day, so it may not be available yet in the user's time zone.
 List<int> episodesEligibleForSystemNotification({
   required Iterable<NewEpisodeAlert> alerts,
   required Set<int> alreadyNotifiedEpisodeIds,
@@ -49,9 +52,10 @@ Iterable<int> alertEpisodeIds(NewEpisodeAlert alert) => [
 
 bool _airedRecently(DateTime? airDate, DateTime now) {
   if (airDate == null) return false;
-  // Calendar days: air dates carry no time of day.
+  // Calendar days: air dates carry no time of day. Today is excluded because
+  // the episode may not be out yet in the user's time zone.
   final today = DateTime(now.year, now.month, now.day);
   final aired = DateTime(airDate.year, airDate.month, airDate.day);
   final days = today.difference(aired).inDays;
-  return days >= 0 && days <= AppConstants.notificationRecentAirDays;
+  return days >= 1 && days <= AppConstants.notificationRecentAirDays;
 }

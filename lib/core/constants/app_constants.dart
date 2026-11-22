@@ -45,8 +45,10 @@ class AppConstants {
   // Notification / background episode-check settings
   static const int notificationCheckIntervalHours = 2;
 
-  /// System notifications are raised only for episodes aired within this
-  /// many days; older ones stay in Continue Watching without notifying.
+  /// System notifications are raised only for episodes aired one to this
+  /// many days ago; older ones stay in Continue Watching without notifying.
+  /// Episodes aired today wait until the next day, since TMDB air dates
+  /// carry no time of day.
   static const int notificationRecentAirDays = 7;
 
   /// First WorkManager run after registration (Android minimum ~15 minutes).

@@ -51,8 +51,8 @@ void main() {
             laterAiredEpisodes: [
               LaterAiredEpisode(episodeId: 2, airDate: DateTime(2026, 1, 17)),
               LaterAiredEpisode(episodeId: 3, airDate: DateTime(2026, 3, 14)),
-              LaterAiredEpisode(episodeId: 4, airDate: DateTime(2026, 3, 15)),
-              LaterAiredEpisode(episodeId: 5, airDate: DateTime(2026, 3, 15)),
+              LaterAiredEpisode(episodeId: 4, airDate: DateTime(2026, 3, 13)),
+              LaterAiredEpisode(episodeId: 5, airDate: DateTime(2026, 3, 13)),
             ],
           ),
         ],
@@ -69,10 +69,10 @@ void main() {
         alerts: [
           alert(
             episodeId: 1,
-            airDate: DateTime(2026, 3, 15),
+            airDate: DateTime(2026, 3, 14),
             runtimeMinutes: null,
             laterAiredEpisodes: [
-              LaterAiredEpisode(episodeId: 2, airDate: DateTime(2026, 3, 15)),
+              LaterAiredEpisode(episodeId: 2, airDate: DateTime(2026, 3, 14)),
             ],
           ),
         ],
@@ -89,7 +89,7 @@ void main() {
         alerts: [
           alert(
             episodeId: 1,
-            airDate: DateTime(2026, 3, 15),
+            airDate: DateTime(2026, 3, 13),
             runtimeMinutes: 42,
           ),
           alert(
@@ -99,13 +99,13 @@ void main() {
           ),
           alert(
             episodeId: 3,
-            airDate: DateTime(2026, 3, 15),
+            airDate: DateTime(2026, 3, 14),
             runtimeMinutes: 42,
           ),
           alert(episodeId: 4, airDate: null, runtimeMinutes: 42),
           alert(
             episodeId: 5,
-            airDate: DateTime(2026, 3, 15),
+            airDate: DateTime(2026, 3, 14),
             runtimeMinutes: null,
           ),
         ],
@@ -164,18 +164,83 @@ void main() {
         alerts: [
           alert(
             episodeId: 1,
-            airDate: DateTime(2026, 3, 15),
+            airDate: DateTime(2026, 3, 14),
             runtimeMinutes: 42,
           ),
           alert(
             episodeId: 2,
-            airDate: DateTime(2026, 3, 15),
+            airDate: DateTime(2026, 3, 14),
             runtimeMinutes: 42,
           ),
         ],
         alreadyNotifiedEpisodeIds: {},
         catalogueEpisodeIds: {2},
         now: now,
+      );
+
+      expect(eligible, [1]);
+    });
+
+    test('waits until the next day for an episode aired today', () {
+      final alerts = [
+        alert(episodeId: 1, airDate: DateTime(2026, 3, 15), runtimeMinutes: 42),
+      ];
+
+      final onAirDay = episodesEligibleForSystemNotification(
+        alerts: alerts,
+        alreadyNotifiedEpisodeIds: {},
+        now: DateTime(2026, 3, 15, 21),
+      );
+      final nextDay = episodesEligibleForSystemNotification(
+        alerts: alerts,
+        alreadyNotifiedEpisodeIds: {},
+        now: DateTime(2026, 3, 16, 3),
+      );
+
+      expect(onAirDay, isEmpty);
+      expect(nextDay, [1]);
+    });
+
+    test('notifies episodes aired one to seven days ago', () {
+      final eligible = episodesEligibleForSystemNotification(
+        alerts: [
+          alert(
+            episodeId: 1,
+            airDate: DateTime(2026, 3, 14),
+            runtimeMinutes: 42,
+          ),
+          alert(
+            episodeId: 2,
+            airDate: DateTime(2026, 3, 8),
+            runtimeMinutes: 42,
+          ),
+          alert(
+            episodeId: 3,
+            airDate: DateTime(2026, 3, 7),
+            runtimeMinutes: 42,
+          ),
+        ],
+        alreadyNotifiedEpisodeIds: {},
+        now: DateTime(2026, 3, 15, 21),
+      );
+
+      expect(eligible, [1, 2]);
+    });
+
+    test('applies the same rule to later aired episodes', () {
+      final eligible = episodesEligibleForSystemNotification(
+        alerts: [
+          alert(
+            episodeId: 1,
+            airDate: DateTime(2026, 3, 14),
+            runtimeMinutes: 42,
+            laterAiredEpisodes: [
+              LaterAiredEpisode(episodeId: 2, airDate: DateTime(2026, 3, 15)),
+            ],
+          ),
+        ],
+        alreadyNotifiedEpisodeIds: {},
+        now: DateTime(2026, 3, 15, 21),
       );
 
       expect(eligible, [1]);
