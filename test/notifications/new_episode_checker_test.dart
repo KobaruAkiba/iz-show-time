@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iz_show_time_tracker/core/network/api_error.dart';
 import 'package:iz_show_time_tracker/core/notifications/new_episode_checker.dart';
 import 'package:iz_show_time_tracker/data/models/catalogue_item.dart';
 import 'package:iz_show_time_tracker/data/models/episode_model.dart';
@@ -262,6 +263,28 @@ class MultiShowStubTmdbService extends TmdbService {
   }) async {
     return byShowId[tvId]?.episodesBySeason[seasonNumber] ?? const [];
   }
+}
+
+/// Throws [errorType] for every request, like TMDB failing for this show.
+class FailingTmdbService extends TmdbService {
+  FailingTmdbService(this.errorType) : super(cacheManager: null);
+
+  final ApiErrorType errorType;
+
+  @override
+  Future<TvShowSummary?> getTvShowSummary(
+    int tvId, {
+    bool forceRefresh = false,
+  }) async =>
+      throw ApiException(errorType, 'stub');
+
+  @override
+  Future<List<EpisodeModel>> getSeasonEpisodes({
+    required int tvId,
+    required int seasonNumber,
+    bool forceRefresh = false,
+  }) async =>
+      throw ApiException(errorType, 'stub');
 }
 
 void main() {
@@ -1202,5 +1225,87 @@ void main() {
         expect(result.allAlerts.single.episodeId, 101);
       },
     );
+
+    group('on TMDB failure', () {
+      const show = TvShow(id: 42, title: 'Sample Show');
+      final registered = WatchRecord(
+        mediaId: 42,
+        isFilm: false,
+        episodeId: 100,
+        seasonNumber: 1,
+        episodeNumber: 2,
+        durationMinutes: 45,
+        watchedAt: DateTime(2026, 1, 1),
+      );
+      final prior = NewEpisodeAlert(
+        showId: 42,
+        showTitle: 'Sample Show',
+        episodeId: 101,
+        seasonNumber: 1,
+        episodeNumber: 3,
+        episodeName: 'Next',
+        airDate: DateTime(2026, 1, 8),
+        runtimeMinutes: 45,
+        detectedAt: DateTime(2026, 1, 8),
+      );
+
+      Future<NewEpisodeCheckResult> check(
+        ApiErrorType errorType, {
+        bool mergeWithExisting = false,
+        List<WatchRecord>? watchHistory,
+      }) {
+        return NewEpisodeChecker(tmdbService: FailingTmdbService(errorType))
+            .checkShows(
+          shows: [show],
+          watchHistory: watchHistory ?? [registered],
+          mergeWithExisting: mergeWithExisting,
+          existingAlerts: [prior],
+          persistAlerts: false,
+        );
+      }
+
+      test('keeps the previous alert on a transient error', () async {
+        final result = await check(ApiErrorType.timeout);
+
+        expect(result.allAlerts.map((a) => a.episodeId), [101]);
+        expect(result.newlyDetected, isEmpty);
+      });
+
+      test('keeps the previous alert when merging a block', () async {
+        final result = await check(
+          ApiErrorType.timeout,
+          mergeWithExisting: true,
+        );
+
+        expect(result.allAlerts.map((a) => a.episodeId), [101]);
+        expect(result.newlyDetected, isEmpty);
+      });
+
+      test('drops the alert when TMDB no longer has the show', () async {
+        final result = await check(ApiErrorType.notFound);
+
+        expect(result.allAlerts, isEmpty);
+      });
+
+      test('drops a kept alert whose episode is already registered', () async {
+        final result = await check(
+          ApiErrorType.timeout,
+          watchHistory: [
+            registered,
+            WatchRecord(
+              mediaId: 42,
+              isFilm: false,
+              episodeId: 101,
+              seasonNumber: 1,
+              episodeNumber: 3,
+              durationMinutes: 45,
+              watchedAt: DateTime(2026, 1, 9),
+            ),
+          ],
+        );
+
+        expect(result.allAlerts, isEmpty);
+      });
+    });
   });
 }

@@ -4,12 +4,18 @@ import '../screens/home/home_screen.dart';
 import '../screens/search/search_screen.dart';
 import '../screens/catalogue/catalogue_screen.dart';
 import '../screens/settings/settings_screen.dart';
+import 'main_tab.dart';
 
-enum MainTab { home, search, catalogue, settings }
+export 'main_tab.dart' show MainTab;
 
 /// Main navigator for the app with bottom navigation
 class MainNavigator extends StatefulWidget {
-  const MainNavigator({super.key});
+  const MainNavigator({super.key, MainTabRequests? tabRequests})
+    : _tabRequests = tabRequests;
+
+  final MainTabRequests? _tabRequests;
+
+  MainTabRequests get tabRequests => _tabRequests ?? mainTabRequests;
 
   @override
   State<MainNavigator> createState() => _MainNavigatorState();
@@ -19,6 +25,37 @@ class _MainNavigatorState extends State<MainNavigator> {
   MainTab _currentTab = MainTab.home;
 
   int get _currentIndex => _currentTab.index;
+
+  @override
+  void initState() {
+    super.initState();
+    // A request made before the first build: nothing is open above the tabs
+    // yet, so the tab is just selected.
+    _currentTab = widget.tabRequests.take() ?? _currentTab;
+    widget.tabRequests.addListener(_handleTabRequest);
+  }
+
+  @override
+  void didUpdateWidget(MainNavigator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.tabRequests == widget.tabRequests) return;
+    oldWidget.tabRequests.removeListener(_handleTabRequest);
+    widget.tabRequests.addListener(_handleTabRequest);
+  }
+
+  @override
+  void dispose() {
+    widget.tabRequests.removeListener(_handleTabRequest);
+    super.dispose();
+  }
+
+  void _handleTabRequest() {
+    final tab = widget.tabRequests.take();
+    if (tab == null) return;
+    // Close routes and sheets above the tabs, or the switch stays hidden.
+    appNavigatorKey.currentState?.popUntil((route) => route.isFirst);
+    _selectTab(tab.index);
+  }
 
   Widget _screenFor(MainTab tab) {
     switch (tab) {

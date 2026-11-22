@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:iz_show_time_tracker/core/background/background_task_kind.dart';
+import 'package:iz_show_time_tracker/core/network/api_error.dart';
 import 'package:iz_show_time_tracker/core/notifications/episode_check_service.dart';
+import 'package:iz_show_time_tracker/core/notifications/new_episodes_summary.dart';
 import 'package:iz_show_time_tracker/data/models/catalogue_item.dart';
 import 'package:iz_show_time_tracker/data/models/episode_model.dart';
 import 'package:iz_show_time_tracker/data/models/tv_show_summary.dart';
@@ -20,13 +22,16 @@ final String _yesterday = DateTime.now()
 /// Every show has two aired episodes unless [episodeCount] says otherwise;
 /// ids are `showId * 10 + episodeNumber`.
 /// Shows in [interruptedShowIds] throw a non-API error, like a killed run.
+/// Shows in [apiFailingShowIds] throw a transient TMDB error.
 class _TwoEpisodeStubTmdbService extends TmdbService {
   _TwoEpisodeStubTmdbService({
     this.interruptedShowIds = const {},
+    this.apiFailingShowIds = const {},
     this.episodeCount = const {},
   }) : super(cacheManager: null);
 
   final Set<int> interruptedShowIds;
+  final Set<int> apiFailingShowIds;
 
   /// Episodes per show id, when not two.
   final Map<int, int> episodeCount;
@@ -47,6 +52,9 @@ class _TwoEpisodeStubTmdbService extends TmdbService {
   }) async {
     if (interruptedShowIds.contains(tvId)) {
       throw StateError('run interrupted');
+    }
+    if (apiFailingShowIds.contains(tvId)) {
+      throw const ApiException(ApiErrorType.timeout, 'timeout');
     }
     return [
       for (var number = 1; number <= (episodeCount[tvId] ?? 2); number++)
@@ -132,8 +140,14 @@ void main() {
 
     test('an interrupted run keeps its completed blocks and is resumed',
         () async {
-      final notifications = <int>[];
-      Future<void> notify(int count) async => notifications.add(count);
+      final notifications = <({int count, bool silent})>[];
+      Future<bool> notify(
+        NewEpisodesSummary summary, {
+        required bool silent,
+      }) async {
+        notifications.add((count: summary.episodeCount, silent: silent));
+        return true;
+      }
 
       // Blocks of two: [1, 2] completes, [3, 4] is interrupted.
       await expectLater(
@@ -150,7 +164,7 @@ void main() {
       expect(storedEpisodeIds(), {12, 22});
       expect(outbox.resumeAfterShowId, 2);
       expect(outbox.notifiedEpisodeIds, {12, 22});
-      expect(notifications, [2]);
+      expect(notifications, [(count: 2, silent: false)]);
 
       // Next run starts at show 3 and keeps the alerts already found.
       notifications.clear();
@@ -166,7 +180,10 @@ void main() {
       expect(outbox.notifiedEpisodeIds, {12, 22, 32, 42, 52});
       // The app was not opened in between: the notification keeps counting
       // shows 1 and 2, then adds 3, 4 and 5.
-      expect(notifications, [4, 5]);
+      expect(notifications, [
+        (count: 4, silent: false),
+        (count: 5, silent: true),
+      ]);
       expect(outbox.resumeAfterShowId, 2);
     });
 
@@ -175,7 +192,7 @@ void main() {
         snapshot: snapshot,
         tmdbService: _TwoEpisodeStubTmdbService(),
         outbox: outbox,
-        notify: (_) async {},
+        notify: (_, {required silent}) async => true,
         taskKind: BackgroundTaskKind.nightly,
       );
 
@@ -183,18 +200,21 @@ void main() {
     });
 
     test('counts every aired episode of a show, not one per show', () async {
-      final notifications = <int>[];
+      final notifications = <({int count, bool silent})>[];
 
       // Show 1: episodes 2, 3 and 4 aired after the registered episode 1.
       await EpisodeCheckService.checkAndStore(
         snapshot: snapshot,
         tmdbService: _TwoEpisodeStubTmdbService(episodeCount: {1: 4}),
         outbox: outbox,
-        notify: (count) async => notifications.add(count),
+        notify: (summary, {required silent}) async {
+          notifications.add((count: summary.episodeCount, silent: silent));
+          return true;
+        },
       );
 
       // Show 1 counts 3 episodes, shows 2 to 5 one each.
-      expect(notifications, [7]);
+      expect(notifications, [(count: 7, silent: false)]);
       expect(outbox.notifiedEpisodeIds, containsAll([12, 13, 14]));
       final alert =
           outbox.result!.alerts.firstWhere((alert) => alert.showId == 1);
@@ -205,9 +225,36 @@ void main() {
       );
     });
 
+    test('names the shows in the notification', () async {
+      final summaries = <NewEpisodesSummary>[];
+
+      await EpisodeCheckService.checkAndStore(
+        snapshot: snapshot,
+        tmdbService: _TwoEpisodeStubTmdbService(),
+        outbox: outbox,
+        notify: (summary, {required silent}) async {
+          summaries.add(summary);
+          return true;
+        },
+      );
+
+      expect(summaries, hasLength(1));
+      expect(summaries.single.episodeCount, 5);
+      expect(
+        summaries.single.showTitles,
+        ['Show 1', 'Show 2', 'Show 3', 'Show 4', 'Show 5'],
+      );
+    });
+
     test('restarts the count after the app was opened', () async {
-      final notifications = <int>[];
-      Future<void> notify(int count) async => notifications.add(count);
+      final notifications = <({int count, bool silent})>[];
+      Future<bool> notify(
+        NewEpisodesSummary summary, {
+        required bool silent,
+      }) async {
+        notifications.add((count: summary.episodeCount, silent: silent));
+        return true;
+      }
 
       await EpisodeCheckService.checkAndStore(
         snapshot: snapshot,
@@ -215,7 +262,7 @@ void main() {
         outbox: outbox,
         notify: notify,
       );
-      expect(notifications, [5]);
+      expect(notifications, [(count: 5, silent: false)]);
 
       // The user opened and left the app; then show 1 gets a third episode.
       notifications.clear();
@@ -233,12 +280,12 @@ void main() {
         notify: notify,
       );
 
-      expect(notifications, [1]);
+      expect(notifications, [(count: 1, silent: false)]);
       expect(outbox.notifiedAt.keys, [13]);
     });
 
     test('does not notify while the app is in foreground', () async {
-      final notifications = <int>[];
+      final notifications = <({int count, bool silent})>[];
 
       await EpisodeCheckService.checkAndStore(
         snapshot: UserDataSnapshot(
@@ -247,15 +294,169 @@ void main() {
           newEpisodeAlerts: const [],
           appInForeground: true,
           notifiedEpisodeIds: const {},
+          appForegroundHeartbeatAt: DateTime.now(),
         ),
         tmdbService: _TwoEpisodeStubTmdbService(),
         outbox: outbox,
-        notify: (count) async => notifications.add(count),
+        notify: (summary, {required silent}) async {
+          notifications.add((count: summary.episodeCount, silent: silent));
+          return true;
+        },
       );
 
       expect(storedEpisodeIds(), hasLength(5));
       expect(notifications, isEmpty);
       expect(outbox.notifiedEpisodeIds, isEmpty);
+    });
+
+    test('notifies when the foreground flag is stale', () async {
+      final notifications = <({int count, bool silent})>[];
+
+      // Left true by a crash: the heartbeat stopped an hour ago.
+      await EpisodeCheckService.checkAndStore(
+        snapshot: UserDataSnapshot(
+          catalogue: snapshot.catalogue,
+          watchHistory: snapshot.watchHistory,
+          newEpisodeAlerts: const [],
+          appInForeground: true,
+          notifiedEpisodeIds: const {},
+          appForegroundHeartbeatAt:
+              DateTime.now().subtract(const Duration(hours: 1)),
+        ),
+        tmdbService: _TwoEpisodeStubTmdbService(),
+        outbox: outbox,
+        notify: (summary, {required silent}) async {
+          notifications.add((count: summary.episodeCount, silent: silent));
+          return true;
+        },
+      );
+
+      expect(notifications, [(count: 5, silent: false)]);
+    });
+
+    test('a transient TMDB failure does not notify the same episode again',
+        () async {
+      final notifications = <({int count, bool silent})>[];
+      Future<bool> notify(
+        NewEpisodesSummary summary, {
+        required bool silent,
+      }) async {
+        notifications.add((count: summary.episodeCount, silent: silent));
+        return true;
+      }
+
+      await EpisodeCheckService.checkAndStore(
+        snapshot: snapshot,
+        tmdbService: _TwoEpisodeStubTmdbService(),
+        outbox: outbox,
+        notify: notify,
+      );
+      expect(outbox.notifiedEpisodeIds, {12, 22, 32, 42, 52});
+
+      // TMDB fails for show 1 while show 2 gets a new episode in the same run.
+      notifications.clear();
+      await EpisodeCheckService.checkAndStore(
+        snapshot: snapshot,
+        tmdbService: _TwoEpisodeStubTmdbService(
+          apiFailingShowIds: {1},
+          episodeCount: {2: 3},
+        ),
+        outbox: outbox,
+        notify: notify,
+      );
+
+      expect(notifications, [(count: 6, silent: false)]);
+      expect(outbox.notifiedEpisodeIds, contains(12));
+      expect(storedEpisodeIds(), contains(12));
+
+      // TMDB answers again: episode 12 was already notified.
+      notifications.clear();
+      await EpisodeCheckService.checkAndStore(
+        snapshot: snapshot,
+        tmdbService: _TwoEpisodeStubTmdbService(episodeCount: {2: 3}),
+        outbox: outbox,
+        notify: notify,
+      );
+
+      expect(notifications, isEmpty);
+    });
+
+    test('alerts once per run and updates silently afterwards', () async {
+      final notifications = <({int count, bool silent})>[];
+
+      // Blocks of two: [1, 2], [3, 4], [5] each notify an updated total.
+      await EpisodeCheckService.checkAndStore(
+        snapshot: snapshot,
+        tmdbService: _TwoEpisodeStubTmdbService(),
+        outbox: outbox,
+        notify: (summary, {required silent}) async {
+          notifications.add((count: summary.episodeCount, silent: silent));
+          return true;
+        },
+        blockSize: 2,
+      );
+
+      expect(notifications, [
+        (count: 2, silent: false),
+        (count: 4, silent: true),
+        (count: 5, silent: true),
+      ]);
+    });
+
+    test('does not mark episodes while notifications are off', () async {
+      final notifications = <({int count, bool silent})>[];
+
+      // The notification is not shown (e.g. notifications disabled).
+      await EpisodeCheckService.checkAndStore(
+        snapshot: snapshot,
+        tmdbService: _TwoEpisodeStubTmdbService(),
+        outbox: outbox,
+        notify: (summary, {required silent}) async {
+          notifications.add((count: summary.episodeCount, silent: silent));
+          return false;
+        },
+      );
+
+      expect(notifications, [(count: 5, silent: false)]);
+      expect(outbox.notifiedEpisodeIds, isEmpty);
+      expect(outbox.notifiedAt, isEmpty);
+
+      // Notifications are enabled again: the same episodes are notified.
+      notifications.clear();
+      await EpisodeCheckService.checkAndStore(
+        snapshot: snapshot,
+        tmdbService: _TwoEpisodeStubTmdbService(),
+        outbox: outbox,
+        notify: (summary, {required silent}) async {
+          notifications.add((count: summary.episodeCount, silent: silent));
+          return true;
+        },
+      );
+
+      expect(notifications, [(count: 5, silent: false)]);
+      expect(outbox.notifiedEpisodeIds, {12, 22, 32, 42, 52});
+    });
+
+    test('alerts with sound after a notification that was not shown', () async {
+      final notifications = <({int count, bool silent})>[];
+
+      // Blocks of two: the first notification fails, the next ones succeed.
+      await EpisodeCheckService.checkAndStore(
+        snapshot: snapshot,
+        tmdbService: _TwoEpisodeStubTmdbService(),
+        outbox: outbox,
+        notify: (summary, {required silent}) async {
+          notifications.add((count: summary.episodeCount, silent: silent));
+          return notifications.length > 1;
+        },
+        blockSize: 2,
+      );
+
+      expect(notifications, [
+        (count: 2, silent: false),
+        (count: 4, silent: false),
+        (count: 5, silent: true),
+      ]);
     });
   });
 }

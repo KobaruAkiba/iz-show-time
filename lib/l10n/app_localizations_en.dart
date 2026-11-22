@@ -706,6 +706,34 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String notificationBodyOneShow(int count, String show) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count new episodes of $show',
+      one: 'A new episode of $show',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String notificationBodyTwoShows(int count, String first, String second) {
+    return '$count new episodes of $first and $second';
+  }
+
+  @override
+  String notificationBodyManyShows(
+      int count, String first, String second, int others) {
+    String _temp0 = intl.Intl.pluralLogic(
+      others,
+      locale: localeName,
+      other: '$others more shows',
+      one: '1 more show',
+    );
+    return '$count new episodes of $first, $second and $_temp0';
+  }
+
+  @override
   String get settingsNotifications => 'Notifications';
 
   @override

@@ -46,6 +46,8 @@ class EpisodeAlertsService {
   /// mid-flight, so they cannot restore a just-watched episode alert.
   int _watchDrivenEpoch = 0;
 
+  Future<void>? _fullRefreshInFlight;
+
   List<NewEpisodeAlert> get alerts => List.unmodifiable(_alerts);
 
   void _publish() {
@@ -148,7 +150,17 @@ class EpisodeAlertsService {
   /// A slow full network scan must not commit after a newer watch-driven
   /// refresh: it may still hold a stale watch-history snapshot and would
   /// put a just-catalogued episode back into Continue Watching.
-  Future<void> refresh({int? forShowId, bool forceRefresh = false}) async {
+  ///
+  /// A full refresh requested while another is running joins that run.
+  Future<void> refresh({int? forShowId, bool forceRefresh = false}) {
+    if (forShowId != null) {
+      return _runRefresh(forShowId: forShowId, forceRefresh: forceRefresh);
+    }
+    return _fullRefreshInFlight ??= _runRefresh(forceRefresh: forceRefresh)
+        .whenComplete(() => _fullRefreshInFlight = null);
+  }
+
+  Future<void> _runRefresh({int? forShowId, bool forceRefresh = false}) async {
     final epochAtStart = _watchDrivenEpoch;
     final watchDriven = forShowId != null;
     await NetworkFeedback.runSilent(() async {

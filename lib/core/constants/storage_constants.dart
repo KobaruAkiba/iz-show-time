@@ -18,6 +18,10 @@ class StorageConstants {
   /// Last time the app left the foreground: episodes notified before then
   /// count as seen.
   static const String appLeftForegroundAtKey = 'app_left_foreground_at';
+
+  /// Last time the open app confirmed it is still in the foreground.
+  static const String appForegroundHeartbeatAtKey =
+      'app_foreground_heartbeat_at';
   static const String notifiedEpisodeIdsKey = 'notified_episode_ids';
   static const String notificationPermissionPrePromptShownKey =
       'notification_permission_pre_prompt_shown';

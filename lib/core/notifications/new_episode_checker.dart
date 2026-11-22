@@ -75,9 +75,13 @@ class NewEpisodeChecker {
           forceRefresh: forceRefresh,
           priorAlert: priorByShowId[show.id],
         );
-      } on ApiException {
-        // Skip this show on network/API failure; other shows still process.
-        return null;
+      } on ApiException catch (error) {
+        // Keep the show's previous alert on failure; other shows still process.
+        return _alertKeptOnFailure(
+          error,
+          priorByShowId[show.id],
+          watchHistory,
+        );
       }
     }
 
@@ -201,6 +205,23 @@ class NewEpisodeChecker {
             ),
       ],
     );
+  }
+
+  /// The alert to keep for a show whose check failed with [error].
+  ///
+  /// A transient error is not a verdict: dropping [prior] would hide the
+  /// Continue Watching row and notify its episode again on the next run.
+  /// A show TMDB no longer has, or an episode already registered, drops it.
+  static NewEpisodeAlert? _alertKeptOnFailure(
+    ApiException error,
+    NewEpisodeAlert? prior,
+    List<WatchRecord> watchHistory,
+  ) {
+    if (prior == null || error.type == ApiErrorType.notFound) return null;
+    final alreadyRegistered = watchHistory.any(
+      (record) => !record.isFilm && record.episodeId == prior.episodeId,
+    );
+    return alreadyRegistered ? null : prior;
   }
 
   /// True when TMDB already says nothing aired after [lastRegistered], so the

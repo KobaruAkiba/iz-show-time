@@ -5,6 +5,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../../data/repositories/user_data_store.dart';
 import '../../l10n/l10n.dart';
+import 'new_episodes_notification_text.dart';
+import 'new_episodes_summary.dart';
 import 'notification_permission_preprompt.dart';
 
 /// Sends local system notifications for newly detected TV episodes.
@@ -29,6 +31,7 @@ class NotificationService {
     UserDataStore? userDataStore,
     GlobalKey<NavigatorState>? navigatorKey,
     bool requestPermissions = true,
+    VoidCallback? onNewEpisodesTap,
   }) async {
     if (_initialized) return;
 
@@ -51,7 +54,12 @@ class NotificationService {
       ),
     );
 
-    await _plugin.initialize(settings: initSettings);
+    await _plugin.initialize(
+      settings: initSettings,
+      onDidReceiveNotificationResponse: (response) {
+        if (isNewEpisodesResponse(response)) onNewEpisodesTap?.call();
+      },
+    );
     _initialized = true;
     if (!requestPermissions) return;
     // Do not await permission prompts before/during early startup.
@@ -62,6 +70,10 @@ class NotificationService {
       ),
     );
   }
+
+  @visibleForTesting
+  static bool isNewEpisodesResponse(NotificationResponse response) =>
+      response.id == _newEpisodesNotificationId;
 
   /// Whether the OS currently lets the app post notifications.
   Future<bool> areNotificationsEnabled() {
@@ -146,14 +158,18 @@ class NotificationService {
     return false;
   }
 
-  Future<void> showNewEpisodesNotification({required int count}) async {
-    if (!_initialized || count <= 0) return;
+  /// Shows the new episodes notification for [summary]. Returns `false` when
+  /// it was not shown: service not initialized, nothing to count,
+  /// notifications disabled by the OS, or a plugin error.
+  Future<bool> showNewEpisodesNotification({
+    required NewEpisodesSummary summary,
+    bool silent = false,
+  }) async {
+    if (!_initialized || summary.episodeCount <= 0) return false;
 
     final l10n = AppL10n.current;
     final title = l10n.notificationTitle;
-    final body = count == 1
-        ? l10n.notificationBodyOne
-        : l10n.notificationBodyOther(count);
+    final body = newEpisodesNotificationBody(l10n, summary);
 
     final details = NotificationDetails(
       android: AndroidNotificationDetails(
@@ -163,23 +179,42 @@ class NotificationService {
         importance: Importance.high,
         priority: Priority.high,
         playSound: true,
+        silent: silent,
+        // Expanded, the notification shows every show named in the body.
+        styleInformation: BigTextStyleInformation(body),
       ),
-      iOS: const DarwinNotificationDetails(),
-      macOS: const DarwinNotificationDetails(),
+      iOS: DarwinNotificationDetails(presentSound: !silent),
+      macOS: DarwinNotificationDetails(presentSound: !silent),
       linux: const LinuxNotificationDetails(),
       windows: const WindowsNotificationDetails(),
     );
 
     try {
+      if (!await areNotificationsEnabled()) return false;
       await _plugin.show(
         id: _newEpisodesNotificationId,
         title: title,
         body: body,
         notificationDetails: details,
       );
+      return true;
     } catch (error, stackTrace) {
       debugPrint(
         'Failed to show new episodes notification: $error\n$stackTrace',
+      );
+      return false;
+    }
+  }
+
+  /// Removes the new episodes notification from the tray, if shown.
+  Future<void> cancelNewEpisodesNotification() async {
+    if (!_initialized) return;
+
+    try {
+      await _plugin.cancel(id: _newEpisodesNotificationId);
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Failed to cancel new episodes notification: $error\n$stackTrace',
       );
     }
   }

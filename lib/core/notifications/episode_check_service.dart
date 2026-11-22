@@ -10,7 +10,16 @@ import '../constants/app_constants.dart';
 import '../network/network_feedback.dart';
 import 'episode_notification_policy.dart';
 import 'new_episode_checker.dart';
+import 'new_episodes_summary.dart';
 import 'notification_service.dart';
+
+/// Raises the new episodes notification for [summary]; when [silent] it
+/// updates the notification without sound or vibration. Completes with
+/// `true` only if the notification was shown.
+typedef NewEpisodesNotifier = Future<bool> Function(
+  NewEpisodesSummary summary, {
+  required bool silent,
+});
 
 /// [shows] ordered by id, starting after [resumeAfterShowId] and wrapping.
 @visibleForTesting
@@ -46,8 +55,11 @@ class EpisodeCheckService {
         snapshot: snapshot,
         tmdbService: tmdbService,
         outbox: outbox,
-        notify: (count) =>
-            NotificationService().showNewEpisodesNotification(count: count),
+        notify: (summary, {required silent}) =>
+            NotificationService().showNewEpisodesNotification(
+          summary: summary,
+          silent: silent,
+        ),
         taskKind: taskKind,
       );
     } finally {
@@ -68,7 +80,7 @@ class EpisodeCheckService {
     required UserDataSnapshot snapshot,
     required TmdbService tmdbService,
     required BackgroundCheckOutbox outbox,
-    required Future<void> Function(int count) notify,
+    required NewEpisodesNotifier notify,
     int blockSize = AppConstants.episodeCheckBlockSize,
     BackgroundTaskKind? taskKind,
   }) async {
@@ -124,6 +136,9 @@ class EpisodeCheckService {
     }
 
     final checker = NewEpisodeChecker(tmdbService: tmdbService);
+    // Only the run's first notification sounds; later blocks of the same run
+    // replace its text silently.
+    var alertedThisRun = false;
     for (var start = 0; start < shows.length; start += blockSize) {
       final block = shows.sublist(
         start,
@@ -144,7 +159,7 @@ class EpisodeCheckService {
       );
       alerts = result.allAlerts;
 
-      if (!snapshot.appInForeground) {
+      if (!snapshot.isAppOpenAt(DateTime.now())) {
         final eligible = episodesEligibleForSystemNotification(
           alerts: alerts,
           alreadyNotifiedEpisodeIds: notified,
@@ -152,15 +167,30 @@ class EpisodeCheckService {
         );
         if (eligible.isNotEmpty) {
           final now = DateTime.now();
-          notifiedAt = {...notifiedAt, for (final id in eligible) id: now};
-          // A single notification, replaced each time with the new total.
-          await notify(notifiedAt.length);
-          // Drop IDs that are no longer in the current alert snapshot.
-          final activeIds = {
-            for (final alert in alerts) ...alertEpisodeIds(alert),
+          final candidateNotifiedAt = {
+            ...notifiedAt,
+            for (final id in eligible) id: now,
           };
-          notified = {...notified, ...eligible}
-            ..removeWhere((id) => !activeIds.contains(id));
+          // A single notification, replaced each time with the new total.
+          final shown = await notify(
+            summarizeNotifiedEpisodes(
+              episodeIds: candidateNotifiedAt.keys,
+              alerts: alerts,
+            ),
+            silent: alertedThisRun,
+          );
+          // Episodes of a notification not shown (e.g. notifications off)
+          // stay eligible, so a later block or run can still alert for them.
+          if (shown) {
+            notifiedAt = candidateNotifiedAt;
+            alertedThisRun = true;
+            // Drop IDs that are no longer in the current alert snapshot.
+            final activeIds = {
+              for (final alert in alerts) ...alertEpisodeIds(alert),
+            };
+            notified = {...notified, ...eligible}
+              ..removeWhere((id) => !activeIds.contains(id));
+          }
         }
       }
 
